@@ -1,0 +1,122 @@
+:root{
+  --symbol-scale: 1;
+  --ball-red: #E53935;
+  --ball-orange: #FB8C00;
+  --ball-yellow: #FDD835;
+  --ball-green: #8CF09E;
+  --ball-cyan: #00ACC1;
+  --ball-blue: #1E63E5;
+  --ball-purple: #8E24AA;
+  --ball-white: #ECEFF1;
+  --ball-pink: #AE507E;
+  --ball-brown: #6C2D18;
+  --ball-lime: #A6DC61;
+  --ball-indigo: #1D1DBD;
+  --bg-dark: #141628;
+  --bg-dark-2: #23284A;
+  --bg-light: #F4F1EA;
+  --bg-light-2: #E3E8F4;
+  --surface: rgba(255,255,255,.08);
+  --text: #F5F6FA;
+  --text-muted: #A9B0CC;
+  --accent: #FFD54F;
+  --accent-ink: #1A1A2E;
+  --danger: #FF6B6B;
+  --tube-stroke: #B8C4E0;
+  --tube-complete: #FFD54F;
+  --ball-size: clamp(32px, 11vw, 44px);
+  --tube-w: calc(var(--ball-size) * 1.3);
+  --tube-h: calc(var(--ball-size) * 4 + var(--ball-size) * .9);
+  --tube-gap: 12px;
+  --hud-h: 56px;
+  --bottom-h: 72px;
+  --banner-h: 50px;
+  --touch-min: 48px;
+  --radius: 16px;
+  --lift-h: calc(var(--tube-h) * -0.22);
+  --dur-lift: 140ms;
+  --dur-move: 260ms;
+  --dur-drop: 320ms;
+  --dur-complete: 600ms;
+  --dur-combo: 800ms;
+  --dur-clear: 1400ms;
+  --ease-out: cubic-bezier(.2,.8,.2,1);
+  --ease-move: cubic-bezier(.45,0,.25,1);
+  --ease-bounce: cubic-bezier(.34,1.56,.64,1);
+}
+[data-theme="light"]{ --bg-dark:#F4F1EA; --bg-dark-2:#E3E8F4; --text:#1A1A2E; --text-muted:#5A6180; --surface:rgba(26,26,46,.06); --tube-stroke:#7A86A8; --ball-white:#FFFFFF; }
+body{margin:0;background:linear-gradient(180deg,var(--bg-dark),var(--bg-dark-2));color:var(--text);font-family:system-ui,"Pretendard","Noto Sans KR",sans-serif}
+.btn{min-width:var(--touch-min);min-height:var(--touch-min);border-radius:var(--radius);border:0;background:var(--surface);color:var(--text);display:inline-flex;align-items:center;justify-content:center;gap:6px;font-weight:700}
+.btn svg{width:24px;height:24px}.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.ball{width:var(--ball-size);height:var(--ball-size)}
+.ball.lifted{animation:lift var(--dur-lift) var(--ease-out) forwards}
+.ball.dropping{animation:drop-bounce var(--dur-drop) linear}
+.tube.complete{animation:tube-complete-glow var(--dur-complete) ease-out}
+.combo{animation:combo-pop var(--dur-combo) var(--ease-bounce) forwards}
+.confetti{position:absolute;width:8px;height:12px;animation:confetti var(--dur-clear) cubic-bezier(.25,.6,.4,1) forwards}
+/* 접근성: 심볼 크게 (설정 토글 → <html class="symbols-large">) */
+:root{ --ball-asset-dir: "assets-"; }
+.symbols-large{ --ball-asset-dir: "assets-large-symbol-"; --symbol-scale: 1.45; }
+.shake{animation:invalid-shake 240ms ease-in-out}
+@keyframes lift{from{transform:translateY(0)}to{transform:translateY(var(--lift-h))}}
+@keyframes drop-bounce{0%{transform:translateY(-60px)}55%{transform:translateY(0) scale(1.08,.9)}72%{transform:translateY(-8px) scale(.97,1.03)}86%{transform:translateY(0) scale(1.02,.98)}100%{transform:translateY(0) scale(1)}}
+@keyframes tube-complete-glow{0%{filter:drop-shadow(0 0 0 transparent)}35%{filter:drop-shadow(0 0 14px var(--tube-complete)) brightness(1.25)}100%{filter:drop-shadow(0 0 4px var(--tube-complete))}}
+@keyframes sparkle{0%{opacity:0;transform:scale(.2) rotate(0)}50%{opacity:1;transform:scale(1.1) rotate(45deg)}100%{opacity:0;transform:scale(.6) rotate(90deg)}}
+@keyframes combo-pop{0%{opacity:0;transform:scale(.4)}40%{opacity:1;transform:scale(1.15)}60%{transform:scale(1)}100%{opacity:0;transform:translateY(-40px) scale(1)}}
+@keyframes confetti{0%{transform:translate(0,0) rotate(0);opacity:1}100%{transform:translate(var(--dx,40px),var(--dy,520px)) rotate(var(--rot,540deg));opacity:0}}
+@keyframes star-in{0%{transform:scale(0) rotate(-90deg)}70%{transform:scale(1.25) rotate(10deg)}100%{transform:scale(1) rotate(0)}}
+@keyframes invalid-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:1ms!important;animation-iteration-count:1!important;transition-duration:1ms!important}.confetti,.sparkle{display:none}}
+
+/* ===== 기믹 ===== */
+:root{
+  --hidden-tone: #5B6070;
+  --key-gold: #F2C14E;
+  --key-body: #2A2E3B;
+  --lock-dim: rgba(11,13,24,.12);
+  --lock-frame: #F2C14E;
+  --dur-key-consume: 520ms;
+  --small-tube-stroke: #9FD8F0;
+  --small-tube-h: calc(var(--ball-size) * 3 + var(--ball-size) * .9);
+  --dur-reveal: 420ms;
+  --dur-unlock: 700ms;
+  --dur-key-fly: 360ms;
+  --ease-reveal: cubic-bezier(.3,1.4,.5,1);
+}
+.ball.hidden-reveal{animation:hidden-reveal var(--dur-reveal) var(--ease-reveal)}
+.tube.locked{pointer-events:none}.tube.locked .lock{animation:lock-idle 2.4s ease-in-out infinite}
+.tube.unlocking .lock{animation:lock-unlock var(--dur-unlock) var(--ease-out) forwards}
+.tube.unlocking .lock-overlay{animation:lock-overlay-out var(--dur-unlock) ease-out forwards}
+.ball.key-ready{animation:key-glint 1.6s ease-in-out infinite}
+.tube.small{height:var(--small-tube-h);border-color:var(--small-tube-stroke)}
+.tube.small.full{animation:small-tube-full 300ms ease-out}
+@keyframes hidden-reveal{0%{transform:rotateY(0)}45%{transform:rotateY(90deg) scale(1.05)}55%{transform:rotateY(90deg) scale(1.05)}80%{transform:rotateY(0) scale(1.12)}100%{transform:scale(1)}}
+@keyframes lock-idle{0%,100%{transform:rotate(0)}50%{transform:rotate(-4deg)}}
+@keyframes lock-unlock{0%{transform:scale(1)}20%{transform:scale(1.15) rotate(-8deg)}40%{transform:scale(1.15) rotate(8deg)}60%{transform:translateY(-10px) scale(1.1);opacity:1}100%{transform:translateY(-60px) scale(.6) rotate(25deg);opacity:0}}
+@keyframes lock-overlay-out{0%{opacity:1}100%{opacity:0}}
+.ball.key-consume{animation:key-consume var(--dur-key-consume) var(--ease-out) forwards}
+.tube.unlocking .lock.consume{animation:lock-consume var(--dur-key-consume) var(--ease-out) forwards}
+@keyframes key-consume{0%{transform:translate(0,0) scale(1) rotate(0)}30%{transform:translate(0,6px) scale(.55) rotate(0)}55%{transform:translate(0,6px) scale(.55) rotate(90deg);opacity:1;filter:brightness(1.6)}100%{transform:translate(0,-40px) scale(.2) rotate(120deg);opacity:0}}
+@keyframes lock-consume{0%{transform:scale(1)}30%{transform:scale(1.12)}55%{transform:scale(1.12) rotate(-6deg);filter:brightness(1.4)}100%{transform:translateY(-40px) scale(.3) rotate(20deg);opacity:0}}
+@keyframes consume-fade{0%{opacity:1}100%{opacity:0}}
+@keyframes key-glint{0%,100%{filter:drop-shadow(0 0 0 transparent)}50%{filter:drop-shadow(0 0 8px var(--key-gold))}}
+@keyframes small-tube-full{0%{transform:scale(1)}50%{transform:scale(1.04,.97)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion: reduce){.tube.locked .lock,.ball.key-ready{animation:none}.ball.key-consume,.tube.unlocking .lock.consume,.tube.unlocking .lock-overlay{animation:consume-fade 150ms linear forwards!important}}
+
+/* ===== 새 비행 ===== */
+:root{ --bird-frame-ms:60ms; --dur-bird-lift:120ms; --dur-bird-flight-min:300ms; --dur-bird-flight-max:400ms; --dur-bird-land:260ms; --bird-arc-min:40px; --bird-arc-max:140px; }
+.bird.flapping{animation:bird-flap calc(var(--bird-frame-ms) * 4) steps(1) infinite}
+.bird.landing{animation:bird-land var(--dur-bird-land) linear forwards}
+@keyframes bird-land{0%{transform:translateY(-14px) scale(1)}45%{transform:translateY(0) scale(1.1,.86)}70%{transform:translateY(-5px) scale(.96,1.04)}100%{transform:translateY(0) scale(1)}}
+@keyframes bird-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@media (prefers-reduced-motion: reduce){.bird.flapping{animation:none}.bird.landing{animation:consume-fade 1ms}}
+
+/* ===== 나무 둥지 기둥 ===== */
+:root{ --perch-w:calc(var(--bird-size,40px)*80/56); --perch-unit:calc(var(--bird-size,40px)/56); --dur-perch-bloom:700ms; --leaf:#7CC36B; --vine:#3E7D3A; }
+.perch.complete .leaf{animation:perch-leaf var(--dur-perch-bloom) var(--ease-bounce) both}
+.perch.complete .bloom{animation:perch-bloom var(--dur-perch-bloom) var(--ease-bounce) 200ms both}
+.perch.complete{animation:perch-glow 900ms ease-out}
+@keyframes perch-leaf{0%{transform:scale(0) rotate(-40deg)}70%{transform:scale(1.2)}100%{transform:scale(1)}}
+@keyframes perch-bloom{0%{transform:scale(0)}60%{transform:scale(1.3)}100%{transform:scale(1)}}
+@keyframes perch-glow{0%{filter:none}35%{filter:drop-shadow(0 0 12px #FFD54F) brightness(1.15)}100%{filter:drop-shadow(0 0 3px #FFD54F)}}
+@media (prefers-reduced-motion: reduce){.perch.complete .leaf,.perch.complete .bloom,.perch.complete{animation:none}}
