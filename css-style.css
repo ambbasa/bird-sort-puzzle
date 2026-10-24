@@ -144,3 +144,7 @@ body.theme-low-end.theme-snow{background-image:url("assets-themes-theme-snow.web
 .maptheme{position:absolute;left:8px;top:8px;padding:3px 10px;border-radius:12px;background:#FFFFFFD9;color:#1A1A2E;font-weight:800;font-size:13px;pointer-events:none}
 .map-node--playing{outline:3px dashed #fff;outline-offset:3px;border-radius:50%}
 #setsect{width:100%}#setsect summary{cursor:pointer}
+/* HUD '스테이지' button (opens the saga map; gear opens the same screen) */
+.hud .stagesbtn{width:auto;padding:0 10px;font-size:13px;font-weight:800;margin-left:6px;touch-action:manipulation}
+#settings{touch-action:manipulation}
+.hud-left{display:flex;align-items:center;flex:none}.hud-mid{flex:1;min-width:0}

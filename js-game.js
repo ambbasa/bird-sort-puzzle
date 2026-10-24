@@ -374,8 +374,12 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   }
   var mapRaf = 0;
   function menu() {
-    var m = $('sagamap'), tr = $('sagatrack');
-    $('coins').textContent = '🪙 ' + save.coins; $('menu').classList.add('show'); dailyCard();
+    $('menu').classList.add('show'); // show first: a map/daily problem must never leave the gear doing nothing
+    try { $('coins').textContent = '🪙 ' + save.coins; dailyCard(); } catch (e) { console.error('menu: daily card', e); }
+    try { mapOpen(); } catch (e) { console.error('menu: saga map', e); }
+  }
+  function mapOpen() {
+    var m = $('sagamap'), tr = $('sagatrack'); if (!m || !tr) return;
     for (var key in mapLive) mapLive[key].remove(); mapLive = {}; if (mapIO) mapIO.disconnect();
     mapIO = window.IntersectionObserver ? new IntersectionObserver(function (es) { es.forEach(function (x) { if (x.isIntersecting) { x.target.style.backgroundImage = 'url("' + x.target.dataset.src + '")'; mapIO.unobserve(x.target); } }); }, { root: m, rootMargin: '100% 0px' }) : null;
     mapTotal = Math.ceil(LAST / 100) * BLK; mapK = Math.min(1, (m.clientWidth || M.w) / M.w);
@@ -386,7 +390,11 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   }
   $('undo').onclick = undo; $('restart').onclick = function () { if (!S.locked && !SP.ads.isBusy()) load(S.n); }; $('add').onclick = addTube; // M2: consumables persist via save.attempt
   $('hint').onclick = function () { if (S.locked) return; S.hint = nextMove(); S.sel = -1; render(); };
-  $('settings').onclick = menu; $('closeMenu').onclick = function () { $('menu').classList.remove('show'); };
+  // gear + HUD '스테이지' button: pointer events (touch/pen act on pointerup, the synthetic click after it is swallowed) + click (mouse/keyboard)
+  function onTap(el, fn) { if (!el) return; var skip = 0;
+    el.addEventListener('pointerup', function (e) { if (e.pointerType === 'mouse') return; skip = Date.now(); fn(e); });
+    el.addEventListener('click', function (e) { if (Date.now() - skip < 600) return; fn(e); }); }
+  onTap($('settings'), menu); onTap($('stagesBtn'), menu); $('closeMenu').onclick = function () { $('menu').classList.remove('show'); };
   function syncSym() { $('bigsym').checked = symbolsLarge; $('sound').checked = !(SP.sfx && SP.sfx.isMuted()); }
   $('sound').onchange = function () { if (SP.sfx) { SP.sfx.setMuted(!this.checked); if (this.checked) sfx.play('select'); } }; // DESIGN §5.6 settings: sound on/off (persisted)
   $('bigsym').onchange = function () { symbolsLarge = this.checked; SP.store.set(A11Y_KEY, String(symbolsLarge)); document.documentElement.classList.toggle('symbols-large', symbolsLarge); render(); };
