@@ -1,0 +1,62 @@
+{
+  "rule": "themeIndex = floor((stage-1)/100) % 3",
+  "order": [
+    "forest",
+    "sunset",
+    "snow"
+  ],
+  "stagesPerTheme": 100,
+  "examples": {
+    "1-100": "forest",
+    "101-200": "sunset",
+    "201-300": "snow",
+    "301-400": "forest"
+  },
+  "themes": [
+    {
+      "key": "forest",
+      "name": "숲",
+      "class": "theme-forest",
+      "file": "assets-themes-theme-forest.svg",
+      "dominant": [
+        "#C9D8C5",
+        "#AFC4AE",
+        "#9DB59A",
+        "#8AA587",
+        "#7E9A7C",
+        "#8F9F7C"
+      ],
+      "perchTint": "#7A6248"
+    },
+    {
+      "key": "sunset",
+      "name": "노을 호수",
+      "class": "theme-sunset",
+      "file": "assets-themes-theme-sunset.svg",
+      "dominant": [
+        "#E6CDBE",
+        "#D9B7B0",
+        "#C2A6A8",
+        "#B3A0A6",
+        "#A99A8E",
+        "#B8A48C"
+      ],
+      "perchTint": "#7C5F4A"
+    },
+    {
+      "key": "snow",
+      "name": "눈 내린 밤",
+      "class": "theme-snow",
+      "file": "assets-themes-theme-snow.svg",
+      "dominant": [
+        "#7F89A3",
+        "#959DB3",
+        "#8A93AA",
+        "#9AA2B6",
+        "#A9B0C1",
+        "#B4BAC8"
+      ],
+      "perchTint": "#6E6A78"
+    }
+  ]
+}

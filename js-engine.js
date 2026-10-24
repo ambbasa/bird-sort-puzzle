@@ -1,4 +1,4 @@
-// Rules engine + solver with gimmicks (docs/STAGES.md, format: docs/STAGE_FORMAT.md). Plain script / CommonJS, no deps.
+// Rules engine + solver with gimmicks (docs-STAGES.md, format: docs-STAGE_FORMAT.md). Plain script / CommonJS, no deps.
 // Stage: { tubes:[[bottom..top]], caps?:[n], locks?:[{tube,key}], hidden?:[[tube,index]] }
 //  - colors are ints >= 0; key balls are strings "Ka","Kb","Kc" (shape pair a=circle, b=triangle, c=square; max 3 pairs)
 //  - caps default 4; a tube with cap < 4 is a SMALL storage tube: never "complete", excluded from the win check

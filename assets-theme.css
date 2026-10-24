@@ -55,7 +55,7 @@ body{margin:0;background:linear-gradient(180deg,var(--bg-dark),var(--bg-dark-2))
 .combo{animation:combo-pop var(--dur-combo) var(--ease-bounce) forwards}
 .confetti{position:absolute;width:8px;height:12px;animation:confetti var(--dur-clear) cubic-bezier(.25,.6,.4,1) forwards}
 /* 접근성: 심볼 크게 (설정 토글 → <html class="symbols-large">) */
-:root{ --ball-asset-dir: "assets-"; }
+:root{ --ball-asset-dir: "assets/"; }
 .symbols-large{ --ball-asset-dir: "assets-large-symbol-"; --symbol-scale: 1.45; }
 .shake{animation:invalid-shake 240ms ease-in-out}
 @keyframes lift{from{transform:translateY(0)}to{transform:translateY(var(--lift-h))}}
@@ -120,3 +120,29 @@ body{margin:0;background:linear-gradient(180deg,var(--bg-dark),var(--bg-dark-2))
 @keyframes perch-bloom{0%{transform:scale(0)}60%{transform:scale(1.3)}100%{transform:scale(1)}}
 @keyframes perch-glow{0%{filter:none}35%{filter:drop-shadow(0 0 12px #FFD54F) brightness(1.15)}100%{filter:drop-shadow(0 0 3px #FFD54F)}}
 @media (prefers-reduced-motion: reduce){.perch.complete .leaf,.perch.complete .bloom,.perch.complete{animation:none}}
+
+/* ===== 15장: 측면 비행 프레임 · 테마 배경 (tools/gen_side_themes.py) ===== */
+:root{ --bird-outline:#1A1A2E; --bird-outline-inner:#F5F6FA; --side-fps-ms:250ms; /* 4프레임 × 62.5ms */ }
+/* 정지(기둥 위) 새 + 비행 새 공통 2중 외곽선: 안쪽 밝은 1px + 바깥 어두운 1.5px → 어떤 테마에서도 ΔE≥24 */
+.bird, .bird-side{ filter: drop-shadow(0 0 .6px var(--bird-outline-inner)) drop-shadow(0 0 1.2px var(--bird-outline)) drop-shadow(0 0 .6px var(--bird-outline)); }
+/* 측면 스프라이트: 4프레임을 가로로 이어붙인 시트 또는 <img> 교체(JS) 둘 다 지원 */
+.bird-side{ width:var(--ball-size); height:var(--ball-size); background-size:400% 100%; background-repeat:no-repeat; animation: wingbeat var(--side-fps-ms) steps(4) infinite; will-change:transform; }
+.bird-side--left{ transform: scaleX(-1); }
+.bird-side--left[data-kind="hidden"]{ transform:none; } /* "?" 거울상 방지: hidden은 반전 안 함 */
+@keyframes wingbeat{ from{ background-position:0 0 } to{ background-position:133.333% 0 } }
+/* 개별 SVG를 쓰는 경우: 4개 <img class="f f1..f4">를 겹쳐 놓고 opacity 스텝 */
+.bird-side > .f{ position:absolute; inset:0; width:100%; height:100%; opacity:0; animation: wingbeat-f var(--side-fps-ms) steps(1,end) infinite; }
+.bird-side > .f1{ animation-delay:0ms } .bird-side > .f2{ animation-delay:calc(var(--side-fps-ms) * -.75) }
+.bird-side > .f3{ animation-delay:calc(var(--side-fps-ms) * -.5) } .bird-side > .f4{ animation-delay:calc(var(--side-fps-ms) * -.25) }
+@keyframes wingbeat-f{ 0%{opacity:1} 25%,100%{opacity:0} }
+@media (prefers-reduced-motion: reduce){
+  .bird-side{ animation:none; background-position:33.333% 0; }   /* 2번(mid) 고정 */
+  .bird-side > .f{ animation:none; opacity:0 } .bird-side > .f2{ opacity:1 }
+}
+/* 테마: themeIndex = floor((stage-1)/100) % 3 → forest / sunset / snow */
+.theme-forest{ --theme-bg:url("assets-themes-theme-forest.svg"); --perch-tint:#7A6248; --slot-backing:rgba(245,246,250,.28); --text-on-theme:#1A1A2E; }
+.theme-sunset{ --theme-bg:url("assets-themes-theme-sunset.svg"); --perch-tint:#7C5F4A; --slot-backing:rgba(245,246,250,.26); --text-on-theme:#1A1A2E; }
+.theme-snow  { --theme-bg:url("assets-themes-theme-snow.svg");   --perch-tint:#6E6A78; --slot-backing:rgba(26,26,46,.14);  --text-on-theme:#1A1A2E; }
+.theme-forest, .theme-sunset, .theme-snow{ background: var(--theme-bg) center / cover no-repeat, var(--bg-light); }
+.perch{ filter: sepia(.15) saturate(.9); }
+.slot-backing{ background: radial-gradient(closest-side, var(--slot-backing), transparent); border-radius:50%; }

@@ -1,5 +1,5 @@
 // Platform adapter (LAUNCH.md L1/L4/L5/L6). One API for the game; two backends:
-//  - App-in-Toss release bundle: window.SPToss (SDK bridge, dist/js-toss-bridge.js) is present.
+//  - App-in-Toss release bundle: window.SPToss (SDK bridge, dist/js/toss-bridge.js) is present.
 //  - file:// dev build / plain browser: no SDK -> localStorage + dummy fallbacks, ready synchronously.
 // SDK names follow the official docs (developers-apps-in-toss.toss.im, SDK 3.x domain API).
 var SP = window.SP = window.SP || {};

@@ -1,4 +1,4 @@
-/* Layout per docs/DESIGN.md §3-4; tokens/keyframes come from assets-theme.css */
+/* Layout per docs-DESIGN.md §3-4; tokens/keyframes come from assets-theme.css */
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
 body{min-height:100vh;user-select:none;-webkit-user-select:none;touch-action:manipulation;overflow:hidden}
@@ -100,3 +100,14 @@ body{min-height:100vh;user-select:none;-webkit-user-select:none;touch-action:man
 .ball.bigsym{position:absolute;width:46%;height:46%;left:27%;top:48%;border-radius:50%;box-shadow:0 0 0 1px #0006;pointer-events:none}
 .pairsym.keysym{left:50%;top:66%}
 @media (prefers-reduced-motion: reduce){.ballwrap.lifted .ball.bird,.ball.bird.landing{animation:none}}
+
+/* Feedback v2: stage-theme background (js-game.js applyTheme -> body.theme-*) + theme-unlock toast */
+body[class*="theme-"]{color:var(--text-on-theme)}/* DESIGN 15.3 backgrounds come from .theme-* in assets-theme.css */
+body[class*="theme-"] .hud .sub{color:#1A1A2EB3}
+.flyer .bird-side-img,.flyer .ball.bird{display:block;width:100%;height:100%;animation:none}
+#app{background:transparent}
+.banner{background:#0005}
+#toast{position:fixed;left:50%;top:calc(var(--sa-top,env(safe-area-inset-top)) + 72px);transform:translate(-50%,-20px);z-index:40;background:#000c;color:#fff;font-weight:800;padding:10px 18px;border-radius:999px;box-shadow:0 4px 16px #0006;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;white-space:nowrap}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion: reduce){#toast{transition:none}}
+body[class*="theme-"] .btn:not(.primary){background:#1A1A2EB3;color:#fff}/* contrast on the light theme backgrounds */

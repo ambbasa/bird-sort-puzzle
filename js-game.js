@@ -12,38 +12,55 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   function persist() { SP.store.set(KEY, JSON.stringify(save)); }
   var S, fx = {}, sfx = SP.sfx || { play: function () {} };
   // DESIGN §6 move: ball flies along a parabola (220–340ms), then drop-bounce. Landing sounds/glow wait for touchdown.
-  var pend = null, flight = null; SP._flights = 0;
+  var pend = null, flights = []; SP._flights = 0;
   function snd(name, arg) { if (pend) pend.push([name, arg]); else sfx.play(name, arg); }
-  function cancelFlight() { clearInterval(flapT); if (flight) { var f = flight; flight = null; if (f.anim) f.anim.cancel(); f.clone.remove(); f.land(true); } }
-  // DESIGN 14.2-14.4 bird move: lift 120ms -> quadratic-bezier flight over the perch tops (300-400ms, wings up/mid/down/mid
-  // at 60ms, fold for t>0.85) -> bird-land 260ms on the real bird. Reduced motion never reaches here (instant placement).
-  var BF = C.birds, flapT = null;
+  // Feedback v2 flight: small hop (18%) -> parabolic arc over the perch tops -> decelerating arrival with a slight overshoot bounce.
+  // Total clamp(350, 330 + 0.15*|dx|, 450) ms. Side-view flap frames (mirrored to the travel direction) when C.birds.side.enabled,
+  // else front frames; the real (front-view) bird reappears on touchdown. Several flights may be in the air at once: every render
+  // re-binds each flight to its destination slot (retarget), and a bird picked up mid-air launches from where its flyer is now.
+  var BF = C.birds;
   function birdFrame(c, fr) { return BF.pattern.replace('{color}', C.palette[c].key).replace('{frame}', fr); }
-  function fly(from, to, ball, tube, fresh, sounds, color) {
-    var r = ball.getBoundingClientRect(), B = r.width;
-    var sx = from.left, sy = from.top - 30, ex = r.left, ey = r.top, dx = Math.abs(ex - sx);
+  function sideKey(c) { return C.palette[c] ? C.palette[c].key : E.isKey(c) ? 'key-' + C.gimmickAssets.pair[c].pair : 'hidden'; }
+  function sideFrame(k, i) { return BF.side.pattern.replace('{key}', k).replace('{n}', BF.side.frames[i]); }
+  function finishFlight(f, instant) { var k = flights.indexOf(f); if (k < 0) return; flights.splice(k, 1); clearInterval(f.timer); if (f.anim) f.anim.cancel(); f.clone.remove(); f.land(instant); }
+  function cancelFlights() { flights.slice().forEach(function (f) { finishFlight(f, true); }); }
+  function rebind(b) { // after a re-render: hide the new DOM bird each flyer is heading to; drop flights whose target vanished
+    flights.slice().forEach(function (f) { var t = b.querySelectorAll('.tube')[f.to], w = t && t.querySelectorAll('.ballwrap')[f.slot];
+      if (!w || S.tubes[f.to][f.slot] !== f.color) return finishFlight(f, true); f.ball = w; f.tube = t; w.style.visibility = 'hidden'; });
+  }
+  function fly(from, to, ball, tube, fresh, sounds, color, slot) {
+    var r = ball.getBoundingClientRect(), B = r.width, sx = from.left, sy = from.top, ex = r.left, ey = r.top, dx = ex - sx, adx = Math.abs(dx);
     var perchTop = Math.min.apply(null, [].map.call(document.querySelectorAll('#board .tube'), function (t) { return t.getBoundingClientRect().top; }));
-    var ypk = Math.min(perchTop, sy, ey) - 0.5 * B - Math.max(10, Math.min(40, 0.1 * dx)), cx = (sx + ex) / 2, cy = 2 * ypk - (sy + ey) / 2;
-    var LIFT = BF.liftMs, dur = Math.max(300, Math.min(400, 260 + 0.25 * dx)), tot = LIFT + dur, kf = [], N = 16;
-    kf.push({ offset: 0, transform: 'translate(' + from.left + 'px,' + from.top + 'px) rotate(0deg)', easing: 'cubic-bezier(.2,.8,.2,1)' });
-    for (var k = 0; k <= N; k++) { var t = k / N, u = 1 - t, x = u * u * sx + 2 * u * t * cx + t * t * ex, y = u * u * sy + 2 * u * t * cy + t * t * ey;
-      var vx = 2 * u * (cx - sx) + 2 * t * (ex - cx), vy = 2 * u * (cy - sy) + 2 * t * (ey - cy), a = k === N ? 0 : (vx < 0 ? -1 : 1) * Math.max(-20, Math.min(20, Math.atan2(vy, Math.abs(vx) || 1e-6) * 180 / Math.PI * 0.35));
-      kf.push({ offset: (LIFT + t * dur) / tot, transform: 'translate(' + x + 'px,' + y + 'px) rotate(' + a + 'deg)' }); }
-    var c = document.createElement('img'); c.className = 'ball flyer bird'; c.alt = ''; c.draggable = false; c.style.width = r.width + 'px'; c.style.height = r.height + 'px';
-    var hasFrames = color != null && C.palette[color]; c.src = hasFrames ? birdFrame(color, BF.frames[0]) : ball.firstChild.src;
+    var hy = sy - Math.max(14, B * 0.45), ypk = Math.min(perchTop, hy, ey) - 0.5 * B - Math.max(10, Math.min(40, 0.1 * adx));
+    var cx = (sx + ex) / 2, cy = 2 * ypk - (hy + ey) / 2, tot = Math.round(Math.max(BF.flightMin, Math.min(BF.flightMax, 330 + 0.15 * adx)));
+    var side = !!(BF.side && BF.side.enabled) && color != null, H = 0.18, ARR = 0.86, kf = [], N = 14;
+    var T = function (x, y, a) { return 'translate(' + x + 'px,' + y + 'px) rotate(' + a + 'deg)'; };
+    kf.push({ offset: 0, transform: T(sx, sy, 0), easing: 'cubic-bezier(.2,.8,.3,1)' });
+    for (var k = 0; k <= N; k++) { var t = k / N, e = 1 - Math.pow(1 - t, 2.2), tt = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; tt = 0.55 * tt + 0.45 * e; var u = 1 - tt; // decelerate toward the target
+      var x = u * u * sx + 2 * u * tt * cx + tt * tt * ex, y = u * u * hy + 2 * u * tt * cy + tt * tt * ey;
+      var vx = 2 * u * (cx - sx) + 2 * tt * (ex - cx), vy = 2 * u * (cy - hy) + 2 * tt * (ey - cy), a = k === N ? 0 : (vx < 0 ? -1 : 1) * Math.max(-20, Math.min(20, Math.atan2(vy, Math.abs(vx) || 1e-6) * 180 / Math.PI * 0.35));
+      kf.push({ offset: H + t * (ARR - H), transform: T(x, y, a) }); }
+    kf.push({ offset: 0.93, transform: T(ex, ey + B * 0.08, 0) + ' scale(1.08,.9)', easing: 'ease-out' }); // touchdown squash
+    kf.push({ offset: 1, transform: T(ex, ey, 0) + ' scale(1,1)' });
+    // flyer = wrapper (path + tilt) > img (.bird-side, mirrored with .bird-side--left when flying left; hidden '?' never mirrored)
+    var c = document.createElement('div'); c.className = 'ball flyer'; c.style.width = r.width + 'px'; c.style.height = r.height + 'px';
+    var im = document.createElement('img'); im.alt = ''; im.draggable = false; c.appendChild(im);
+    var sk = side ? sideKey(color) : null, front = C.palette[color] ? birdFrame(color, BF.foldFrame) : ball.firstChild.src;
+    if (side) { im.className = 'bird-side bird-side-img' + (dx < 0 && sk !== 'hidden' ? ' bird-side--left' : ''); im.dataset.kind = sk; im.src = sideFrame(sk, 0); }
+    else { im.className = 'ball bird'; im.src = front; }
     document.body.appendChild(c); ball.style.visibility = 'hidden'; SP._flights++;
-    var t0 = performance.now(), fi = 0; clearInterval(flapT);
-    if (hasFrames) flapT = setInterval(function () { // frame swap: fold once the flight is 85% done
-      var p = (performance.now() - t0 - LIFT) / dur; if (p > 0.85) { c.src = birdFrame(color, BF.foldFrame); clearInterval(flapT); return; }
-      fi = (fi + 1) % BF.frames.length; c.src = birdFrame(color, BF.frames[fi]); if (BF.frames[fi] === 'down') SP._flaps = (SP._flaps || 0) + 1; }, BF.frameMs);
-    var f = flight = { clone: c, land: function (instant) {
-      clearInterval(flapT); ball.style.visibility = ''; if (!instant) { ball.className += ' dropping'; ball.firstChild.classList.add('landing'); }
-      if (fresh) { tube.classList.add('fresh'); if (!instant) sparkle(tube); }
+    var f = { clone: c, to: to, slot: slot, color: color, ball: ball, tube: tube, side: side, land: function (instant) {
+      f.ball.style.visibility = ''; if (!instant) { f.ball.className += ' dropping'; }
+      if (fresh) { f.tube.classList.add('fresh'); if (!instant) sparkle(f.tube); }
       sounds.forEach(function (a) { sfx.play(a[0], a[1]); });
     } };
-    if (c.animate) { f.anim = c.animate(kf, { duration: tot, easing: 'linear', fill: 'forwards' });
-      f.anim.onfinish = function () { if (flight !== f) return; flight = null; c.remove(); f.land(false); }; }
-    else { flight = null; c.remove(); f.land(false); }
+    var t0 = performance.now(), fi = 0, fms = side ? BF.side.frameMs : BF.frameMs;
+    f.timer = setInterval(function () { // side flap 1-2-3-4 at 62.5ms (16fps, 250ms/beat); front view (fold) for the touchdown
+      var p = (performance.now() - t0) / tot; if (p > ARR * 0.95) { im.className = 'ball bird'; im.removeAttribute('data-kind'); im.src = front; clearInterval(f.timer); return; }
+      fi = (fi + 1) % 4; im.src = side ? sideFrame(sk, fi) : (C.palette[color] ? birdFrame(color, BF.frames[fi]) : front); if (fi === 2) SP._flaps = (SP._flaps || 0) + 1; }, fms);
+    flights.push(f);
+    if (c.animate) { f.anim = c.animate(kf, { duration: tot, easing: 'linear', fill: 'forwards' }); f.anim.onfinish = function () { f.anim = null; finishFlight(f, false); }; }
+    else finishFlight(f, false);
   }
   // Gimmick state (js-engine.js rules): S.caps (small tubes), S.lock (per tube key id or null), S.mask (per tube: true = '?' ball)
   function est() { return { t: S.tubes, cap: S.caps, lock: S.lock }; }
@@ -52,6 +69,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   function stageOf() { return { tubes: S.tubes, caps: S.caps, locks: S.lock.map(function (k, i) { return k ? { tube: i, key: k } : null; }).filter(Boolean) }; }
   function revealTops() { var r = []; S.mask.forEach(function (m, i) { if (m.length && m[m.length - 1]) { m[m.length - 1] = false; r.push(i); } }); return r; }
   function load(n) {
+    cancelFlights();
     var sb = false;
     var g = SP.STAGES[n], a = sb ? (S && S.n === n && S.a.sandbox ? S.a : { undoLeft: C.freeUndos, addedTube: false, sandbox: true }) : (save.attempt[n] || (save.attempt[n] = { undoLeft: C.freeUndos, addedTube: false }));
     var tubes = g.tubes.map(function (t) { return t.slice(); });
@@ -60,8 +78,20 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     var mask = tubes.map(function (t) { return t.map(function () { return false; }); }); (g.hidden || []).forEach(function (h) { mask[h[0]][h[1]] = true; });
     if (a.addedTube) { tubes.push([]); caps.push(4); lock.push(null); mask.push([]); } // purchased tube survives restart
     S = { n: n, g: g, a: a, tubes: tubes, caps: caps, lock: lock, mask: mask, hist: [], sel: -1, path: 0, moves: 0, lastDone: -99, combo: 0, chain: 0, banked: 0, won: false, locked: false, hint: null };
+    applyTheme(n, sb);
     if (!sb) { save.current = n; persist(); } fx = {}; render();
   }
+  // Feedback v2 themes: theme = floor((stage-1)/100) mod themes.length (cycles forever for 201+). Background = designer file
+  // (C.art.themeBg[key], detected by tools/sync-art.js) else the config gradient. First arrival in a new 100-block -> toast once.
+  function applyTheme(n, sb) {
+    var blk = Math.floor((n - 1) / 100), th = C.themes[blk % C.themes.length];
+    C.themes.forEach(function (t) { document.body.classList.remove('theme-' + t.key); }); document.body.classList.add('theme-' + th.key);
+    save.themesSeen = save.themesSeen || [0];
+    if (blk > 0 && save.themesSeen.indexOf(blk) < 0 && !sb) { save.themesSeen.push(blk); persist(); toast('새 테마 해금! ' + th.name + ' 🎉'); }
+  }
+  SP._themeFor = function (n) { return C.themes[Math.floor((n - 1) / 100) % C.themes.length].key; }; // QA hook
+  function toast(msg) { var t = $('toast'); if (!t) { t = document.createElement('div'); t.id = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
+    t.textContent = msg; t.classList.remove('show'); void t.offsetWidth; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(function () { t.classList.remove('show'); }, 2600); }
   function starsFor(moves, min, n) { var three = n >= 101 ? C.stars.threeFrom101 : n >= 21 ? C.stars.threeFrom21 : C.stars.three; return moves <= min * three ? 3 : moves <= min * C.stars.two ? 2 : 1; }
   function starsHtml(k) { var h = ''; for (var i = 0; i < 3; i++) h += '<span class="' + (i < k ? '' : 'off') + '" style="animation-delay:' + (i * 150) + 'ms">' + STAR + '</span>'; return h; }
   function rows(n) { // DESIGN §4 grid rule
@@ -73,7 +103,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     $('hudstars').innerHTML = starsHtml(S.moves === 0 ? 3 : starsFor(S.moves, S.g.min, S.n));
     $('moves').textContent = '이동 ' + S.moves + ' · 최소 ' + S.g.min + ' (되돌리기도 1수)';
     var tutorialHint = S.g.tutorial && !S.won ? nextMove() : null, h = S.hint || tutorialHint;
-    var stuck = !S.won && isStuck(); cancelFlight(); var fl = !reduced && fx.fly && fx.fly.from ? fx.fly : null, flyBall = null;
+    var stuck = !S.won && isStuck(); if (reduced || S.won) cancelFlights(); var fl = !reduced && fx.fly && fx.fly.from ? fx.fly : null, flyBall = null;
     var b = $('board'); b.innerHTML = '';
     fitBalls(b);
     var idx = 0;
@@ -111,9 +141,9 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
         r.appendChild(d);
       })(idx);
     });
-    placeLockSyms(b);
+    placeLockSyms(b); rebind(b);
     if (fx.unlock) { consume(fx.keyFrom, fx.unlock.tube, fx.keySrc, fx.unlock.solved); fl = null; fx.fly = null; }
-    if (fl && flyBall) fly(fl.from, fl.to, flyBall, flyBall.parentNode.parentNode, fx.fresh === fl.to, fl.sounds, S.mask[fl.to][S.tubes[fl.to].length - 1] ? null : S.tubes[fl.to][S.tubes[fl.to].length - 1]);
+    if (fl && flyBall) { var ln = S.tubes[fl.to].length - 1; fly(fl.from, fl.to, flyBall, flyBall.parentNode.parentNode, fx.fresh === fl.to, fl.sounds, S.mask[fl.to][ln] ? null : S.tubes[fl.to][ln], ln); }
     else if (fx.fly && fx.fly.sounds) fx.fly.sounds.forEach(function (a) { sfx.play(a[0], a[1]); });
     btns(); $('hint').disabled = S.locked; $('restart').disabled = S.locked;
     fx = {};
@@ -186,6 +216,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     else if (S.sel === i) S.sel = -1;
     else if (E.canMove(est(), S.sel, i)) {
       var from = S.sel, src = document.querySelectorAll('#board .tube')[from], sb = src && src.querySelector('.ballwrap:last-child');
+      var air = flights.filter(function (f) { return f.to === from && f.slot === S.tubes[from].length - 1; })[0], airRect = air ? air.clone.getBoundingClientRect() : null; if (air) finishFlight(air, true); // retarget mid-air
       var h = snap(); h.chain = S.chain; h.banked = S.banked; h.combo = S.combo; h.lastDone = S.lastDone; h.path = S.path; S.hist.push(h); pend = []; // R2 + gimmick state snapshot
       var sol = S.g.solution; S.path = S.path >= 0 && sol && sol[S.path] && sol[S.path][0] === from && sol[S.path][1] === i ? S.path + 1 : -1;
       var ball = S.tubes[from][S.tubes[from].length - 1], unlock = E.isKey(ball) && S.lock[i] === ball;
@@ -193,11 +224,11 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
       S.moves++; S.sel = -1; S.hint = null;
       var rv = revealTops(); if (rv.length) { fx.reveal = rv; snd('select'); } // hidden ball revealed the moment it becomes the top ball
       var solved = E.isSolved(est()), isd = !unlock && done(i);
-      if (unlock) { fx.unlock = { tube: i, key: ball, solved: solved }; fx.keyFrom = sb ? sb.getBoundingClientRect() : null; fx.keySrc = ballSrc(ball).src; S.locked = true; S.consuming = true; } // undo: key move + unlock = 1 move (one hist entry)
+      if (unlock) { fx.unlock = { tube: i, key: ball, solved: solved }; fx.keyFrom = sb ? (airRect || sb.getBoundingClientRect()) : null; fx.keySrc = ballSrc(ball).src; S.locked = true; S.consuming = true; } // undo: key move + unlock = 1 move (one hist entry)
       else { fx.drop = i; if (!isd) snd('drop', S.tubes[i].length - 1); if (S.caps[i] < 4 && S.tubes[i].length >= S.caps[i]) fx.full = i; }
       if (!isd && S.chain > 0) { S.banked += S.chain; S.chain = 0; } // chain broken by a normal move -> banked (paid on clear)
       if (isd) onTubeDone(i, solved);
-      fx.fly = { from: !unlock && sb ? sb.getBoundingClientRect() : null, to: i, sounds: pend }; pend = null;
+      fx.fly = { from: !unlock && sb ? (airRect || sb.getBoundingClientRect()) : null, to: i, sounds: pend }; pend = null;
       if (unlock) { fx.fly.sounds.forEach(function (a) { sfx.play(a[0], a[1]); }); fx.fly = null; render(); return; }
       if (solved) { S.locked = true; S.sel = -1; render(); return setTimeout(win, reduced ? 50 : 700); } // H1: lock all input during clear sequence
     } else if (pickable(i)) { S.sel = i; sfx.play('select'); }
@@ -258,7 +289,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     if (!S.hist.length || S.locked || SP.ads.isBusy()) return;
     var go = function () {
       if (S.locked || !S.hist.length) return;
-      var h = S.hist.pop(); S.tubes = h.tubes; S.caps = h.caps; S.lock = h.lock; S.mask = h.mask; S.path = h.path; // undo restores '?' state and key/lock
+      cancelFlights(); var h = S.hist.pop(); S.tubes = h.tubes; S.caps = h.caps; S.lock = h.lock; S.mask = h.mask; S.path = h.path; // undo restores '?' state and key/lock
       while (S.tubes.length < S.g.tubes.length + (S.a.addedTube ? 1 : 0)) { S.tubes.push([]); S.caps.push(4); S.lock.push(null); S.mask.push([]); } // M1: added tube is not undoable
       S.moves++; S.sel = -1; S.combo = 0; S.lastDone = -99; S.chain = h.chain; S.banked = h.banked; S.hint = null; sfx.play('undo'); render(); // R2: revoke chain/banked coins accrued by the undone move // undo counts as a move for stars
     };
