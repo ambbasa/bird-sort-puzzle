@@ -169,14 +169,14 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
         if (small) { var cb = document.createElement('img'); cb.className = 'capbadge'; cb.src = GA.smallTube.badge; cb.alt = '용량 3'; d.appendChild(cb); } // DESIGN 13.4: no complete glow/check on small tubes
         var lockKey = lk || (fx.unlock && fx.unlock.tube === i ? fx.unlock.key : null);
         if (lockKey) { var pr = GA.pair[lockKey], ov = document.createElement('img'); ov.className = 'lock-overlay'; ov.src = small ? BF.perch.perchSmallLocked : BF.perch.perchLocked; ov.alt = ''; d.appendChild(ov);
-          var lo = document.createElement('img'); lo.className = 'lock'; lo.src = lk ? pr.lock : pr.lock; lo.alt = '자물쇠 ' + pr.symbol; d.appendChild(lo);
+          var lo = document.createElement('img'); lo.className = 'lock'; lo.src = lk ? pr.lock : pr.lock; lo.alt = '자물쇠 ' + symKo(pr.symbol); d.appendChild(lo);
         }
         var st = document.createElement('div'); st.className = 'stack';
         t.forEach(function (c, j) {
           var w = document.createElement('span'); w.className = 'ballwrap ball';
           var im = document.createElement('img'); im.className = 'ball'; im.draggable = false; w.appendChild(im);
           var real = ballSrc(c), revealing = fx.reveal && fx.reveal.indexOf(i) >= 0 && j === t.length - 1;
-          if (S.mask[i][j] || revealing) { im.src = BF.hidden; im.alt = '숨은 공'; }
+          if (S.mask[i][j] || revealing) { im.src = BF.hidden; im.alt = '숨은 새'; }
           else { im.src = real.src; im.alt = real.alt; }
           im.className += ' bird'; if (!E.isKey(c) && !S.mask[i][j] && !revealing) { if (isd && C.palette[c]) im.src = BF.expr(c, 'happy'); else if (stuck && C.palette[c]) im.src = BF.expr(c, 'sad'); }
           if (symbolsLarge && !S.mask[i][j] && C.palette[c]) { var bs = document.createElement('img'); bs.className = 'ball bigsym'; bs.alt = ''; bs.src = C.palette[c].fileLargeSymbol; w.appendChild(bs); } // a11y: big symbol chip on the belly (bird art has no large-symbol set)
@@ -193,7 +193,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
         d.addEventListener('pointerdown', function (e) { e.preventDefault(); tap(i); });
         // QA F6: screen reader label + keyboard (Tab focus, Enter/Space = select / move)
         d.tabIndex = 0; d.setAttribute('role', 'button');
-        d.setAttribute('aria-label', '횃대 ' + (i + 1) + ', 새 ' + t.length + '마리' + (isd ? ', 완성' : '') + (lk ? ', 잠김' : '') + (i === S.sel ? ', 선택됨' : ''));
+        d.setAttribute('aria-label', '횃대 ' + (i + 1) + ', 새 ' + t.length + '마리' + (t.length ? ' (' + t.map(function (c, j) { return S.mask[i][j] ? '숨은 새' : ballSrc(c).alt.split(', ')[0]; }).join(', ') + ')' : '') + (isd ? ', 완성' : '') + (lk ? ', 잠김' : '') + (i === S.sel ? ', 선택됨' : ''));
         d.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); tap(i); } });
         r.appendChild(d);
       })(idx);
@@ -223,6 +223,12 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     $('undo').disabled = !S.hist.length || S.locked || (S.a.undoLeft <= 0 && !rw); $('add').disabled = S.a.addedTube || S.locked || !rw;
     $('add').title = rw ? '' : '광고를 불러오는 중이에요';
   }
+  // a11y: Korean bird names (DESIGN 14.14.1 캐릭터 표) + colour; symbols in Korean (no English 'red circle')
+  var BIRD_KO = { red: ['루비', '빨간'], orange: ['망고', '주황'], yellow: ['레모', '노란'], green: ['새싹', '초록'], cyan: ['파도', '하늘색'], blue: ['탑', '파란'], purple: ['보라', '보라색'], white: ['구름', '하얀'], pink: ['복숭', '분홍'], brown: ['도토리', '갈색'], lime: ['라임', '연두'], indigo: ['별밤', '남색'] };
+  var SYM_KO = { circle: '동그라미', triangle: '세모', square: '네모', star: '별', diamond: '마름모', heart: '하트', plus: '더하기', x: '엑스', hexagon: '육각형', moon: '달', drop: '물방울', ring: '고리', pentagon: '오각형', bolt: '번개', crescent: '초승달', clover: '클로버', flower: '꽃', note: '음표' };
+  function birdName(k) { var b = BIRD_KO[k]; return b ? b[0] + '(' + b[1] + ' 새)' : '새'; }
+  function symKo(s) { return SYM_KO[s] || '표식'; }
+  SP._birdName = birdName; SP._symKo = symKo;
   // QA M1: size balls so the tube grid fits the board's real height/width (safe areas, HUD, buttons, banner excluded) for any tube count
   function fitBalls(b) {
     var rs = rows(S.tubes.length), n = rs.length, c = Math.max.apply(null, rs), cs = getComputedStyle(b);
@@ -237,8 +243,8 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   }
   window.addEventListener('resize', function () { if (S) render(); });
   function ballSrc(c) {
-    if (E.isKey(c)) { var pr = GA.pair[c]; return { src: BF.key.replace('{pair}', pr.pair), alt: '열쇠 ' + pr.symbol }; }
-    var P = C.palette[c]; return { src: BF.expr(c, 'idle'), alt: P.key + ' ' + P.symbol };
+    if (E.isKey(c)) { var pr = GA.pair[c]; return { src: BF.key.replace('{pair}', pr.pair), alt: '열쇠 ' + symKo(pr.symbol) }; }
+    var P = C.palette[c]; return { src: BF.expr(c, 'idle'), alt: birdName(P.key) + ', ' + symKo(P.symbol) + ' 표식' };
   }
   // DESIGN 13.3 key consume (~1020ms, input locked): 0 lift 140ms -> 140 fly to the lock 360ms -> 500 .key-consume/.lock.consume/.unlocking
   // (520ms; '찰칵' at ~790) -> 1020 remove key+lock+overlay, release input. Reduced motion: no flight, consume-fade 150ms together.
@@ -433,10 +439,11 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   // gear + HUD '스테이지' button: pointer events (touch/pen act on pointerup, the synthetic click after it is swallowed) + click (mouse/keyboard)
   function onTap(el, fn) { if (!el) return; var skip = 0;
     el.addEventListener('pointerup', function (e) { if (e.pointerType === 'mouse') return; skip = Date.now(); fn(e); });
+    el.addEventListener('touchend', function (e) { if (e.cancelable) e.preventDefault(); }); // no synthetic ghost click on whatever the toggle just revealed/hid (map 닫기 bug)
     el.addEventListener('click', function (e) { if (Date.now() - skip < 600) return; fn(e); }); }
   // QA F4: gear = settings panel only; '스테이지' = map + daily
   function settingsOpen() { syncSym(); $('setov').classList.add('show'); }
-  onTap($('settings'), settingsOpen); onTap($('stagesBtn'), menu); $('closeMenu').onclick = function () { $('menu').classList.remove('show'); };
+  onTap($('settings'), settingsOpen); onTap($('stagesBtn'), menu); onTap($('closeMenu'), function () { $('menu').classList.remove('show'); clearInterval(cdT); });
   $('closeSet').onclick = function () { $('setov').classList.remove('show'); };
   // QA F3: ending popup after the last stage
   function endClose() { $('endov').classList.remove('show'); $('overlay').classList.remove('show'); SP.ads.cancelDue(); }

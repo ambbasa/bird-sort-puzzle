@@ -167,3 +167,7 @@ body.theme-low-end.theme-snow{background-image:url("assets-themes-theme-snow.web
 /* F1 follow-up: the move counter must never wrap (1 -> 2 digit moves re-flowed the HUD and shifted the whole board ~14px) */
 .hud #moves{white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 @media (max-width:420px){.hud #moves .mv-note{display:none}}
+/* map close fix: card never scrolls (no nested scroll / off-screen 닫기); map takes remaining height, 닫기 always fully visible */
+#menu .card{display:flex;flex-direction:column;overflow:hidden}
+#menu #mapwrap{flex:1 1 200px;min-height:200px}
+#menu #closeMenu,#menu #dailycard,#menu .title,#menu #coins{flex:none}

@@ -70,7 +70,7 @@
   function banner() {
     var b = document.getElementById('banner'); if (!b) return;
     var hide = function () { b.classList.add('off'); b.textContent = ''; }; // QA F2: no empty / placeholder ad area
-    if (mode === 'dummy') { b.classList.remove('off'); b.textContent = '광고 배너 320×50 (placeholder)'; return; }
+    if (mode === 'dummy') { b.classList.remove('off'); b.textContent = '광고 배너 320×50 (개발용 자리)'; return; }
     if (mode === 'none') return hide();
     var id = IDS.banner, TA = T && T.TossAds;
     try { if (!TA || placeholder(id) || !TA.initialize.isSupported() || !TA.attachBanner.isSupported()) return hide(); } catch (e) { return hide(); }
