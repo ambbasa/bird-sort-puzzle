@@ -1,0 +1,403 @@
+{
+  "frames": [
+    "up",
+    "mid",
+    "down",
+    "mid"
+  ],
+  "foldFrame": "fold",
+  "frameMs": 60,
+  "pattern": "assets-birds-bird-{color}-{frame}.svg",
+  "timing": {
+    "lift": {
+      "ms": 120,
+      "easing": "cubic-bezier(.2,.8,.2,1)"
+    },
+    "flight": {
+      "msMin": 300,
+      "msMax": 400,
+      "formula": "clamp(300, 260 + 0.25*|dx|, 400)",
+      "easing": "cubic-bezier(.45,0,.25,1)"
+    },
+    "land": {
+      "ms": 260,
+      "easing": "keyframes bird-land"
+    }
+  },
+  "path": {
+    "type": "quadratic-bezier",
+    "P0": "출발 기둥 맨 위 새 위치 - lift 30px",
+    "P2": "도착 기둥 다음 빈 칸(가지) 착지 위치",
+    "Ypeak": "perchTopY - 0.5*B - clamp(10, 0.1*|dx|, 40)",
+    "P1": "((x0+x2)/2, 2*Ypeak - (y0+y2)/2)",
+    "note": "t=0.5에서 y=Ypeak → 항상 기둥 꼭대기 위로 넘어감",
+    "tilt": "atan2(dy/dt, dx/dt) * 0.35 (max ±20deg)"
+  },
+  "colors": [
+    {
+      "key": "red",
+      "hex": "#E53935",
+      "bellySymbol": "circle",
+      "crest": "curl",
+      "pattern": "dots",
+      "expressions": {
+        "idle": "assets-birds-bird-red-idle.svg",
+        "happy": "assets-birds-bird-red-happy.svg",
+        "sad": "assets-birds-bird-red-sad.svg"
+      },
+      "frames": {
+        "up": "assets-birds-bird-red-up.svg",
+        "mid": "assets-birds-bird-red-mid.svg",
+        "down": "assets-birds-bird-red-down.svg",
+        "fold": "assets-birds-bird-red-fold.svg"
+      }
+    },
+    {
+      "key": "orange",
+      "hex": "#FB8C00",
+      "bellySymbol": "star",
+      "crest": "bun",
+      "pattern": "hstripe",
+      "expressions": {
+        "idle": "assets-birds-bird-orange-idle.svg",
+        "happy": "assets-birds-bird-orange-happy.svg",
+        "sad": "assets-birds-bird-orange-sad.svg"
+      },
+      "frames": {
+        "up": "assets-birds-bird-orange-up.svg",
+        "mid": "assets-birds-bird-orange-mid.svg",
+        "down": "assets-birds-bird-orange-down.svg",
+        "fold": "assets-birds-bird-orange-fold.svg"
+      }
+    },
+    {
+      "key": "yellow",
+      "hex": "#FDD835",
+      "bellySymbol": "triangle",
+      "crest": "crown",
+      "pattern": "chevron",
+      "expressions": {
+        "idle": "assets-birds-bird-yellow-idle.svg",
+        "happy": "assets-birds-bird-yellow-happy.svg",
+        "sad": "assets-birds-bird-yellow-sad.svg"
+      },
+      "frames": {
+        "up": "assets-birds-bird-yellow-up.svg",
+        "mid": "assets-birds-bird-yellow-mid.svg",
+        "down": "assets-birds-bird-yellow-down.svg",
+        "fold": "assets-birds-bird-yellow-fold.svg"
+      }
+    },
+    {
+      "key": "green",
+      "hex": "#8CF09E",
+      "bellySymbol": "square",
+      "crest": "leaf",
+      "pattern": "scale",
+      "expressions": {
+        "idle": "assets-birds-bird-green-idle.svg",
+        "happy": "assets-birds-bird-green-happy.svg",
+        "sad": "assets-birds-bird-green-sad.svg"
+      },
+      "frames": {
+        "up": "assets-birds-bird-green-up.svg",
+        "mid": "assets-birds-bird-green-mid.svg",
+        "down": "assets-birds-bird-green-down.svg",
+        "fold": "assets-birds-bird-green-fold.svg"
+      }
+    },
+    {
+      "key": "cyan",
+      "hex": "#00ACC1",
+      "bellySymbol": "diamond",
+      "crest": "plume",
+      "pattern": "wave",
+      "expressions": {
+        "idle": "assets-birds-bird-cyan-idle.svg",
+        "happy": "assets-birds-bird-cyan-happy.svg",
+        "sad": "assets-birds-bird-cyan-sad.svg"
+      },
+      "frames": {
+        "up": "assets-birds-bird-cyan-up.svg",
+        "mid": "assets-birds-bird-cyan-mid.svg",
+        "down": "assets-birds-bird-cyan-down.svg",
+        "fold": "assets-birds-bird-cyan-fold.svg"
+      }
+    },
+    {
+      "key": "blue",
+      "hex": "#1E63E5",
+      "bellySymbol": "plus",
+      "crest": "mohawk",
+      "pattern": "diag",
+      "expressions": {
+        "idle": "assets-birds-bird-blue-idle.svg",
+        "happy": "assets-birds-bird-blue-happy.svg",
+        "sad": "assets-birds-bird-blue-sad.svg"
+      },
+      "frames": {
+        "up": "assets-birds-bird-blue-up.svg",
+        "mid": "assets-birds-bird-blue-mid.svg",
+        "down": "assets-birds-bird-blue-down.svg",
+        "fold": "assets-birds-bird-blue-fold.svg"
+      }
+    },
+    {
+      "key": "purple",
+      "hex": "#8E24AA",
+      "bellySymbol": "heart",
+      "crest": "spiral",
+      "pattern": "checker",
+      "expressions": {
+        "idle": "assets-birds-bird-purple-idle.svg",
+        "happy": "assets-birds-bird-purple-happy.svg",
+        "sad": "assets-birds-bird-purple-sad.svg"
+      },
+      "frames": {
+        "up": "assets-birds-bird-purple-up.svg",
+        "mid": "assets-birds-bird-purple-mid.svg",
+        "down": "assets-birds-bird-purple-down.svg",
+        "fold": "assets-birds-bird-purple-fold.svg"
+      }
+    },
+    {
+      "key": "white",
+      "hex": "#ECEFF1",
+      "bellySymbol": "ring",
+      "crest": "beret",
+      "pattern": "cross",
+      "expressions": {
+        "idle": "assets-birds-bird-white-idle.svg",
+        "happy": "assets-birds-bird-white-happy.svg",
+        "sad": "assets-birds-bird-white-sad.svg"
+      },
+      "frames": {
+        "up": "assets-birds-bird-white-up.svg",
+        "mid": "assets-birds-bird-white-mid.svg",
+        "down": "assets-birds-bird-white-down.svg",
+        "fold": "assets-birds-bird-white-fold.svg"
+      }
+    },
+    {
+      "key": "pink",
+      "hex": "#AE507E",
+      "bellySymbol": "moon",
+      "crest": "heart",
+      "pattern": "hearts",
+      "expressions": {
+        "idle": "assets-birds-bird-pink-idle.svg",
+        "happy": "assets-birds-bird-pink-happy.svg",
+        "sad": "assets-birds-bird-pink-sad.svg"
+      },
+      "frames": {
+        "up": "assets-birds-bird-pink-up.svg",
+        "mid": "assets-birds-bird-pink-mid.svg",
+        "down": "assets-birds-bird-pink-down.svg",
+        "fold": "assets-birds-bird-pink-fold.svg"
+      }
+    },
+    {
+      "key": "brown",
+      "hex": "#6C2D18",
+      "bellySymbol": "hexagon",
+      "crest": "spike",
+      "pattern": "vstripe",
+      "expressions": {
+        "idle": "assets-birds-bird-brown-idle.svg",
+        "happy": "assets-birds-bird-brown-happy.svg",
+        "sad": "assets-birds-bird-brown-sad.svg"
+      },
+      "frames": {
+        "up": "assets-birds-bird-brown-up.svg",
+        "mid": "assets-birds-bird-brown-mid.svg",
+        "down": "assets-birds-bird-brown-down.svg",
+        "fold": "assets-birds-bird-brown-fold.svg"
+      }
+    },
+    {
+      "key": "lime",
+      "hex": "#A6DC61",
+      "bellySymbol": "x",
+      "crest": "antenna",
+      "pattern": "zigzag",
+      "expressions": {
+        "idle": "assets-birds-bird-lime-idle.svg",
+        "happy": "assets-birds-bird-lime-happy.svg",
+        "sad": "assets-birds-bird-lime-sad.svg"
+      },
+      "frames": {
+        "up": "assets-birds-bird-lime-up.svg",
+        "mid": "assets-birds-bird-lime-mid.svg",
+        "down": "assets-birds-bird-lime-down.svg",
+        "fold": "assets-birds-bird-lime-fold.svg"
+      }
+    },
+    {
+      "key": "indigo",
+      "hex": "#1D1DBD",
+      "bellySymbol": "drop",
+      "crest": "star",
+      "pattern": "sparkle",
+      "expressions": {
+        "idle": "assets-birds-bird-indigo-idle.svg",
+        "happy": "assets-birds-bird-indigo-happy.svg",
+        "sad": "assets-birds-bird-indigo-sad.svg"
+      },
+      "frames": {
+        "up": "assets-birds-bird-indigo-up.svg",
+        "mid": "assets-birds-bird-indigo-mid.svg",
+        "down": "assets-birds-bird-indigo-down.svg",
+        "fold": "assets-birds-bird-indigo-fold.svg"
+      }
+    }
+  ],
+  "hidden": {
+    "file": "assets-birds-bird-hidden.svg",
+    "tone": "#5B6070",
+    "reveal": "hidden-reveal (13.1)"
+  },
+  "keys": [
+    {
+      "pair": "a",
+      "symbol": "circle",
+      "file": "assets-birds-bird-key-a.svg",
+      "lock": "assets-gimmicks-lock-a.svg"
+    },
+    {
+      "pair": "b",
+      "symbol": "triangle",
+      "file": "assets-birds-bird-key-b.svg",
+      "lock": "assets-gimmicks-lock-b.svg"
+    },
+    {
+      "pair": "c",
+      "symbol": "square",
+      "file": "assets-birds-bird-key-c.svg",
+      "lock": "assets-gimmicks-lock-c.svg"
+    }
+  ],
+  "expressionRules": {
+    "idle": "기본",
+    "happy": "기둥 완성 시 그 기둥의 새 4마리 600ms",
+    "sad": "막힘(이동 가능 수 0) 감지 시 전체 새, 다음 입력까지"
+  },
+  "side": {
+    "pattern": "assets-birds-side-bird-{key}-side-{n}.svg",
+    "frames": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "frameNames": [
+      "up",
+      "mid",
+      "down",
+      "mid2"
+    ],
+    "fps": 16,
+    "frameMs": 62.5,
+    "facing": "right",
+    "flip": "dx<0 이면 .bird-side--left (transform: scaleX(-1)); 심볼/'?' 글자도 함께 뒤집힘은 허용(좌우대칭 심볼 위주). 숫자·문자 가독이 필요하면 side 이미지를 감싼 래퍼만 뒤집지 말 것—hidden '?'는 뒤집혀도 식별 가능 확인.",
+    "usage": "비행 중에만 사용. 기둥 위(정지) 상태는 기존 정면 bird-{color}-{expr}.svg 유지",
+    "reducedMotion": "frame 2(mid) 고정",
+    "files": {
+      "red": [
+        "assets-birds-side-bird-red-side-1.svg",
+        "assets-birds-side-bird-red-side-2.svg",
+        "assets-birds-side-bird-red-side-3.svg",
+        "assets-birds-side-bird-red-side-4.svg"
+      ],
+      "orange": [
+        "assets-birds-side-bird-orange-side-1.svg",
+        "assets-birds-side-bird-orange-side-2.svg",
+        "assets-birds-side-bird-orange-side-3.svg",
+        "assets-birds-side-bird-orange-side-4.svg"
+      ],
+      "yellow": [
+        "assets-birds-side-bird-yellow-side-1.svg",
+        "assets-birds-side-bird-yellow-side-2.svg",
+        "assets-birds-side-bird-yellow-side-3.svg",
+        "assets-birds-side-bird-yellow-side-4.svg"
+      ],
+      "green": [
+        "assets-birds-side-bird-green-side-1.svg",
+        "assets-birds-side-bird-green-side-2.svg",
+        "assets-birds-side-bird-green-side-3.svg",
+        "assets-birds-side-bird-green-side-4.svg"
+      ],
+      "cyan": [
+        "assets-birds-side-bird-cyan-side-1.svg",
+        "assets-birds-side-bird-cyan-side-2.svg",
+        "assets-birds-side-bird-cyan-side-3.svg",
+        "assets-birds-side-bird-cyan-side-4.svg"
+      ],
+      "blue": [
+        "assets-birds-side-bird-blue-side-1.svg",
+        "assets-birds-side-bird-blue-side-2.svg",
+        "assets-birds-side-bird-blue-side-3.svg",
+        "assets-birds-side-bird-blue-side-4.svg"
+      ],
+      "purple": [
+        "assets-birds-side-bird-purple-side-1.svg",
+        "assets-birds-side-bird-purple-side-2.svg",
+        "assets-birds-side-bird-purple-side-3.svg",
+        "assets-birds-side-bird-purple-side-4.svg"
+      ],
+      "white": [
+        "assets-birds-side-bird-white-side-1.svg",
+        "assets-birds-side-bird-white-side-2.svg",
+        "assets-birds-side-bird-white-side-3.svg",
+        "assets-birds-side-bird-white-side-4.svg"
+      ],
+      "pink": [
+        "assets-birds-side-bird-pink-side-1.svg",
+        "assets-birds-side-bird-pink-side-2.svg",
+        "assets-birds-side-bird-pink-side-3.svg",
+        "assets-birds-side-bird-pink-side-4.svg"
+      ],
+      "brown": [
+        "assets-birds-side-bird-brown-side-1.svg",
+        "assets-birds-side-bird-brown-side-2.svg",
+        "assets-birds-side-bird-brown-side-3.svg",
+        "assets-birds-side-bird-brown-side-4.svg"
+      ],
+      "lime": [
+        "assets-birds-side-bird-lime-side-1.svg",
+        "assets-birds-side-bird-lime-side-2.svg",
+        "assets-birds-side-bird-lime-side-3.svg",
+        "assets-birds-side-bird-lime-side-4.svg"
+      ],
+      "indigo": [
+        "assets-birds-side-bird-indigo-side-1.svg",
+        "assets-birds-side-bird-indigo-side-2.svg",
+        "assets-birds-side-bird-indigo-side-3.svg",
+        "assets-birds-side-bird-indigo-side-4.svg"
+      ],
+      "hidden": [
+        "assets-birds-side-bird-hidden-side-1.svg",
+        "assets-birds-side-bird-hidden-side-2.svg",
+        "assets-birds-side-bird-hidden-side-3.svg",
+        "assets-birds-side-bird-hidden-side-4.svg"
+      ],
+      "key-a": [
+        "assets-birds-side-bird-key-a-side-1.svg",
+        "assets-birds-side-bird-key-a-side-2.svg",
+        "assets-birds-side-bird-key-a-side-3.svg",
+        "assets-birds-side-bird-key-a-side-4.svg"
+      ],
+      "key-b": [
+        "assets-birds-side-bird-key-b-side-1.svg",
+        "assets-birds-side-bird-key-b-side-2.svg",
+        "assets-birds-side-bird-key-b-side-3.svg",
+        "assets-birds-side-bird-key-b-side-4.svg"
+      ],
+      "key-c": [
+        "assets-birds-side-bird-key-c-side-1.svg",
+        "assets-birds-side-bird-key-c-side-2.svg",
+        "assets-birds-side-bird-key-c-side-3.svg",
+        "assets-birds-side-bird-key-c-side-4.svg"
+      ]
+    }
+  }
+}
