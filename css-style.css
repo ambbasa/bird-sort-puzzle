@@ -111,3 +111,19 @@ body[class*="theme-"] .hud .sub{color:#1A1A2EB3}
 #toast.show{opacity:1;transform:translate(-50%,0)}
 @media (prefers-reduced-motion: reduce){#toast{transition:none}}
 body[class*="theme-"] .btn:not(.primary){background:#1A1A2EB3;color:#fff}/* contrast on the light theme backgrounds */
+/* Daily challenge (DESIGN §5.5): card at the top of the stage menu, red dot on the gear while today's puzzle is unplayed */
+#settings{position:relative}#settings.dot::after{content:"";position:absolute;top:6px;right:6px;width:10px;height:10px;border-radius:50%;background:#FF5252;box-shadow:0 0 0 2px var(--bg-dark,#1A1A2E)}
+#dailycard{width:100%;background:var(--surface);border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:10px}
+#dailycard .drow{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#dailycard .dtitle{font-weight:800;font-size:16px}#dailycard .dtitle small{font-size:12px;color:var(--text-muted);font-weight:600;margin-left:4px}
+#dailycard .dstreak{font-weight:800;color:#FF9E40;font-size:14px;white-space:nowrap}
+#dailycard .dtrack{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+#dailycard .dday{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;border-radius:10px;background:#0003;font-size:11px;line-height:1.2;border:2px solid transparent}
+#dailycard .dday b{font-size:10px;color:var(--text-muted);font-weight:700}
+#dailycard .dday.got{background:#FFD54F38;background:color-mix(in srgb,var(--accent) 22%,transparent);color:var(--accent)}
+#dailycard .dday.today{border-color:var(--accent)}
+#dailycard .wide{height:48px;font-size:14px}
+body[class*="theme-"] .ov .card{color:var(--text)}/* overlay cards keep their own (dark/light) background -> card text follows --text, not the theme's dark --text-on-theme */
+/* v3 flight: rAF-driven transform only (no transitions/animations on the flyer) */
+.ball.flyer{transition:none;will-change:transform;transform-origin:50% 85%}
+.feather{position:fixed;left:0;top:0;width:7px;height:3px;border-radius:50% 50% 50% 0;z-index:29;pointer-events:none;will-change:transform,opacity;box-shadow:0 0 0 .5px #1A1A2E66}

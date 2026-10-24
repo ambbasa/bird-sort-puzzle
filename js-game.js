@@ -10,6 +10,11 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   document.documentElement.classList.toggle('symbols-large', symbolsLarge);
   if (save.theme) document.documentElement.dataset.theme = save.theme;
   function persist() { SP.store.set(KEY, JSON.stringify(save)); }
+  // Daily challenge (js-daily.js): S.n === DAILY, S.daily = date key of the puzzle. Progress in save.daily, consumables in save.attempt.daily.
+  var DAILY = 'daily', DD = SP.daily || null; save.daily = save.daily || { last: '', streak: 0, best: 0, stars: {} };
+  function today() { return DD ? DD.dateKey() : ''; }
+  function dailyLabel(k) { var p = k.split('-'); return +p[1] + '월 ' + +p[2] + '일'; }
+  function sn() { return S.g.source || S.n; } // star thresholds / bands follow the daily puzzle's source stage
   var S, fx = {}, sfx = SP.sfx || { play: function () {} };
   // DESIGN §6 move: ball flies along a parabola (220–340ms), then drop-bounce. Landing sounds/glow wait for touchdown.
   var pend = null, flights = []; SP._flights = 0;
@@ -22,46 +27,58 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   function birdFrame(c, fr) { return BF.pattern.replace('{color}', C.palette[c].key).replace('{frame}', fr); }
   function sideKey(c) { return C.palette[c] ? C.palette[c].key : E.isKey(c) ? 'key-' + C.gimmickAssets.pair[c].pair : 'hidden'; }
   function sideFrame(k, i) { return BF.side.pattern.replace('{key}', k).replace('{n}', BF.side.frames[i]); }
-  function finishFlight(f, instant) { var k = flights.indexOf(f); if (k < 0) return; flights.splice(k, 1); clearInterval(f.timer); if (f.anim) f.anim.cancel(); f.clone.remove(); f.land(instant); }
+  function finishFlight(f, instant) { var k = flights.indexOf(f); if (k < 0) return; flights.splice(k, 1); f.clone.remove(); (f.feathers || []).forEach(function (q) { q.el.remove(); }); f.land(instant); }
   function cancelFlights() { flights.slice().forEach(function (f) { finishFlight(f, true); }); }
   function rebind(b) { // after a re-render: hide the new DOM bird each flyer is heading to; drop flights whose target vanished
     flights.slice().forEach(function (f) { var t = b.querySelectorAll('.tube')[f.to], w = t && t.querySelectorAll('.ballwrap')[f.slot];
       if (!w || S.tubes[f.to][f.slot] !== f.color) return finishFlight(f, true); f.ball = w; f.tube = t; w.style.visibility = 'hidden'; });
   }
-  function fly(from, to, ball, tube, fresh, sounds, color, slot) {
-    var r = ball.getBoundingClientRect(), B = r.width, sx = from.left, sy = from.top, ex = r.left, ey = r.top, dx = ex - sx, adx = Math.abs(dx);
-    var perchTop = Math.min.apply(null, [].map.call(document.querySelectorAll('#board .tube'), function (t) { return t.getBoundingClientRect().top; }));
-    var hy = sy - Math.max(14, B * 0.45), ypk = Math.min(perchTop, hy, ey) - 0.5 * B - Math.max(10, Math.min(40, 0.1 * adx));
-    var cx = (sx + ex) / 2, cy = 2 * ypk - (hy + ey) / 2, tot = Math.round(Math.max(BF.flightMin, Math.min(BF.flightMax, 330 + 0.15 * adx)));
-    var side = !!(BF.side && BF.side.enabled) && color != null, H = 0.18, ARR = 0.86, kf = [], N = 14;
-    var T = function (x, y, a) { return 'translate(' + x + 'px,' + y + 'px) rotate(' + a + 'deg)'; };
-    kf.push({ offset: 0, transform: T(sx, sy, 0), easing: 'cubic-bezier(.2,.8,.3,1)' });
-    for (var k = 0; k <= N; k++) { var t = k / N, e = 1 - Math.pow(1 - t, 2.2), tt = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; tt = 0.55 * tt + 0.45 * e; var u = 1 - tt; // decelerate toward the target
-      var x = u * u * sx + 2 * u * tt * cx + tt * tt * ex, y = u * u * hy + 2 * u * tt * cy + tt * tt * ey;
-      var vx = 2 * u * (cx - sx) + 2 * tt * (ex - cx), vy = 2 * u * (cy - hy) + 2 * tt * (ey - cy), a = k === N ? 0 : (vx < 0 ? -1 : 1) * Math.max(-20, Math.min(20, Math.atan2(vy, Math.abs(vx) || 1e-6) * 180 / Math.PI * 0.35));
-      kf.push({ offset: H + t * (ARR - H), transform: T(x, y, a) }); }
-    kf.push({ offset: 0.93, transform: T(ex, ey + B * 0.08, 0) + ' scale(1.08,.9)', easing: 'ease-out' }); // touchdown squash
-    kf.push({ offset: 1, transform: T(ex, ey, 0) + ' scale(1,1)' });
-    // flyer = wrapper (path + tilt) > img (.bird-side, mirrored with .bird-side--left when flying left; hidden '?' never mirrored)
-    var c = document.createElement('div'); c.className = 'ball flyer'; c.style.width = r.width + 'px'; c.style.height = r.height + 'px';
-    var im = document.createElement('img'); im.alt = ''; im.draggable = false; c.appendChild(im);
-    var sk = side ? sideKey(color) : null, front = C.palette[color] ? birdFrame(color, BF.foldFrame) : ball.firstChild.src;
-    if (side) { im.className = 'bird-side bird-side-img' + (dx < 0 && sk !== 'hidden' ? ' bird-side--left' : ''); im.dataset.kind = sk; im.src = sideFrame(sk, 0); }
-    else { im.className = 'ball bird'; im.src = front; }
-    document.body.appendChild(c); ball.style.visibility = 'hidden'; SP._flights++;
-    var f = { clone: c, to: to, slot: slot, color: color, ball: ball, tube: tube, side: side, land: function (instant) {
-      f.ball.style.visibility = ''; if (!instant) { f.ball.className += ' dropping'; }
-      if (fresh) { f.tube.classList.add('fresh'); if (!instant) sparkle(f.tube); }
-      sounds.forEach(function (a) { sfx.play(a[0], a[1]); });
-    } };
-    var t0 = performance.now(), fi = 0, fms = side ? BF.side.frameMs : BF.frameMs;
-    f.timer = setInterval(function () { // side flap 1-2-3-4 at 62.5ms (16fps, 250ms/beat); front view (fold) for the touchdown
-      var p = (performance.now() - t0) / tot; if (p > ARR * 0.95) { im.className = 'ball bird'; im.removeAttribute('data-kind'); im.src = front; clearInterval(f.timer); return; }
-      fi = (fi + 1) % 4; im.src = side ? sideFrame(sk, fi) : (C.palette[color] ? birdFrame(color, BF.frames[fi]) : front); if (fi === 2) SP._flaps = (SP._flaps || 0) + 1; }, fms);
-    flights.push(f);
-    if (c.animate) { f.anim = c.animate(kf, { duration: tot, easing: 'linear', fill: 'forwards' }); f.anim.onfinish = function () { f.anim = null; finishFlight(f, false); }; }
-    else finishFlight(f, false);
+  // v3 "weighty" flight (feedback 3), one requestAnimationFrame loop, transform-only, no CSS transitions:
+  //  crouch 100ms (squash on the branch) -> ballistic flight: x at constant speed, y(t) = y0 + v0*t + g*t^2/2 with the apex
+  //  35-45% of |dx| above the higher end (min clears the perch tops) -> landing 150ms (low squash + small bounce).
+  //  Body angle follows the velocity vector. Side frames flap fast while rising, glide (wings spread, frame 2) while falling,
+  //  front fold just before touchdown. Two feathers drift off at takeoff. Speed setting 'fast' scales every phase by 0.6.
+  var FLY_KEY = 'settings.flightSpeed', flySpeed = SP.store.get(FLY_KEY) === 'fast' ? 'fast' : 'normal', rafOn = false;
+  function flyTimes(adx) { var k = SP.store.get(FLY_KEY) === 'fast' ? 0.6 : 1; return { crouch: 100 * k, air: Math.max(480, Math.min(650, 460 + 0.45 * adx)) * k, land: 150 * k }; }
+  SP._flyTimes = flyTimes;
+  function tick(now) {
+    flights.slice().forEach(function (f) { var e = now - f.t0, P = f.P, x, y, a = 0, sx = 1, sy = 1;
+      if (e < P.crouch) { var q = Math.sin(Math.PI * e / P.crouch); sx = 1 + 0.12 * q; sy = 1 - 0.18 * q; x = f.x0; y = f.y0 + f.B * 0.09 * q; }
+      else if (e < P.crouch + P.air) { var t = (e - P.crouch) / P.air, vy = f.v0 + f.g * t; x = f.x0 + f.dx * t; y = f.y0 + f.v0 * t + 0.5 * f.g * t * t;
+        a = (f.dx < 0 ? -1 : 1) * Math.max(-55, Math.min(55, Math.atan2(vy, Math.abs(f.dx) || 1e-6) * 180 / Math.PI * 0.8));
+        if (!f.flown) { f.flown = true; if (f.side) { f.im.className = f.sideCls; f.im.dataset.kind = f.sk; } spawnFeathers(f, x, y); }
+        var fi = Math.floor(e / 50) % 4, src = t > 0.93 ? f.front : !f.side ? f.flap(fi) : vy < 0 ? f.sideSrc(fi) : f.sideSrc(1); // rising: 50ms flaps; falling: glide (wings spread)
+        if (t > 0.93 && f.im.className !== 'ball bird') { f.im.className = 'ball bird'; f.im.removeAttribute('data-kind'); }
+        if (f.im.getAttribute('src') !== src) f.im.src = src; }
+      else if (e < P.crouch + P.air + P.land) { var u = (e - P.crouch - P.air) / P.land; x = f.x0 + f.dx; if (f.im.getAttribute('src') !== f.front) { f.im.className = 'ball bird'; f.im.src = f.front; }
+        if (u < 0.45) { var w = Math.sin(Math.PI * u / 0.45); sx = 1 + 0.16 * w; sy = 1 - 0.22 * w; y = f.y2 + f.B * 0.1 * w; } else { var v = Math.sin(Math.PI * (u - 0.45) / 0.55); y = f.y2 - f.B * 0.12 * v; sx = 1 - 0.04 * v; sy = 1 + 0.05 * v; } }
+      else return finishFlight(f, false);
+      f.clone.style.transform = 'translate3d(' + x + 'px,' + y + 'px,0) rotate(' + a + 'deg) scale(' + sx + ',' + sy + ')';
+      (f.feathers || []).forEach(function (q) { var k = (now - q.t0) / 600; if (k > 1) { q.el.style.opacity = 0; return; }
+        q.el.style.transform = 'translate3d(' + (q.x + q.vx * k) + 'px,' + (q.y + q.vy * k + 30 * k * k) + 'px,0) rotate(' + (q.r + 220 * k) + 'deg)'; q.el.style.opacity = (1 - k) * 0.85; });
+    });
+    if (flights.length) requestAnimationFrame(tick); else rafOn = false;
   }
+  function spawnFeathers(f, x, y) { if (f.color == null || !C.palette[f.color]) return; f.feathers = [];
+    for (var i = 0; i < 2; i++) { var el = document.createElement('i'); el.className = 'feather'; el.style.background = C.palette[f.color].hex; document.body.appendChild(el);
+      f.feathers.push({ el: el, t0: performance.now(), x: x + f.B * (0.3 + 0.3 * i), y: y + f.B * 0.5, vx: (f.dx < 0 ? 1 : -1) * (14 + 10 * i), vy: -6 + 10 * i, r: i * 60 }); } }
+  function fly(from, to, ball, tube, fresh, sounds, color, slot) {
+    var r = ball.getBoundingClientRect(), B = r.width, x0 = from.left, y0 = from.top, x2 = r.left, y2 = r.top, dx = x2 - x0, adx = Math.abs(dx);
+    var perchTop = Math.min.apply(null, [].map.call(document.querySelectorAll('#board .tube'), function (t) { return t.getBoundingClientRect().top; }));
+    var h = Math.max(0.4 * adx, B * 0.9), ya = Math.min(Math.min(y0, y2) - h, perchTop - B * 0.5); // apex: 40% of |dx| (min ~0.9 bird), always above the perch tops
+    var ra = Math.sqrt(y0 - ya), rb = Math.sqrt(y2 - ya), ta = ra / (ra + rb), g = 2 * (y0 - ya) / (ta * ta), v0 = -g * ta;
+    var side = !!(BF.side && BF.side.enabled) && color != null, sk = side ? sideKey(color) : null, front = C.palette[color] ? birdFrame(color, BF.foldFrame) : ball.firstChild.src;
+    var c = document.createElement('div'); c.className = 'ball flyer'; c.style.width = r.width + 'px'; c.style.height = r.height + 'px';
+    var im = document.createElement('img'); im.alt = ''; im.draggable = false; im.className = 'ball bird'; im.src = ball.firstChild.getAttribute('src'); c.appendChild(im);
+    c.style.transform = 'translate3d(' + x0 + 'px,' + y0 + 'px,0)'; document.body.appendChild(c); ball.style.visibility = 'hidden'; SP._flights++;
+    var f = { clone: c, im: im, to: to, slot: slot, color: color, ball: ball, tube: tube, side: side, sk: sk, front: front, B: B, x0: x0, y0: y0, y2: y2, dx: dx, g: g, v0: v0,
+      P: flyTimes(adx), t0: performance.now(), sideCls: 'bird-side bird-side-img' + (dx < 0 && sk !== 'hidden' ? ' bird-side--left' : ''),
+      sideSrc: function (i) { return sideFrame(sk, i); }, flap: function (i) { return C.palette[color] ? birdFrame(color, BF.frames[i]) : front; },
+      land: function (instant) { f.ball.style.visibility = ''; if (fresh) { f.tube.classList.add('fresh'); if (!instant) sparkle(f.tube); } sounds.forEach(function (a) { sfx.play(a[0], a[1]); }); } };
+    SP._lastFlight = { ms: f.P.crouch + f.P.air + f.P.land, apexRatio: adx ? +((Math.min(y0, y2) - ya) / adx).toFixed(2) : null, dx: Math.round(adx) };
+    flights.push(f); if (!rafOn) { rafOn = true; requestAnimationFrame(tick); }
+  }
+  function whenLanded(cb) { (function w() { if (!flights.length) return cb(); setTimeout(w, 30); })(); } // clear waits for the last bird to touch down
   // Gimmick state (js-engine.js rules): S.caps (small tubes), S.lock (per tube key id or null), S.mask (per tube: true = '?' ball)
   function est() { return { t: S.tubes, cap: S.caps, lock: S.lock }; }
   function done(i) { return E.isDone(est(), i); }
@@ -71,15 +88,17 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   function load(n) {
     cancelFlights();
     var sb = false;
-    var g = SP.STAGES[n], a = sb ? (S && S.n === n && S.a.sandbox ? S.a : { undoLeft: C.freeUndos, addedTube: false, sandbox: true }) : (save.attempt[n] || (save.attempt[n] = { undoLeft: C.freeUndos, addedTube: false }));
+    var dk = n === DAILY ? today() : null, g = dk ? DD.build(SP.STAGES, dk, C.palette.length) : SP.STAGES[n];
+    if (dk && (!save.attempt.daily || save.attempt.daily.key !== dk)) save.attempt.daily = { key: dk, undoLeft: C.freeUndos, addedTube: false }; // fresh consumables each day
+    var a = dk ? save.attempt.daily : sb ? (S && S.n === n && S.a.sandbox ? S.a : { undoLeft: C.freeUndos, addedTube: false, sandbox: true }) : (save.attempt[n] || (save.attempt[n] = { undoLeft: C.freeUndos, addedTube: false }));
     var tubes = g.tubes.map(function (t) { return t.slice(); });
     var caps = g.caps ? g.caps.slice() : tubes.map(function () { return 4; }), lock = tubes.map(function () { return null; });
     (g.locks || []).forEach(function (l) { lock[l.tube] = l.key; });
     var mask = tubes.map(function (t) { return t.map(function () { return false; }); }); (g.hidden || []).forEach(function (h) { mask[h[0]][h[1]] = true; });
     if (a.addedTube) { tubes.push([]); caps.push(4); lock.push(null); mask.push([]); } // purchased tube survives restart
-    S = { n: n, g: g, a: a, tubes: tubes, caps: caps, lock: lock, mask: mask, hist: [], sel: -1, path: 0, moves: 0, lastDone: -99, combo: 0, chain: 0, banked: 0, won: false, locked: false, hint: null };
-    applyTheme(n, sb);
-    if (!sb) { save.current = n; persist(); } fx = {}; render();
+    S = { n: n, daily: dk, g: g, a: a, tubes: tubes, caps: caps, lock: lock, mask: mask, hist: [], sel: -1, path: 0, moves: 0, lastDone: -99, combo: 0, chain: 0, banked: 0, won: false, locked: false, hint: null };
+    applyTheme(dk ? 1 + 100 * (g.seed % C.themes.length) : n, sb || !!dk); // daily: theme rotates by date, no unlock toast
+    if (!sb) { if (!dk) save.current = n; persist(); } fx = {}; render();
   }
   // Feedback v2 themes: theme = floor((stage-1)/100) mod themes.length (cycles forever for 201+). Background = designer file
   // (C.art.themeBg[key], detected by tools/sync-art.js) else the config gradient. First arrival in a new 100-block -> toast once.
@@ -99,8 +118,9 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     var a = Math.ceil(n / 3), b = Math.ceil((n - a) / 2); return [a, b, n - a - b];
   }
   function render() {
-    $('stage').textContent = (S.g.rest ? '휴식 · ' : '') + '레벨 ' + S.n;
-    $('hudstars').innerHTML = starsHtml(S.moves === 0 ? 3 : starsFor(S.moves, S.g.min, S.n));
+    $('stage').textContent = S.daily ? '📅 일일 도전 · ' + dailyLabel(S.daily) : (S.g.rest ? '휴식 · ' : '') + '레벨 ' + S.n;
+    $('hudstars').innerHTML = starsHtml(S.moves === 0 ? 3 : starsFor(S.moves, S.g.min, sn()));
+    $('settings').classList.toggle('dot', !!DD && !DD.doneToday(save.daily, today())); // unplayed daily -> red dot on the gear
     $('moves').textContent = '이동 ' + S.moves + ' · 최소 ' + S.g.min + ' (되돌리기도 1수)';
     var tutorialHint = S.g.tutorial && !S.won ? nextMove() : null, h = S.hint || tutorialHint;
     var stuck = !S.won && isStuck(); if (reduced || S.won) cancelFlights(); var fl = !reduced && fx.fly && fx.fly.from ? fx.fly : null, flyBall = null;
@@ -230,7 +250,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
       if (isd) onTubeDone(i, solved);
       fx.fly = { from: !unlock && sb ? (airRect || sb.getBoundingClientRect()) : null, to: i, sounds: pend }; pend = null;
       if (unlock) { fx.fly.sounds.forEach(function (a) { sfx.play(a[0], a[1]); }); fx.fly = null; render(); return; }
-      if (solved) { S.locked = true; S.sel = -1; render(); return setTimeout(win, reduced ? 50 : 700); } // H1: lock all input during clear sequence
+      if (solved) { S.locked = true; S.sel = -1; render(); return reduced ? setTimeout(win, 50) : whenLanded(function () { setTimeout(win, 250); }); } // H1: lock all input during clear sequence
     } else if (pickable(i)) { S.sel = i; sfx.play('select'); }
     else { fx.shake = i; vibrate(10); sfx.play('invalid'); }
     render();
@@ -269,7 +289,9 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   }
   function win() {
     if (!E.isSolved(est())) { S.locked = false; render(); return; } // H1: re-check before saving
-    S.won = true; var st = starsFor(S.moves, S.g.min, S.n), prev = save.stars[S.n] || 0;
+    S.won = true; var st = starsFor(S.moves, S.g.min, sn()), prev = save.stars[S.n] || 0;
+    $('cleartitle').textContent = S.daily ? '일일 도전 완료!' : '클리어!'; $('next').textContent = S.daily ? '캠페인으로' : '다음';
+    if (S.daily) return winDaily(st);
     var got = prev === 0 ? C.coinsFirstClear : Math.max(0, st - prev) * C.coinsPerStarImprove; // GDD v0.2
     // N1: combo coins paid only on clear; lifetime cap per stage persisted in save.comboPaid
     save.comboPaid = save.comboPaid || {}; var paid = save.comboPaid[S.n] || 0;
@@ -284,6 +306,27 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     $('next').style.display = S.n < LAST ? '' : 'none'; confetti();
     sfx.play('clear'); for (var k = 0; k < st; k++) setTimeout(sfx.play.bind(sfx, 'star', k), 1000 + k * 150); $('overlay').classList.add('show'); // DESIGN §7: fanfare, then a ding per star
     SP.ads.noteClear(S.n); // L7: interstitial (if due) shows only when the player taps 다음
+  }
+  function winDaily(st) { // first clear of the day pays the 7-day track reward (coins only); replays only keep the best stars
+    var r = DD.complete(save.daily, S.daily, st); save.coins += r.reward;
+    save.attempt.daily = { key: S.daily, undoLeft: C.freeUndos, addedTube: false }; persist(); render();
+    $('bigstars').innerHTML = starsHtml(st); $('result').textContent = '이동 ' + S.moves + ' / 최소 ' + S.g.min;
+    $('coinsGot').textContent = r.first ? '🔥 ' + r.streak + '일 연속 · ' + r.day + '일차 보상 🪙 +' + r.reward + ' · 보유 ' + save.coins : '오늘 보상은 이미 받았어요 · 🔥 ' + r.streak + '일 연속';
+    $('next').style.display = ''; confetti(); SP._dailyResult = r;
+    sfx.play('clear'); for (var k = 0; k < st; k++) setTimeout(sfx.play.bind(sfx, 'star', k), 1000 + k * 150); $('overlay').classList.add('show');
+  }
+  function campaign() { return Math.min(save.current || 1, save.unlocked); }
+  // DESIGN §5.5 daily card (top of the stage menu): date, streak flame, 7-day track (today highlighted), countdown once done
+  var cdT = 0;
+  function dailyCard() {
+    var el = $('dailycard'); if (!el) return; if (!DD) { el.style.display = 'none'; return; }
+    var k = today(), d = save.daily, done = DD.doneToday(d, k), cur = DD.streakNow(d, k), at = done ? (cur - 1) % 7 : cur % 7, h = '';
+    DD.REWARDS.forEach(function (c, i) { h += '<div class="dday' + (i < at || (done && i === at) ? ' got' : '') + (i === at ? ' today' : '') + '"><b>' + (i + 1) + '일</b><span>' + (i < at || (done && i === at) ? '✓' : (i === 6 ? '🎁' : '🪙') + c) + '</span></div>'; });
+    el.innerHTML = '<div class="drow"><div class="dtitle">📅 오늘의 도전 <small>' + dailyLabel(k) + '</small></div><div class="dstreak" title="최고 ' + (d.best || 0) + '일">🔥 ' + cur + '일 연속</div></div>'
+      + '<div class="dtrack">' + h + '</div><button class="btn ' + (done ? '' : 'primary ') + 'wide" id="dailyBtn">' + (done ? '다시 하기 (보상 없음) · <span id="dailyCd"></span> 후 새 도전' : '도전하기 ▶') + '</button>';
+    $('dailyBtn').onclick = function () { $('menu').classList.remove('show'); clearInterval(cdT); load(DAILY); };
+    clearInterval(cdT); if (done) { var tick = function () { var s = Math.ceil(DD.msToMidnight() / 1000), c = $('dailyCd'); if (!c || !$('menu').classList.contains('show')) return clearInterval(cdT); if (today() !== k) return dailyCard();
+      c.textContent = Math.floor(s / 3600) + ':' + ('0' + Math.floor(s / 60) % 60).slice(-2) + ':' + ('0' + s % 60).slice(-2); }; tick(); cdT = setInterval(tick, 1000); }
   }
   function undo() {
     if (!S.hist.length || S.locked || SP.ads.isBusy()) return;
@@ -303,7 +346,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
       b.innerHTML = (n > save.unlocked ? '🔒' : n) + '<small>' + (SP.STAGES[n].rest ? '☕' : '★'.repeat(save.stars[n] || 0)) + '</small>';
       b.onclick = function () { $('menu').classList.remove('show'); load(n); }; g.appendChild(b);
     })(n);
-    $('coins').textContent = '🪙 ' + save.coins; $('menu').classList.add('show');
+    $('coins').textContent = '🪙 ' + save.coins; $('menu').classList.add('show'); dailyCard();
   }
   $('undo').onclick = undo; $('restart').onclick = function () { if (!S.locked && !SP.ads.isBusy()) load(S.n); }; $('add').onclick = addTube; // M2: consumables persist via save.attempt
   $('hint').onclick = function () { if (S.locked) return; S.hint = nextMove(); S.sel = -1; render(); };
@@ -311,9 +354,10 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   function syncSym() { $('bigsym').checked = symbolsLarge; $('sound').checked = !(SP.sfx && SP.sfx.isMuted()); }
   $('sound').onchange = function () { if (SP.sfx) { SP.sfx.setMuted(!this.checked); if (this.checked) sfx.play('select'); } }; // DESIGN §5.6 settings: sound on/off (persisted)
   $('bigsym').onchange = function () { symbolsLarge = this.checked; SP.store.set(A11Y_KEY, String(symbolsLarge)); document.documentElement.classList.toggle('symbols-large', symbolsLarge); render(); };
+  $('fastfly').checked = SP.store.get(FLY_KEY) === 'fast'; $('fastfly').onchange = function () { flySpeed = this.checked ? 'fast' : 'normal'; SP.store.set(FLY_KEY, flySpeed); };
   syncSym();
   $('theme').onclick = function () { var d = document.documentElement; save.theme = d.dataset.theme === 'light' ? '' : 'light'; d.dataset.theme = save.theme; persist(); };
-  $('next').onclick = function () { if (SP.ads.isBusy()) return; var n = S.n + 1; SP.ads.beforeNext(function () { $('overlay').classList.remove('show'); load(n); }); };
+  $('next').onclick = function () { if (SP.ads.isBusy()) return; if (S.daily) { $('overlay').classList.remove('show'); return load(campaign()); } var n = S.n + 1; SP.ads.beforeNext(function () { $('overlay').classList.remove('show'); load(n); }); };
   $('again').onclick = function () { SP.ads.cancelDue(); $('overlay').classList.remove('show'); load(S.n); };
   // L4: Android back -> close popup -> stage select -> exit confirm modal
   var shown = function (id) { return $(id).classList.contains('show'); };
@@ -321,7 +365,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   SP.platform.onBack(function () {
     if (SP.ads.isBusy()) return true;                         // the ad owns the back key while it plays
     if (shown('exitov')) { exitModal(false); return true; }   // popup close
-    if (shown('overlay')) { SP.ads.cancelDue(); $('overlay').classList.remove('show'); if (S.won) { if (S.n < LAST) load(S.n + 1); menu(); } return true; } // clear card -> stage select
+    if (shown('overlay')) { SP.ads.cancelDue(); $('overlay').classList.remove('show'); if (S.won) { if (S.daily) load(campaign()); else if (S.n < LAST) load(S.n + 1); menu(); } return true; } // clear card -> stage select
     if (shown('menu')) { exitModal(true); return true; }      // on stage select -> exit confirm
     menu(); return true;                                        // in game -> stage select
   });
