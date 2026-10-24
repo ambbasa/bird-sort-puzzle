@@ -127,3 +127,20 @@ body[class*="theme-"] .ov .card{color:var(--text)}/* overlay cards keep their ow
 /* v3 flight: rAF-driven transform only (no transitions/animations on the flyer) */
 .ball.flyer{transition:none;will-change:transform;transform-origin:50% 85%}
 .feather{position:fixed;left:0;top:0;width:7px;height:3px;border-radius:50% 50% 50% 0;z-index:29;pointer-events:none;will-change:transform,opacity;box-shadow:0 0 0 .5px #1A1A2E66}
+/* DESIGN 15.3 backgrounds: set directly here (url relative to css/) instead of theme.css var(--theme-bg); .theme-low-end -> WebP 780x1688 */
+body.theme-forest{background:url("assets-themes-theme-forest.svg") center/cover no-repeat,var(--bg-light)}
+body.theme-sunset{background:url("assets-themes-theme-sunset.svg") center/cover no-repeat,var(--bg-light)}
+body.theme-snow{background:url("assets-themes-theme-snow.svg") center/cover no-repeat,var(--bg-light)}
+body.theme-low-end.theme-forest{background-image:url("assets-themes-theme-forest.webp")}
+body.theme-low-end.theme-sunset{background-image:url("assets-themes-theme-sunset.webp")}
+body.theme-low-end.theme-snow{background-image:url("assets-themes-theme-snow.webp")}
+/* DESIGN ch.16 saga map inside the stage-select card (map styles themselves: assets-theme.css ch.16 block) */
+#menu .card{max-height:100%;border-radius:0;height:100%;overflow-y:auto}
+#mapwrap{position:relative;width:100%;flex:1 0 340px;min-height:340px;border-radius:16px;overflow:hidden;background:#1A1A2E}
+#mapwrap .saga-map{position:absolute;inset:0;max-width:none;height:auto;scrollbar-width:none}
+#mapwrap .saga-map::-webkit-scrollbar{display:none}
+#sagasize{position:relative;width:100%;overflow:hidden}
+#sagatrack{transform-origin:0 0;margin:0}
+.maptheme{position:absolute;left:8px;top:8px;padding:3px 10px;border-radius:12px;background:#FFFFFFD9;color:#1A1A2E;font-weight:800;font-size:13px;pointer-events:none}
+.map-node--playing{outline:3px dashed #fff;outline-offset:3px;border-radius:50%}
+#setsect{width:100%}#setsect summary{cursor:pointer}

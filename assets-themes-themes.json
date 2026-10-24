@@ -19,14 +19,16 @@
       "class": "theme-forest",
       "file": "assets-themes-theme-forest.svg",
       "dominant": [
-        "#C9D8C5",
-        "#AFC4AE",
-        "#9DB59A",
-        "#8AA587",
-        "#7E9A7C",
-        "#8F9F7C"
+        "#C8D8B8",
+        "#D8E8D8",
+        "#C8D8C8",
+        "#C8E8C8",
+        "#C8E8B8",
+        "#B8D8B8"
       ],
-      "perchTint": "#7A6248"
+      "perchTint": "#7A6248",
+      "fallback": "assets-themes-theme-forest.webp",
+      "version": 5
     },
     {
       "key": "sunset",
@@ -34,14 +36,16 @@
       "class": "theme-sunset",
       "file": "assets-themes-theme-sunset.svg",
       "dominant": [
-        "#E6CDBE",
-        "#D9B7B0",
-        "#C2A6A8",
-        "#B3A0A6",
-        "#A99A8E",
-        "#B8A48C"
+        "#E8C8C8",
+        "#E8D8C8",
+        "#F8D8C8",
+        "#D8C8C8",
+        "#D8B8A8",
+        "#E8C8D8"
       ],
-      "perchTint": "#7C5F4A"
+      "perchTint": "#7C5F4A",
+      "fallback": "assets-themes-theme-sunset.webp",
+      "version": 5
     },
     {
       "key": "snow",
@@ -49,14 +53,17 @@
       "class": "theme-snow",
       "file": "assets-themes-theme-snow.svg",
       "dominant": [
-        "#7F89A3",
-        "#959DB3",
-        "#8A93AA",
-        "#9AA2B6",
-        "#A9B0C1",
-        "#B4BAC8"
+        "#C8D8E8",
+        "#B8B8D8",
+        "#B8C8D8",
+        "#D8D8E8",
+        "#C8C8D8",
+        "#D8E8E8"
       ],
-      "perchTint": "#6E6A78"
+      "perchTint": "#6E6A78",
+      "fallback": "assets-themes-theme-snow.webp",
+      "version": 5
     }
-  ]
+  ],
+  "playArea": "세로 20%~80% 헤이즈 오버레이(저채도·저대비)"
 }

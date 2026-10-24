@@ -15,6 +15,9 @@ SP.CONFIG = {
     perch: { perch: 'assets-birds-perch-perch.svg', perchSmall: 'assets-birds-perch-perch-small.svg', perchLocked: 'assets-birds-perch-perch-locked.svg', perchSmallLocked: 'assets-birds-perch-perch-small-locked.svg', perchComplete: 'assets-birds-perch-perch-complete.svg' } },
   // DESIGN 15.3 / assets-themes-themes.json: themeIndex = floor((stage-1)/100) % 3 -> class .theme-<key> on <body> (backgrounds in assets-theme.css)
   themes: [{ key: 'forest', name: '숲' }, { key: 'sunset', name: '노을 호수' }, { key: 'snow', name: '눈 내린 밤' }],
+  // DESIGN ch.16 saga map (assets-map-map-layout.json mirrored here so file:// works without fetch; nodes from the path formula
+  // x = 195 + 105*sin(2π*y/450), y = 855 - 90*i, chunk-top origin, 390px wide).
+  map: { w: 390, chunkH: 900, bandH: 450, per: 10, chunk: 'assets-map-map-chunk-{key}.svg', band: 'assets-map-map-band-{from}-{to}.svg' },
   freeUndos: 3,
   stars: { three: 1.2, two: 1.6, threeFrom21: 1.1, threeFrom101: 1.15 }, // GDD v0.2: 21+ 1.1x; STAGES.md: 101+ 1.15x (gimmick slack)
   // GDD v0.2 combo: tube completions on consecutive player moves; the stage-solving move never counts (no end-of-stage auto chain)

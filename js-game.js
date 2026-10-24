@@ -102,6 +102,8 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   }
   // Feedback v2 themes: theme = floor((stage-1)/100) mod themes.length (cycles forever for 201+). Background = designer file
   // (C.art.themeBg[key], detected by tools/sync-art.js) else the config gradient. First arrival in a new 100-block -> toast once.
+  // DESIGN 15.3: backgrounds set from css-style.css with paths relative to that file (not theme.css var(--theme-bg)); WebP on low-end devices
+  (function () { var nv = navigator, c = nv.connection; if ((nv.deviceMemory && nv.deviceMemory <= 2) || (nv.hardwareConcurrency && nv.hardwareConcurrency <= 2) || (c && c.saveData) || /[?&]lowend=1/.test(location.search)) document.body.classList.add('theme-low-end'); })();
   function applyTheme(n, sb) {
     var blk = Math.floor((n - 1) / 100), th = C.themes[blk % C.themes.length];
     C.themes.forEach(function (t) { document.body.classList.remove('theme-' + t.key); }); document.body.classList.add('theme-' + th.key);
@@ -339,14 +341,48 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     if (S.a.undoLeft > 0) { S.a.undoLeft--; persist(); go(); } else SP.ads.showRewarded('undo', function (ok) { if (ok) go(); });
   }
   function addTube() { if (S.a.addedTube || S.locked || SP.ads.isBusy()) return; SP.ads.showRewarded('add_tube', function (ok) { if (ok && !S.a.addedTube && !S.locked) { S.a.addedTube = true; persist(); S.tubes.push([]); S.caps.push(4); S.lock.push(null); S.mask.push([]); S.sel = -1; render(); } }); }
+  // DESIGN ch.16 saga map: bottom-to-top winding path, 10-stage chunk tiles per theme + a transition band above every 100.
+  // Virtualized: only segments/nodes within ±1 screen of the viewport are in the DOM (positions are O(1) from the formula),
+  // tile backgrounds are set when IntersectionObserver sees the segment (rootMargin 1 screen). Works for any LAST (200+).
+  var M = C.map, BLK = M.chunkH * M.per + M.bandH, mapLive = {}, mapIO = null, mapK = 1, mapTotal = 0;
+  function nodeXY(i) { var y = M.chunkH - 45 - 90 * i; return { x: 195 + 105 * Math.sin(2 * Math.PI * y / 450), y: y }; }
+  function mapPos(n) { var b = Math.floor((n - 1) / 100), j = (n - 1) % 100, c = Math.floor(j / 10), q = nodeXY(j % 10); return { x: q.x, y: mapTotal - (b * BLK + c * M.chunkH + (M.chunkH - q.y)) }; }
+  SP._mapPos = function (n) { return mapPos(n); };
+  function mapSeg(key, top, h, src, label) {
+    var e = document.createElement('div'); e.className = 'saga-seg'; e.style.top = top + 'px'; e.style.height = h + 'px'; e.dataset.src = src;
+    if (label) { var l = document.createElement('div'); l.className = 'saga-band-label'; l.style.top = '50%'; l.textContent = label; e.appendChild(l); }
+    if (mapIO) mapIO.observe(e); else e.style.backgroundImage = 'url("' + src + '")'; return e;
+  }
+  function mapRender() {
+    var m = $('sagamap'), tr = $('sagatrack'), vh = m.clientHeight / mapK, st = m.scrollTop / mapK, lo = mapTotal - (st + 2 * vh), hi = mapTotal - (st - vh), want = {}, blocks = Math.ceil(LAST / 100);
+    for (var b = Math.max(0, Math.floor(lo / BLK)); b <= Math.min(blocks - 1, Math.floor(hi / BLK)); b++) {
+      var th = C.themes[b % C.themes.length].key, nx = C.themes[(b + 1) % C.themes.length];
+      for (var c = 0; c <= M.per; c++) { var y0 = b * BLK + c * M.chunkH, h = c < M.per ? M.chunkH : M.bandH; if (y0 + h < lo || y0 > hi) continue;
+        var k = 'g' + b + '_' + c; want[k] = 1;
+        if (!mapLive[k]) tr.insertBefore(mapLive[k] = c < M.per ? mapSeg(k, mapTotal - y0 - h, h, M.chunk.replace('{key}', th)) : mapSeg(k, mapTotal - y0 - h, h, M.band.replace('{from}', th).replace('{to}', nx.key), (b * 100 + 101) + '~ ' + nx.name), tr.firstChild);
+        if (c === M.per) continue;
+        for (var i = 0; i < M.per; i++) { var n = b * 100 + c * 10 + i + 1; if (n > LAST) break; want['n' + n] = 1; if (mapLive['n' + n]) continue; tr.appendChild(mapLive['n' + n] = mapNode(n)); } } }
+    for (var key in mapLive) if (!want[key]) { if (mapIO && key[0] === 'g') mapIO.unobserve(mapLive[key]); mapLive[key].remove(); delete mapLive[key]; }
+    var mid = mapTotal - (st + vh / 2), fb = Math.max(0, Math.floor(mid / BLK)); $('maptheme').textContent = C.themes[fb % C.themes.length].name; // HUD: theme at screen centre
+  }
+  function mapNode(n) {
+    var p = mapPos(n), cur = Math.min(save.unlocked, LAST), stt = n > save.unlocked ? 'locked' : n === cur && !save.stars[n] ? 'current' : n < cur || save.stars[n] ? 'cleared' : 'current';
+    var e = document.createElement('button'); e.className = 'map-node map-node--' + stt + (n === S.n ? ' map-node--playing' : ''); e.style.left = p.x + 'px'; e.style.top = p.y + 'px'; e.dataset.n = n;
+    e.textContent = n; e.setAttribute('aria-label', '스테이지 ' + n + ' ' + ({ locked: '잠김', current: '현재', cleared: '클리어' })[stt]); e.disabled = stt === 'locked';
+    if (stt === 'cleared' && !SP.STAGES[n].rest) { var w = document.createElement('div'); w.className = 'map-stars'; for (var i = 0; i < 3; i++) { var t = document.createElement('i'); t.className = 'map-star' + (i < (save.stars[n] || 0) ? ' on' : ''); w.appendChild(t); } e.appendChild(w); }
+    e.onclick = function () { $('menu').classList.remove('show'); load(n); }; return e;
+  }
+  var mapRaf = 0;
   function menu() {
-    var g = $('levelgrid'); g.innerHTML = '';
-    for (var n = 1; n <= LAST; n++) (function (n) {
-      var b = document.createElement('button'); b.className = 'btn' + (n === S.n ? ' primary' : ''); b.disabled = n > save.unlocked;
-      b.innerHTML = (n > save.unlocked ? '🔒' : n) + '<small>' + (SP.STAGES[n].rest ? '☕' : '★'.repeat(save.stars[n] || 0)) + '</small>';
-      b.onclick = function () { $('menu').classList.remove('show'); load(n); }; g.appendChild(b);
-    })(n);
+    var m = $('sagamap'), tr = $('sagatrack');
     $('coins').textContent = '🪙 ' + save.coins; $('menu').classList.add('show'); dailyCard();
+    for (var key in mapLive) mapLive[key].remove(); mapLive = {}; if (mapIO) mapIO.disconnect();
+    mapIO = window.IntersectionObserver ? new IntersectionObserver(function (es) { es.forEach(function (x) { if (x.isIntersecting) { x.target.style.backgroundImage = 'url("' + x.target.dataset.src + '")'; mapIO.unobserve(x.target); } }); }, { root: m, rootMargin: '100% 0px' }) : null;
+    mapTotal = Math.ceil(LAST / 100) * BLK; mapK = Math.min(1, (m.clientWidth || M.w) / M.w);
+    tr.style.height = mapTotal + 'px'; tr.style.transform = 'scale(' + mapK + ')'; $('sagasize').style.height = mapTotal * mapK + 'px';
+    var focus = Math.min(Math.max(1, save.unlocked), LAST); m.scrollTop = (mapPos(focus).y + 120) * mapK - m.clientHeight / 2; // current node a bit below centre
+    if (!m._bound) { m._bound = true; m.addEventListener('scroll', function () { if (!mapRaf) mapRaf = requestAnimationFrame(function () { mapRaf = 0; mapRender(); }); }, { passive: true }); }
+    mapRender();
   }
   $('undo').onclick = undo; $('restart').onclick = function () { if (!S.locked && !SP.ads.isBusy()) load(S.n); }; $('add').onclick = addTube; // M2: consumables persist via save.attempt
   $('hint').onclick = function () { if (S.locked) return; S.hint = nextMove(); S.sel = -1; render(); };

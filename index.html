@@ -27,10 +27,10 @@
   <button class="btn primary wide" id="next">다음</button><button class="btn wide" id="again">재시작</button>
 </div></div>
 <div id="menu" class="ov"><div class="card">
-  <div class="title">설정 · 스테이지</div><div id="coins" class="sub"></div>
+  <div class="title">스테이지 지도</div><div id="coins" class="sub"></div>
   <div id="dailycard"></div>
-  <div id="levelgrid"></div>
-  <div class="sect">접근성</div><label class="toggle"><span>심볼 크게</span><input type="checkbox" id="bigsym"></label><div class="sect">사운드</div><label class="toggle"><span>효과음</span><input type="checkbox" id="sound" checked></label><div class="sect">비행</div><label class="toggle"><span>빠른 비행</span><input type="checkbox" id="fastfly"></label><div class="sect">화면</div><button class="btn wide" id="theme">라이트/다크 전환</button><button class="btn wide" id="closeMenu">닫기</button><button class="btn wide" id="exitBtn">게임 종료</button>
+  <div id="mapwrap"><div class="saga-map" id="sagamap" role="list" aria-label="스테이지 지도"><div id="sagasize"><div class="saga-track" id="sagatrack"></div></div></div><div id="maptheme" class="maptheme"></div></div>
+  <details id="setsect" open><summary class="sect">설정</summary><div class="sect">접근성</div><label class="toggle"><span>심볼 크게</span><input type="checkbox" id="bigsym"></label><div class="sect">사운드</div><label class="toggle"><span>효과음</span><input type="checkbox" id="sound" checked></label><div class="sect">비행</div><label class="toggle"><span>빠른 비행</span><input type="checkbox" id="fastfly"></label><div class="sect">화면</div><button class="btn wide" id="theme">라이트/다크 전환</button></details><button class="btn wide" id="closeMenu">닫기</button><button class="btn wide" id="exitBtn">게임 종료</button>
 </div></div>
 <div id="exitov" class="ov"><div class="card">
   <div class="title">게임을 종료할까요?</div><div class="sub">진행 상황은 저장돼요.</div>
