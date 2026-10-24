@@ -1,42 +1,51 @@
 <!doctype html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>볼 소트 퍼즐</title>
-<link rel="stylesheet" href="assets-theme.css?v=a8a3ac22"><link rel="stylesheet" href="css-style.css?v=20099d35"></head><body>
+<title>버드 소트 퍼즐</title>
+<link rel="icon" href="favicon.ico" sizes="any"><link rel="icon" type="image/svg+xml" href="icons-icon.svg"><link rel="apple-touch-icon" href="icons-icon-180.png"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#2F8BE6">
+<link rel="stylesheet" href="assets-theme.css?v=a8a3ac22"><link rel="stylesheet" href="css-style.css?v=5ce83316"><link rel="stylesheet" href="assets-v5ui-v5-launch.css?v=94b46127"><link rel="stylesheet" href="assets-v5ui-v5-rec.css?v=36ce8b39"></head><body>
 <!-- L6: instant first paint (inline, no assets) until the game boots; no login/consent sheet on entry -->
-<div id="splash"><div class="splash-balls"><i style="background:#E53935"></i><i style="background:#FDD835"></i><i style="background:#1E63E5"></i></div><div class="splash-title">볼 소트 퍼즐</div></div>
+<div id="splash" class="v5"><img class="splash-logo" src="assets-v5ui-logo-emblem.svg" alt=""><div class="splash-title">버드 소트 퍼즐</div><div class="splash-sub">BIRD SORT</div><div class="splash-birds" aria-hidden="true"><span class="perch"></span><i></i><i></i><i></i></div><div class="splash-load">불러오는 중…</div></div>
 <div id="rotate">세로 화면으로 돌려 주세요</div>
 <!-- icons inlined from assets-icons-*.svg so they inherit currentColor and work over file:// -->
 <div id="app">
 <header class="hud">
-  <div class="hud-left"><button class="btn" id="settings" aria-label="설정"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 01-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 010-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 014 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 010 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg></button>
-  <button class="btn stagesbtn" id="stagesBtn" aria-label="스테이지 지도 열기">스테이지</button></div>
+  <div class="hud-left"><button class="btn" id="settings" aria-label="설정 열기"><i class="v5h v5h-settings" aria-hidden="true"></i></button>
+  <button class="btn stagesbtn" id="stagesBtn" aria-label="스테이지 열기"><i class="v5h v5h-map" aria-hidden="true"></i>스테이지</button></div>
   <div class="hud-mid"><div class="lvl" id="stage"></div><div class="stars" id="hudstars"></div><div class="sub" id="moves"></div></div>
-  <button class="btn" id="hint" aria-label="힌트"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 00-4 12.7V16h8v-1.3A7 7 0 0012 2z"/></svg></button>
+  <button class="btn" id="hint" aria-label="힌트"><i class="v5h v5h-hint" aria-hidden="true"></i></button>
 </header>
 <div id="board"></div>
 <div id="combo"></div>
 <footer class="bottom">
-  <button class="btn" id="undo"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 010 11H11"/></svg><span>되돌리기</span><span class="cnt" id="undocnt"></span></button>
-  <button class="btn" id="restart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 109-9 9.7 9.7 0 00-6.7 2.8L3 8"/><path d="M3 3v5h5"/></svg><span>재시작</span></button>
-  <button class="btn primary" id="add"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v14a3 3 0 006 0V3M5 3h10"/><path d="M19 8v8M15 12h8"/></svg><span>튜브추가</span><span class="cnt">▶AD</span></button>
+  <button class="btn" id="undo"><i class="v5h v5h-undo" aria-hidden="true"></i><span>되돌리기</span><span class="cnt" id="undocnt"></span></button>
+  <button class="btn" id="restart"><i class="v5h v5h-restart" aria-hidden="true"></i><span>재시작</span></button>
+  <button class="btn primary" id="add"><span class="v5-ico-add-perch" aria-hidden="true"></span><span>횃대 추가</span><span class="cnt adtag-cnt">▶광고</span></button>
 </footer>
 <div id="banner" class="banner"></div>
 </div>
-<div id="overlay" class="ov"><div class="card">
+<div id="overlay" class="ov v5"><div class="card">
+  <div class="clear-art" aria-hidden="true"></div>
   <div class="title" id="cleartitle">클리어!</div><div class="bigstars" id="bigstars"></div>
   <div id="result" class="sub"></div><div id="coinsGot" class="sub"></div>
   <button class="btn primary wide" id="next">다음</button><button class="btn wide" id="again">재시작</button>
 </div></div>
 <div id="menu" class="ov"><div class="card">
-  <div class="title">스테이지 지도</div><div id="coins" class="sub"></div>
+  <div class="title">스테이지</div><div id="coins" class="sub"></div>
   <div id="dailycard"></div>
-  <div id="mapwrap"><div class="saga-map" id="sagamap" role="list" aria-label="스테이지 지도"><div id="sagasize"><div class="saga-track" id="sagatrack"></div></div></div><div id="maptheme" class="maptheme"></div></div>
-  <details id="setsect" open><summary class="sect">설정</summary><div class="sect">접근성</div><label class="toggle"><span>심볼 크게</span><input type="checkbox" id="bigsym"></label><div class="sect">사운드</div><label class="toggle"><span>효과음</span><input type="checkbox" id="sound" checked></label><div class="sect">비행</div><label class="toggle"><span>빠른 비행</span><input type="checkbox" id="fastfly"></label><div class="sect">화면</div><button class="btn wide" id="theme">라이트/다크 전환</button></details><button class="btn wide" id="closeMenu">닫기</button><button class="btn wide" id="exitBtn">게임 종료</button>
+  <div id="mapwrap"><div class="saga-map" id="sagamap" role="list" aria-label="스테이지"><div id="sagasize"><div class="saga-track" id="sagatrack"></div></div></div><div id="maptheme" class="maptheme"></div></div>
+  <button class="btn wide" id="closeMenu">닫기</button></div></div>
+<div id="setov" class="ov"><div class="card" role="dialog" aria-label="설정"><div class="title">설정</div><div id="setsect"><div class="sect">접근성</div><label class="toggle"><span>심볼 크게</span><input type="checkbox" id="bigsym"></label><div class="sect">사운드</div><label class="toggle"><span>효과음</span><input type="checkbox" id="sound" checked></label><div class="sect">비행</div><label class="toggle"><span>빠른 비행</span><input type="checkbox" id="fastfly"></label><div class="sect">화면</div><button class="btn wide" id="theme">라이트/다크 전환</button></div><button class="btn wide" id="closeSet">닫기</button><button class="btn wide" id="exitBtn">게임 종료</button>
 </div></div>
+<div id="endov" class="ov v5"><div class="card endcard" role="dialog" aria-label="모든 스테이지 클리어">
+  <div class="endart" aria-hidden="true"><span>🐦</span><span>🎉</span><span>🐤</span></div>
+  <div class="title">200 스테이지 모두 클리어!</div><div class="sub">정말 대단해요! 새 스테이지가 곧 추가될 예정이에요.<br>그동안 매일 바뀌는 데일리 퍼즐에 도전해 보세요.</div>
+  <button class="btn primary wide" id="endDaily">데일리 도전</button><button class="btn wide" id="endMap">지도로</button>
+</div></div>
+<div id="themeov" class="ov"><div class="card" role="dialog" aria-label="새 테마 해금"><div class="tcard" data-theme="forest" aria-hidden="true"></div><div class="title">새 테마 해금!</div><div class="sub" id="themesub"></div><button class="btn primary wide" id="themeOk">계속하기</button></div></div>
 <div id="exitov" class="ov"><div class="card">
   <div class="title">게임을 종료할까요?</div><div class="sub">진행 상황은 저장돼요.</div>
   <button class="btn primary wide" id="exitNo">계속하기</button><button class="btn wide" id="exitYes">종료하기</button>
 </div></div>
 <template id="staricon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.1 8.3 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 8.9 8.3" fill="currentColor"/></svg></template>
-<script src="js-config.js?v=27d5a6db"></script><script src="js-core.js?v=ebefced7"></script><script src="js-engine.js?v=7cdff0ee"></script><script src="js-stages.js?v=7baa3cbb"></script><script src="js-platform.js?v=c86c2ca2"></script><script src="js-ads.js?v=1877797d"></script><script src="js-sfx.js?v=8a1c8ae5"></script><script src="js-daily.js?v=7c01e70b"></script><script src="js-game.js?v=1fcdf095"></script>
+<script>window.SP_BUILD='web'</script><script src="js-config.js?v=9db9b986"></script><script src="js-core.js?v=ebefced7"></script><script src="js-engine.js?v=7cdff0ee"></script><script src="js-stages.js?v=7baa3cbb"></script><script src="js-platform.js?v=c86c2ca2"></script><script src="js-ads.js?v=14c6e5af"></script><script src="js-sfx.js?v=8a1c8ae5"></script><script src="js-daily-pool.js?v=7ba10dbb"></script><script src="js-daily.js?v=0e780679"></script><script src="js-game.js?v=ffcfdc26"></script>
 </body></html>

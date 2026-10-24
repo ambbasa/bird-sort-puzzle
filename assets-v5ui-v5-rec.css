@@ -1,0 +1,79 @@
+/* DESIGN.md 18장 — 권장 13건(v5 카툰). v5-launch.css 다음에 링크: <link rel="stylesheet" href="assets-v5ui-v5-rec.css">
+   assets/ 아래 → build-pages-flat.js가 자동 복사·url() 평탄화. 링크만으로 켜지는 규칙과 클래스가 필요한 규칙을 블록마다 표시. */
+:root{--v5-ol:#1A1A2E;--v5-cream:#FFF8E7;--v5-cream-2:#FFE9B8;--v5-ink:#1A1A2E;--v5-ink-2:#3A3F5C}
+
+/* ---------- A09 HUD 아이콘 (마크업: 각 버튼 <svg>를 <i class="v5h v5h-settings"></i> 등으로 교체) ---------- */
+.v5h{display:inline-block;width:28px;height:28px;background:center/contain no-repeat;flex:none}
+.v5h-settings{background-image:url("assets-v5ui-rec-icons-settings.svg")}.v5h-hint{background-image:url("assets-v5ui-rec-icons-hint.svg")}
+.v5h-undo{background-image:url("assets-v5ui-rec-icons-undo.svg")}.v5h-restart{background-image:url("assets-v5ui-rec-icons-restart.svg")}
+.v5h-map{background-image:url("assets-v5ui-rec-icons-map.svg")}
+
+/* ---------- A23 따뜻한 중립 버튼 스킨 (링크 즉시 적용; A11의 남색 HUD 버튼을 대체) ---------- */
+.hud .btn,body[class*="theme-"] .hud .btn,.bottom .btn,body[class*="theme-"] .bottom .btn{
+  background:var(--v5-cream);color:var(--v5-ink);border:2.5px solid var(--v5-ol);box-shadow:0 3px 0 var(--v5-ol);border-radius:16px}
+.bottom .btn.primary,body[class*="theme-"] .bottom .btn.primary{background:#FFD54F}
+.hud .btn:active,.bottom .btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--v5-ol)}
+.theme-sunset .hud .btn,.theme-sunset .bottom .btn:not(.primary){background:#FFF1E2}
+.theme-snow .hud .btn,.theme-snow .bottom .btn:not(.primary){background:#F3F6FF}
+/* 팝업 공통 크림 카드 (메뉴/설정/종료) — 링크 즉시 */
+#menu .card,#setov .card,#exitov .card{background:linear-gradient(180deg,var(--v5-cream),var(--v5-cream-2));color:var(--v5-ink)}
+#menu .sub,#setov .sub,#exitov .sub{color:var(--v5-ink-2)}
+#menu .btn,#setov .btn,#exitov .btn{background:#fff;color:var(--v5-ink);border:3px solid var(--v5-ol);box-shadow:0 3px 0 var(--v5-ol)}
+#menu .btn.primary,#setov .btn.primary,#exitov .btn.primary{background:#FFD54F}
+
+/* ---------- A13 되돌리기 비활성/카운트 배지 (링크 즉시) ---------- */
+.bottom .btn{position:relative}
+.bottom .btn .cnt{position:absolute;top:-9px;right:-6px;min-width:22px;height:22px;padding:0 6px;box-sizing:border-box;border-radius:11px;
+  background:#E53935;color:#fff;border:2px solid var(--v5-ol);font:900 12px/18px var(--v5-font,system-ui);opacity:1}
+.bottom .btn .cnt:empty{display:none}
+.bottom .btn.primary .cnt{background:#1E63E5}
+.bottom .btn:disabled{opacity:1;background:#D9DCE5!important;color:#6B7088;box-shadow:0 2px 0 #6B7088;border-color:#6B7088;filter:grayscale(1)}
+.bottom .btn:disabled .cnt{background:#8A8FA3}
+
+/* ---------- A06 맵 노드: 둥지+알 (링크 즉시; 숫자는 알 위 진한 글자) ---------- */
+.map-node--cleared{background-image:url("assets-v5ui-rec-node-cleared.svg")!important;color:var(--v5-ink)!important;text-shadow:none!important;line-height:50px}
+.map-node--current{background-image:url("assets-v5ui-rec-node-current.svg")!important;color:var(--v5-ink)!important;text-shadow:0 1px 0 #fff!important;line-height:54px}
+.map-node--locked{background-image:url("assets-v5ui-rec-node-locked.svg")!important}
+.map-node--current::before{border-radius:50%;border-color:#FFD54F;box-shadow:0 0 0 3px var(--v5-ol)}
+.map-node--current::after{content:"";width:22px;height:20px;top:-24px;background:url("assets-v5ui-rec-node-pointer.svg") center/contain no-repeat;color:transparent}
+.map-node--playing{outline:0}
+.map-node--playing::before{border-color:#fff}
+
+/* ---------- A07 맵 이음선 (링크 즉시): 세그먼트를 아래로 2px 덧대 겹침 → 서브픽셀 스케일 틈 제거 ---------- */
+.saga-seg{padding-bottom:2px;background-size:390px 100%;background-origin:padding-box;background-clip:padding-box}
+
+/* ---------- A15 완료 횃대 / A18 잠금 / A19 소형 (링크 즉시; img src는 content:url로 교체 — Chromium·WebKit 지원) ---------- */
+.tube.perch{background-image:url("assets-v5ui-rec-perch.svg")}
+.tube.perch.small{background-image:url("assets-v5ui-rec-perch-small.svg")}
+.tube.perch.complete{background-image:url("assets-v5ui-rec-perch-complete.svg");filter:drop-shadow(0 0 6px #FFE58A)}
+.tube.perch .badge{content:url("assets-v5ui-rec-badge-complete.svg");width:30px}
+.tube.perch .lock-overlay{content:url("assets-v5ui-rec-perch-locked.svg")}
+.tube.perch.small .lock-overlay{content:url("assets-v5ui-rec-perch-small-locked.svg")}
+
+/* ---------- A22 메뉴/설정 (링크 즉시) ---------- */
+#setov .sect{font:900 13px/1 var(--v5-font,system-ui);color:var(--v5-ink-2);letter-spacing:.5px;margin:10px 0 2px 4px;text-transform:none}
+#setov .toggle{background:#fff;border:2.5px solid var(--v5-ol);border-radius:16px;box-shadow:0 2px 0 var(--v5-ol);color:var(--v5-ink)}
+#setov .toggle input{appearance:none;-webkit-appearance:none;width:56px;height:32px;margin:0;border-radius:16px;background:#C9CDD6;border:2.5px solid var(--v5-ol);position:relative;cursor:pointer;transition:background .15s}
+#setov .toggle input::after{content:"";position:absolute;top:2px;left:2px;width:23px;height:23px;border-radius:50%;background:#fff;border:2px solid var(--v5-ol);box-sizing:border-box;transition:transform .15s}
+#setov .toggle input:checked{background:#6CCB5F}
+#setov .toggle input:checked::after{transform:translateX(24px)}
+#setov .toggle input:focus-visible{outline:3px solid #1E63E5;outline-offset:2px}
+/* 터치 타깃: 라벨 행 전체(≥48px)가 토글 → 44px 규칙 유지 */
+#menu #dailycard{background:#fff;border:3px solid var(--v5-ol);border-radius:18px;box-shadow:0 3px 0 var(--v5-ol);color:var(--v5-ink)}
+#menu #dailycard .dday{border:2px solid var(--v5-ol)}
+#mapwrap{border:3px solid var(--v5-ol);border-radius:18px;overflow:hidden}
+
+/* ---------- A16 테마 해금 팝업 (마크업 신규 #themeov — 18장 스펙) ---------- */
+#themeov .card{background:linear-gradient(180deg,var(--v5-cream),var(--v5-cream-2));color:var(--v5-ink);border:4px solid var(--v5-ol);border-bottom:0}
+#themeov .tcard{position:relative;width:min(64vw,240px);aspect-ratio:260/340;border-radius:22px;overflow:hidden;background:center/cover no-repeat;animation:v5pop .5s cubic-bezier(.3,1.6,.5,1) both}
+#themeov .tcard::after{content:"";position:absolute;inset:0;background:center/100% 100% no-repeat}
+#themeov .tcard[data-theme="forest"]{background-image:url("assets-themes-theme-forest.svg")}#themeov .tcard[data-theme="forest"]::after{background-image:url("assets-v5ui-rec-theme-card-forest.svg")}
+#themeov .tcard[data-theme="sunset"]{background-image:url("assets-themes-theme-sunset.svg")}#themeov .tcard[data-theme="sunset"]::after{background-image:url("assets-v5ui-rec-theme-card-sunset.svg")}
+#themeov .tcard[data-theme="snow"]{background-image:url("assets-themes-theme-snow.svg")}#themeov .tcard[data-theme="snow"]::after{background-image:url("assets-v5ui-rec-theme-card-snow.svg")}
+#themeov .title{font:900 24px/1.2 var(--v5-font,system-ui)}
+#themeov .btn{border:3px solid var(--v5-ol);box-shadow:0 3px 0 var(--v5-ol);font-weight:900}#themeov .btn.primary{background:#FFD54F;color:var(--v5-ink)}
+@keyframes v5pop{from{transform:scale(.6) translateY(20px);opacity:0}}
+@media (prefers-reduced-motion:reduce){#themeov .tcard{animation:none}}
+
+/* ---------- A10 타이포 (링크 즉시): 브랜드 서체 스택. Jua(OFL) 자체 호스팅 시 @font-face만 추가 ---------- */
+.hud .lvl,.title,#splash .splash-title,.btn{font-family:var(--v5-font,"Jua","Gothic A1",system-ui,sans-serif)}

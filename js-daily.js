@@ -18,13 +18,21 @@ var SP = (typeof window !== "undefined") ? (window.SP = window.SP || {}) : (glob
         && !(g.caps && g.caps.some(function (c) { return c !== 4; })) && g.solution && g.min >= MIN_LO && g.min <= MIN_HI; }).sort(function (a, b) { return a - b; });
   }
   // build(stages, key, nColors) -> stage object (same shape as SP.STAGES[n]) + { daily: key, source: n }
+  // QA F9: generated pool (js-daily-pool.js, prime size P, solver-verified). Day number d -> pool index (A*d + B) mod P:
+  // an affine map mod a prime is a bijection on any P consecutive days, so no puzzle repeats within P (>= 30) days.
+  // Falls back to the campaign pool if daily-pool.js is not loaded.
+  function dayNum(key) { var p = key.split('-').map(Number); return Math.round(Date.UTC(p[0], p[1] - 1, p[2]) / 864e5); }
+  function pick(key) { var P = SP.DAILY_POOL && SP.DAILY_POOL.length; if (!P) return -1; var A = 37 % P || 1, B = hash('sortpuzzle-daily-pool') % P;
+    return (((A * dayNum(key) + B) % P) + P) % P; }
+  // build(stages, key, nColors) -> stage object (same shape as SP.STAGES[n]) + { daily: key, source }
   function build(stages, key, nColors) {
-    var p = pool(stages); if (!p.length) return null;
-    var r = rng(hash('sortpuzzle-daily:' + key)), src = p[Math.floor(r() * p.length)], g = stages[src];
+    var r = rng(hash('sortpuzzle-daily:' + key)), pi = pick(key), g, src;
+    if (pi >= 0) { g = SP.DAILY_POOL[pi]; src = 'pool:' + pi; }
+    else { var p = pool(stages); if (!p.length) return null; src = p[Math.floor(r() * p.length)]; g = stages[src]; }
     var order = shuffle(g.tubes.map(function (_, i) { return i; }), r), inv = []; order.forEach(function (old, i) { inv[old] = i; }); // new tube i = old tube order[i]
     var cmap = shuffle(Array.from({ length: nColors || 12 }, function (_, i) { return i; }), r);
     var tubes = order.map(function (old) { return g.tubes[old].map(function (c) { return typeof c === 'number' ? cmap[c] : c; }); });
-    return { daily: key, source: src, seed: hash(key), colors: g.colors, empty: g.empty, rest: false, tutorial: false, min: g.min, deadEnds: g.deadEnds,
+    return { daily: key, source: src, seed: hash(key), colors: g.colors, empty: g.empty, rest: false, tutorial: false, min: g.min, deadEnds: g.deadEnds || 0,
       tubes: tubes, gimmicks: [], solution: g.solution.map(function (m) { return [inv[m[0]], inv[m[1]]]; }) };
   }
   // Streak state lives in the main save (save.daily) so it uses the same (SDK) storage path: { last, streak, best, stars{key:n} }
@@ -40,6 +48,6 @@ var SP = (typeof window !== "undefined") ? (window.SP = window.SP || {}) : (glob
     var day = ((d.streak - 1) % 7) + 1; return { first: true, streak: d.streak, reward: REWARDS[day - 1], day: day };
   }
   function msToMidnight(now) { now = now || new Date(); var m = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1); return m - now; }
-  SP.daily = { REWARDS: REWARDS, dateKey: dateKey, shift: shift, pool: pool, build: build, streakNow: streakNow, doneToday: doneToday, complete: complete, msToMidnight: msToMidnight };
+  SP.daily = { REWARDS: REWARDS, dateKey: dateKey, shift: shift, pool: pool, build: build, pick: pick, streakNow: streakNow, doneToday: doneToday, complete: complete, msToMidnight: msToMidnight };
   if (typeof module !== 'undefined') module.exports = SP.daily;
 })();

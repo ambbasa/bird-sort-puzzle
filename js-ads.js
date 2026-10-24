@@ -13,11 +13,14 @@
   function changed() { listeners.forEach(function (f) { try { f(); } catch (e) {} }); }
   function placeholder(id) { return !id || /^PLACEHOLDER/.test(id); }
   function sdkFull() { try { return !!T && T.loadFullScreenAd.isSupported() && T.showFullScreenAd.isSupported(); } catch (e) { return false; } }
-  var mode = T ? (sdkFull() ? 'toss' : 'toss-unsupported') : 'dummy';
+  // QA F2: the public web build (tools/build-pages-flat.js sets window.SP_BUILD='web') shows no dummy ad UI at all:
+  // 'none' = no ad network; rewarded items are granted directly, interstitials skipped, banner area hidden.
+  var mode = T ? (sdkFull() ? 'toss' : 'toss-unsupported') : (window.SP_BUILD === 'web' ? 'none' : 'dummy');
   function audio(on) { if (SP.sfx) SP.sfx[on ? 'resume' : 'suspend']('ad'); } // L3
   function load(kind) {
     if (ready[kind]) return;
     if (mode === 'dummy') { ready[kind] = !DUMMY_FAIL; return changed(); }
+    if (mode === 'none') { ready[kind] = kind === 'rewarded'; return changed(); }
     var id = IDS[kind]; if (mode !== 'toss' || placeholder(id)) return; // no real ID yet -> stays unavailable (buttons disabled)
     var off = T.loadFullScreenAd({
       options: { adGroupId: id },
@@ -36,6 +39,7 @@
       console.log('[ads] ' + kind + ' ' + label + ' -> ' + (kind === 'rewarded' ? (earned ? 'rewarded' : 'no reward') : 'closed'));
       load(kind); changed(); cb && cb(kind === 'rewarded' ? earned : true);
     }
+    if (mode === 'none') { earned = true; return end(); }
     if (mode === 'dummy') return dummy(kind, label, function (ok) { earned = ok; end(); });
     var off = T.showFullScreenAd({
       options: { adGroupId: IDS[kind] },
@@ -65,12 +69,15 @@
   }
   function banner() {
     var b = document.getElementById('banner'); if (!b) return;
-    if (mode === 'dummy') { b.textContent = '광고 배너 320×50 (placeholder)'; return; }
+    var hide = function () { b.classList.add('off'); b.textContent = ''; }; // QA F2: no empty / placeholder ad area
+    if (mode === 'dummy') { b.classList.remove('off'); b.textContent = '광고 배너 320×50 (placeholder)'; return; }
+    if (mode === 'none') return hide();
     var id = IDS.banner, TA = T && T.TossAds;
-    try { if (!TA || placeholder(id) || !TA.initialize.isSupported() || !TA.attachBanner.isSupported()) return; } catch (e) { return; }
+    try { if (!TA || placeholder(id) || !TA.initialize.isSupported() || !TA.attachBanner.isSupported()) return hide(); } catch (e) { return hide(); }
+    b.classList.remove('off'); b.classList.add('v5-adslot'); b.textContent = ''; // DESIGN 17.3 (A04): framed slot only when a real banner ID exists
     TA.initialize({ callbacks: {
-      onInitialized: function () { TA.attachBanner(id, b, { theme: 'dark', variant: 'expanded', callbacks: { onAdFailedToRender: function (p) { console.warn('[ads] banner', p && p.error); }, onNoFill: function () {} } }); },
-      onInitializationFailed: function (e) { console.warn('[ads] banner init', e); }
+      onInitialized: function () { TA.attachBanner(id, b, { theme: 'dark', variant: 'expanded', callbacks: { onAdFailedToRender: function (p) { console.warn('[ads] banner', p && p.error); hide(); }, onNoFill: hide } }); },
+      onInitializationFailed: function (e) { console.warn('[ads] banner init', e); hide(); }
     } });
   }
   SP.ads = {
@@ -89,7 +96,7 @@
     },
     beforeNext: function (cb) {
       var a = C.ads, due = st.due; st.due = false; persist();
-      if (!due || Date.now() - st.lastInterstitial < a.minIntervalSec * 1000 || !ready.interstitial) return cb();
+      if (mode === 'none' || !due || Date.now() - st.lastInterstitial < a.minIntervalSec * 1000 || !ready.interstitial) return cb();
       st.lastInterstitial = Date.now(); persist(); show('interstitial', 'next stage', function () { cb(); });
     },
     cancelDue: function () { if (st.due) { st.due = false; persist(); } },

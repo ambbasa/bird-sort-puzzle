@@ -14,7 +14,7 @@ body{min-height:100vh;user-select:none;-webkit-user-select:none;touch-action:man
 .tube::after{content:"";position:absolute;inset:-10px -6px -6px}/* hitbox +6px */
 .tube.complete{border-color:var(--tube-complete);filter:drop-shadow(0 0 4px var(--tube-complete))}.tube.complete::before{background:var(--tube-complete)}
 .tube.complete.fresh{animation:tube-complete-glow var(--dur-complete) ease-out}
-.tube .badge{position:absolute;top:-34px;left:50%;width:26px;transform:translateX(-50%);animation:star-in 400ms var(--ease-bounce)}
+.tube .badge{position:absolute;top:-34px;left:50%;width:26px;transform:translateX(-50%)}.tube.fresh .badge{animation:star-in 400ms var(--ease-bounce)}/* complete check plays once (only when the tube just completed), not on every re-render */
 .stack{position:absolute;bottom:4px;left:0;right:0;display:flex;flex-direction:column-reverse;align-items:center;pointer-events:none}
 .ball{display:block;pointer-events:none}
 .hintmark{position:absolute;bottom:-40px;left:50%;transform:translateX(-50%);font-size:28px;animation:bob .8s infinite alternate;pointer-events:none}
@@ -83,9 +83,10 @@ body{min-height:100vh;user-select:none;-webkit-user-select:none;touch-action:man
 :root{--pu:calc(var(--ball-size)/56);--tube-w:calc(var(--pu)*80);--tube-h:calc(var(--pu)*320);--small-tube-h:calc(var(--pu)*260);--tube-gap:8px}
 .tube.perch{border:0;border-radius:0;background:url(assets-birds-perch-perch.svg) center bottom/100% 100% no-repeat;align-self:flex-end}
 .tube.perch::before{display:none}
-.tube.perch.small{height:var(--small-tube-h);background-image:url(assets-birds-perch-perch-small.svg)}
-.tube.perch.complete{background-image:url(assets-birds-perch-perch-complete.svg);border:0;filter:drop-shadow(0 0 3px #FFD54F)}
+.tube.perch.small{height:var(--small-tube-h);background-image:url(assets-v5ui-rec-perch-small.svg)}
+.tube.perch.complete{background-image:url(assets-v5ui-rec-perch-complete.svg);border:0;filter:drop-shadow(0 0 3px #FFD54F)}
 .tube.perch.complete.fresh{animation:perch-glow 900ms ease-out}
+.tube.complete:not(.fresh),.tube.perch.complete:not(.fresh),.tube.perch.complete:not(.fresh) .leaf,.tube.perch.complete:not(.fresh) .bloom{animation:none}/* theme.css animates every .complete -> replayed on each re-render (bug v5); only the freshly completed tube animates */
 .tube.perch .stack{bottom:calc(var(--pu)*24)}
 .tube.perch .ballwrap{width:var(--ball-size);height:var(--ball-size)}
 .tube.perch .ballwrap+.ballwrap{margin-bottom:calc(var(--pu)*4)}
@@ -148,3 +149,21 @@ body.theme-low-end.theme-snow{background-image:url("assets-themes-theme-snow.web
 .hud .stagesbtn{width:auto;padding:0 10px;font-size:13px;font-weight:800;margin-left:6px;touch-action:manipulation}
 #settings{touch-action:manipulation}
 .hud-left{display:flex;align-items:center;flex:none}.hud-mid{flex:1;min-width:0}
+/* ---- QA 완성도 감사 (라이브 v5) fixes ---- */
+/* F5: every touch target >= 44x44 (checkbox hit area = 44px; the whole label row is >= 48px tall and toggles it) */
+.toggle input{width:44px;height:44px;margin:0 -10px 0 0;cursor:pointer}
+/* F4: daily red dot moved to the '스테이지' button */
+#stagesBtn{position:relative}#stagesBtn.dot::after{content:"";position:absolute;top:4px;right:4px;width:10px;height:10px;border-radius:50%;background:#FF5252;box-shadow:0 0 0 2px var(--bg-dark,#1A1A2E)}
+#setsect{display:flex;flex-direction:column;gap:8px;width:100%}
+/* F2: no empty / placeholder ad area */
+.banner.off{display:none!important}
+/* F6: keyboard focus ring on perches */
+.tube:focus-visible{outline:3px solid #FFD54F;outline-offset:3px}
+/* F3: ending popup */
+.endcard .endart{font-size:44px;display:flex;gap:10px;justify-content:center}
+.endcard .endart span{display:inline-block;animation:bird-bob 1.2s ease-in-out infinite alternate}.endcard .endart span:nth-child(2){animation-delay:.3s}
+#endov{z-index:60}
+@media (prefers-reduced-motion: reduce){.endcard .endart span{animation:none}}
+/* F1 follow-up: the move counter must never wrap (1 -> 2 digit moves re-flowed the HUD and shifted the whole board ~14px) */
+.hud #moves{white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:420px){.hud #moves .mv-note{display:none}}
