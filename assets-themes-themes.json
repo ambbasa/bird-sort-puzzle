@@ -1,69 +1,70 @@
 {
-  "rule": "themeIndex = floor((stage-1)/100) % 3",
-  "order": [
-    "forest",
-    "sunset",
-    "snow"
-  ],
-  "stagesPerTheme": 100,
-  "examples": {
-    "1-100": "forest",
-    "101-200": "sunset",
-    "201-300": "snow",
-    "301-400": "forest"
+ "rule": "themeIndex = floor((stage-1)/100) % 3",
+ "order": [
+  "forest",
+  "sunset",
+  "snow"
+ ],
+ "stagesPerTheme": 100,
+ "examples": {
+  "1-100": "forest",
+  "101-200": "sunset",
+  "201-300": "snow",
+  "301-400": "forest"
+ },
+ "themes": [
+  {
+   "key": "forest",
+   "name": "숲",
+   "class": "theme-forest",
+   "file": "assets-themes-theme-forest.svg",
+   "dominant": [
+    "#C8E8A8",
+    "#A8E8F8",
+    "#B8E8F8",
+    "#C8E8B8",
+    "#A8D8A8",
+    "#A8D8F8"
+   ],
+   "perchTint": "#7A6248",
+   "fallback": "assets-themes-theme-forest.webp",
+   "version": "5c"
   },
-  "themes": [
-    {
-      "key": "forest",
-      "name": "숲",
-      "class": "theme-forest",
-      "file": "assets-themes-theme-forest.svg",
-      "dominant": [
-        "#C8D8B8",
-        "#D8E8D8",
-        "#C8D8C8",
-        "#C8E8C8",
-        "#C8E8B8",
-        "#B8D8B8"
-      ],
-      "perchTint": "#7A6248",
-      "fallback": "assets-themes-theme-forest.webp",
-      "version": 5
-    },
-    {
-      "key": "sunset",
-      "name": "노을 호수",
-      "class": "theme-sunset",
-      "file": "assets-themes-theme-sunset.svg",
-      "dominant": [
-        "#E8C8C8",
-        "#E8D8C8",
-        "#F8D8C8",
-        "#D8C8C8",
-        "#D8B8A8",
-        "#E8C8D8"
-      ],
-      "perchTint": "#7C5F4A",
-      "fallback": "assets-themes-theme-sunset.webp",
-      "version": 5
-    },
-    {
-      "key": "snow",
-      "name": "눈 내린 밤",
-      "class": "theme-snow",
-      "file": "assets-themes-theme-snow.svg",
-      "dominant": [
-        "#C8D8E8",
-        "#B8B8D8",
-        "#B8C8D8",
-        "#D8D8E8",
-        "#C8C8D8",
-        "#D8E8E8"
-      ],
-      "perchTint": "#6E6A78",
-      "fallback": "assets-themes-theme-snow.webp",
-      "version": 5
-    }
-  ],
-  "playArea": "세로 20%~80% 헤이즈 오버레이(저채도·저대비)"
+  {
+   "key": "sunset",
+   "name": "노을 호수",
+   "class": "theme-sunset",
+   "file": "assets-themes-theme-sunset.svg",
+   "dominant": [
+    "#F8D8C8",
+    "#F8D8A8",
+    "#E8C8E8",
+    "#F8C8A8",
+    "#F8C8B8",
+    "#E8C8D8"
+   ],
+   "perchTint": "#7C5F4A",
+   "fallback": "assets-themes-theme-sunset.webp",
+   "version": "5c"
+  },
+  {
+   "key": "snow",
+   "name": "눈 내린 밤",
+   "class": "theme-snow",
+   "file": "assets-themes-theme-snow.svg",
+   "dominant": [
+    "#E8E8F8",
+    "#B8C8F8",
+    "#C8C8F8",
+    "#B8C8E8",
+    "#B8D8D8",
+    "#F8F8F8"
+   ],
+   "perchTint": "#6E6A78",
+   "fallback": "assets-themes-theme-snow.webp",
+   "version": "5c"
+  }
+ ],
+ "playArea": "세로 20%~80% 헤이즈 오버레이(저채도·저대비)",
+ "style": "v5c 카툰(둥근 나무·굵은 중명도 외곽선·뭉게구름·언덕), 생성기 tools/gen_themes_v5c.py"
 }

@@ -98,8 +98,26 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     if (a.addedTube) { tubes.push([]); caps.push(4); lock.push(null); mask.push([]); } // purchased tube survives restart
     S = { n: n, daily: dk, g: g, a: a, tubes: tubes, caps: caps, lock: lock, mask: mask, hist: [], sel: -1, path: 0, moves: 0, lastDone: -99, combo: 0, chain: 0, banked: 0, won: false, locked: false, hint: null };
     applyTheme(dk ? 1 + 100 * (g.seed % C.themes.length) : n, sb || !!dk); // daily: theme rotates by date, no unlock toast
-    if (!sb) { if (!dk) save.current = n; persist(); } fx = {}; render();
+    if (!sb) { if (!dk) save.current = n; persist(); } fx = {}; render(); try { artStage(g, n); } catch (e) { console.error('artStage', e); } // art warm-up must never break a stage
   }
+  // v5 art budget (birds 4-7KB each): load only what the current stage uses. The board waits (max 350ms) for the idle
+  // frames it shows to decode -> no pop-in; then, when idle, expressions + flap frames of these colors and the next
+  // stage's idle frames are warmed. Side frames load lazily on first selection of a color (before its flight starts).
+  var artDone = {}, sideWarm = {};
+  function artGet(src) { if (artDone[src]) return artDone[src]; var im = new Image(); im.src = src; return (artDone[src] = im.decode ? im.decode().catch(function () {}) : Promise.resolve()); }
+  function stageColors(g) { var u = []; g.tubes.forEach(function (t) { t.forEach(function (c) { if (u.indexOf(c) < 0 && (E.isKey(c) ? GA.pair[c] : C.palette[c])) u.push(c); }); }); return u; }
+  function idleSrc(c) { return ballSrc(c).src; }
+  SP._artLoaded = function () { return Object.keys(artDone); }; // QA hook
+  function artStage(g, n) {
+    var cs = stageColors(g), b = $('board'), first = cs.map(idleSrc).concat((g.hidden || []).length ? [BF.hidden] : []);
+    if (!reduced) { b.style.opacity = 0; var shown = false, show = function () { if (!shown) { shown = true; b.style.opacity = ''; } };
+      Promise.all(first.map(artGet)).then(show); setTimeout(show, 350); }
+    else first.forEach(artGet);
+    var idle = window.requestIdleCallback || function (f) { setTimeout(f, 200); };
+    idle(function () { cs.forEach(function (c) { if (E.isKey(c) || !C.palette[c]) return; artGet(BF.expr(c, 'happy')); artGet(BF.expr(c, 'sad')); [BF.foldFrame].concat(BF.side && BF.side.enabled ? [] : BF.frames).forEach(function (fr) { artGet(birdFrame(c, fr)); }); });
+      var nx = SP.STAGES[n + 1]; if (nx && nx.tubes) stageColors(nx).forEach(function (c) { if (!E.isKey(c) && C.palette[c]) artGet(BF.expr(c, 'idle')); }); });
+  }
+  function warmSide(c) { if (!(BF.side && BF.side.enabled) || c == null) return; var k = sideKey(c); if (sideWarm[k]) return; sideWarm[k] = 1; BF.side.frames.forEach(function (_, i) { artGet(sideFrame(k, i)); }); }
   // Feedback v2 themes: theme = floor((stage-1)/100) mod themes.length (cycles forever for 201+). Background = designer file
   // (C.art.themeBg[key], detected by tools/sync-art.js) else the config gradient. First arrival in a new 100-block -> toast once.
   // DESIGN 15.3: backgrounds set from css-style.css with paths relative to that file (not theme.css var(--theme-bg)); WebP on low-end devices
@@ -234,7 +252,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   function tap(i) {
     if (S.locked || SP.ads.isBusy()) return;
     var pickable = function (k) { return S.tubes[k].length && !done(k) && !S.lock[k]; };
-    if (S.sel < 0) { if (pickable(i)) { S.sel = i; sfx.play('select'); } else { fx.shake = i; sfx.play('invalid'); } }
+    if (S.sel < 0) { if (pickable(i)) { S.sel = i; warmSide(S.tubes[i][S.tubes[i].length - 1]); sfx.play('select'); } else { fx.shake = i; sfx.play('invalid'); } }
     else if (S.sel === i) S.sel = -1;
     else if (E.canMove(est(), S.sel, i)) {
       var from = S.sel, src = document.querySelectorAll('#board .tube')[from], sb = src && src.querySelector('.ballwrap:last-child');
@@ -253,7 +271,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
       fx.fly = { from: !unlock && sb ? (airRect || sb.getBoundingClientRect()) : null, to: i, sounds: pend }; pend = null;
       if (unlock) { fx.fly.sounds.forEach(function (a) { sfx.play(a[0], a[1]); }); fx.fly = null; render(); return; }
       if (solved) { S.locked = true; S.sel = -1; render(); return reduced ? setTimeout(win, 50) : whenLanded(function () { setTimeout(win, 250); }); } // H1: lock all input during clear sequence
-    } else if (pickable(i)) { S.sel = i; sfx.play('select'); }
+    } else if (pickable(i)) { S.sel = i; warmSide(S.tubes[i][S.tubes[i].length - 1]); sfx.play('select'); }
     else { fx.shake = i; vibrate(10); sfx.play('invalid'); }
     render();
   }

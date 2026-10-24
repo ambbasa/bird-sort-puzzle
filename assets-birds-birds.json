@@ -56,7 +56,7 @@
       "key": "orange",
       "hex": "#FB8C00",
       "bellySymbol": "star",
-      "crest": "bun",
+      "crest": "pom",
       "pattern": "hstripe",
       "expressions": {
         "idle": "assets-birds-bird-orange-idle.svg",
@@ -110,7 +110,7 @@
       "key": "cyan",
       "hex": "#00ACC1",
       "bellySymbol": "diamond",
-      "crest": "plume",
+      "crest": "wave",
       "pattern": "wave",
       "expressions": {
         "idle": "assets-birds-bird-cyan-idle.svg",
@@ -128,7 +128,7 @@
       "key": "blue",
       "hex": "#1E63E5",
       "bellySymbol": "plus",
-      "crest": "mohawk",
+      "crest": "fin",
       "pattern": "diag",
       "expressions": {
         "idle": "assets-birds-bird-blue-idle.svg",
@@ -146,7 +146,7 @@
       "key": "purple",
       "hex": "#8E24AA",
       "bellySymbol": "heart",
-      "crest": "spiral",
+      "crest": "antenna2",
       "pattern": "checker",
       "expressions": {
         "idle": "assets-birds-bird-purple-idle.svg",
@@ -164,7 +164,7 @@
       "key": "white",
       "hex": "#ECEFF1",
       "bellySymbol": "ring",
-      "crest": "beret",
+      "crest": "fan",
       "pattern": "cross",
       "expressions": {
         "idle": "assets-birds-bird-white-idle.svg",
@@ -218,7 +218,7 @@
       "key": "lime",
       "hex": "#A6DC61",
       "bellySymbol": "x",
-      "crest": "antenna",
+      "crest": "ball",
       "pattern": "zigzag",
       "expressions": {
         "idle": "assets-birds-bird-lime-idle.svg",
@@ -398,6 +398,110 @@
         "assets-birds-side-bird-key-c-side-3.svg",
         "assets-birds-side-bird-key-c-side-4.svg"
       ]
+    }
+  },
+  "characters": {
+    "version": 5,
+    "desc": "v5 개성 캐릭터 메타(추가 키, 기존 스키마 불변)",
+    "byKey": {
+      "red": {
+        "name": "루비",
+        "silN": "키 큰 달걀형",
+        "beakN": "짧게 굽은 갈고리 부리(아이보리)",
+        "tuftN": "한 가닥 소용돌이 고리",
+        "browN": "八자 걱정 눈썹(다정한 걱정꾼)"
+      },
+      "orange": {
+        "name": "망고",
+        "silN": "옆으로 넓은 통통 원형",
+        "beakN": "넓적한 오리 주둥이",
+        "tuftN": "짧은 줄기 위 방울 상투",
+        "browN": "굵은 일자 졸린 눈썹(느긋함)"
+      },
+      "yellow": {
+        "name": "레모",
+        "silN": "가늘고 키 큰 병 모양",
+        "beakN": "길고 뾰족한 물총새 부리(주황)",
+        "tuftN": "톱니 왕관 3점",
+        "browN": "높이 올라간 놀란 아치"
+      },
+      "green": {
+        "name": "새싹",
+        "silN": "둥근 사각 콩(스퀘어클)",
+        "beakN": "작은 원뿔 핀치 부리",
+        "tuftN": "새싹 잎 1장",
+        "browN": "한쪽만 치켜뜬 시큰둥 눈썹"
+      },
+      "cyan": {
+        "name": "파도",
+        "silN": "둥근 사다리꼴(위가 넓음)",
+        "beakN": "끝이 둥근 저어새 숟가락 부리",
+        "tuftN": "앞으로 말린 파도 앞머리",
+        "browN": "V자 결의 눈썹(승부욕)"
+      },
+      "blue": {
+        "name": "탑",
+        "silN": "키 큰 둥근 직사각 탑",
+        "beakN": "크고 두툼한 아이보리 부리(위아래 턱)",
+        "tuftN": "둥근 지느러미 갈기",
+        "browN": "두껍게 이어진 일자 눈썹(근엄)"
+      },
+      "purple": {
+        "name": "보라",
+        "silN": "위가 뾰족한 양파형",
+        "beakN": "크게 휜 앵무 부리(황금)",
+        "tuftN": "나방 더듬이 2가닥",
+        "browN": "한쪽 올린 장난꾸러기 눈썹"
+      },
+      "white": {
+        "name": "구름",
+        "silN": "넓고 낮은 식빵/돔형",
+        "beakN": "작은 세모 부리",
+        "tuftN": "5갈래 부채 깃",
+        "browN": "우아한 둥근 아치(차분)"
+      },
+      "pink": {
+        "name": "복숭",
+        "silN": "작은 머리+큰 몸 표주박형",
+        "beakN": "하트형 통통 부리",
+        "tuftN": "하트 볏",
+        "browN": "동그랗게 올린 명랑 눈썹"
+      },
+      "brown": {
+        "name": "도토리",
+        "silN": "아래가 무거운 서양배",
+        "beakN": "길고 곧은 딱따구리 끌 부리",
+        "tuftN": "큰 가시 깃+작은 가시",
+        "browN": "깊은 V 투덜이 눈썹"
+      },
+      "lime": {
+        "name": "라임",
+        "silN": "둥근 마름모(연 모양)",
+        "beakN": "가늘고 아래로 휜 벌새 바늘 부리",
+        "tuftN": "더듬이 공",
+        "browN": "바깥으로 치솟은 신난 눈썹"
+      },
+      "indigo": {
+        "name": "별밤",
+        "silN": "밑이 평평한 종(벨) 모양",
+        "beakN": "작게 굽은 부엉이 부리",
+        "tuftN": "별 볏",
+        "browN": "숱 많은 덥수룩 눈썹(현자)"
+      },
+      "hidden": {
+        "name": "물음표",
+        "silN": "둥근 물방울(후드)",
+        "beakN": "작은 세모 부리(회색)",
+        "tuftN": "물음표 모양 깃",
+        "browN": "궁금해서 올린 눈썹"
+      },
+      "key": {
+        "name": "열쇠",
+        "silN": "둥근 사각 금고형",
+        "beakN": "작은 금빛 원뿔 부리",
+        "tuftN": "열쇠고리 링+이빨",
+        "browN": "반듯한 자신만만 눈썹"
+      }
     }
   }
 }
