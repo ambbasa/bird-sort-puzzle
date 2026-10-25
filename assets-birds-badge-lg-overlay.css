@@ -1,0 +1,35 @@
+/* v7b '심볼 크게' 배지 위치 (DESIGN 19.9). 기준 = 새 박스 100x100(%). 기본값은 대부분 새에 맞음, data-k로 개별 보정 */
+.bigsym{position:absolute;left:26.8%;top:49%;width:46.5%;height:46.5%;pointer-events:none;border-radius:0;box-shadow:none}
+.bird-side-wrap .bigsym,.bigsym.side{left:31%;top:47%}
+.bigsym[data-k="red"]{left:26.8%;top:49.0%;width:46.5%;height:46.5%}
+.bigsym.side[data-k="red"]{left:31.0%;top:47.0%;width:46.5%;height:46.5%}
+.bigsym[data-k="orange"]{left:33.6%;top:59.8%;width:32.8%;height:32.8%}
+.bigsym.side[data-k="orange"]{left:37.4%;top:55.1%;width:36.2%;height:36.2%}
+.bigsym[data-k="yellow"]{left:27.5%;top:49.4%;width:45.1%;height:45.1%}
+.bigsym.side[data-k="yellow"]{left:32.7%;top:49.3%;width:41.2%;height:41.2%}
+.bigsym[data-k="green"]{left:28.9%;top:52.3%;width:42.3%;height:42.3%}
+.bigsym.side[data-k="green"]{left:33.6%;top:49.3%;width:43.4%;height:43.4%}
+.bigsym[data-k="cyan"]{left:26.4%;top:48.3%;width:47.3%;height:47.3%}
+.bigsym.side[data-k="cyan"]{left:31.0%;top:46.3%;width:47.3%;height:47.3%}
+.bigsym[data-k="blue"]{left:25.9%;top:47.6%;width:48.1%;height:48.1%}
+.bigsym.side[data-k="blue"]{left:30.3%;top:45.6%;width:48.1%;height:48.1%}
+.bigsym[data-k="purple"]{left:26.8%;top:49.0%;width:46.5%;height:46.5%}
+.bigsym.side[data-k="purple"]{left:31.6%;top:47.0%;width:46.5%;height:46.5%}
+.bigsym[data-k="white"]{left:35.9%;top:63.5%;width:28.1%;height:28.1%}
+.bigsym.side[data-k="white"]{left:40.6%;top:58.9%;width:31.4%;height:31.4%}
+.bigsym[data-k="pink"]{left:25.9%;top:47.6%;width:48.1%;height:48.1%}
+.bigsym.side[data-k="pink"]{left:31.2%;top:45.6%;width:48.1%;height:48.1%}
+.bigsym[data-k="brown"]{left:26.8%;top:49.0%;width:46.5%;height:46.5%}
+.bigsym.side[data-k="brown"]{left:32.5%;top:47.0%;width:46.5%;height:46.5%}
+.bigsym[data-k="lime"]{left:26.4%;top:48.3%;width:47.3%;height:47.3%}
+.bigsym.side[data-k="lime"]{left:30.6%;top:46.3%;width:47.3%;height:47.3%}
+.bigsym[data-k="indigo"]{left:26.8%;top:49.0%;width:46.5%;height:46.5%}
+.bigsym.side[data-k="indigo"]{left:32.7%;top:47.0%;width:46.5%;height:46.5%}
+.bigsym[data-k="hidden"]{left:27.6%;top:50.3%;width:44.8%;height:44.8%}
+.bigsym.side[data-k="hidden"]{left:32.4%;top:48.1%;width:45.1%;height:45.1%}
+.bigsym[data-k="key-a"]{left:25.0%;top:48.0%;width:50.1%;height:50.1%}
+.bigsym.side[data-k="key-a"]{left:29.7%;top:45.3%;width:50.9%;height:50.9%}
+.bigsym[data-k="key-b"]{left:25.0%;top:48.0%;width:50.1%;height:50.1%}
+.bigsym.side[data-k="key-b"]{left:29.7%;top:45.3%;width:50.9%;height:50.9%}
+.bigsym[data-k="key-c"]{left:25.0%;top:48.0%;width:50.1%;height:50.1%}
+.bigsym.side[data-k="key-c"]{left:29.7%;top:45.3%;width:50.9%;height:50.9%}

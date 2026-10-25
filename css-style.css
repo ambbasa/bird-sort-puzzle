@@ -22,7 +22,7 @@ body{min-height:100vh;user-select:none;-webkit-user-select:none;touch-action:man
 .spark{position:absolute;width:10px;height:10px;background:var(--accent);clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);animation:sparkle 500ms ease-out both;pointer-events:none}
 #combo{position:absolute;top:28%;left:0;right:0;text-align:center;font-size:30px;font-weight:900;color:var(--accent);text-shadow:0 3px 0 #b8860b;pointer-events:none;opacity:0}
 #combo.c3{font-size:36px;-webkit-text-stroke:1px #FB8C00}
-#combo.c4{background:linear-gradient(90deg,#E53935,#FB8C00,#FDD835,#43A047,#00ACC1,#1E63E5,#8E24AA);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none}
+#combo.c4{background:linear-gradient(90deg,#E53935,#FB8C00,#FDD835,#27A272,#1FC8DA,#1E63E5,#870488);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none}
 .bottom{height:var(--bottom-h);display:flex;justify-content:center;gap:16px;align-items:center;flex:none}
 .bottom .btn{width:88px;height:52px;font-size:12px;flex-direction:column;gap:0}
 .btn{cursor:pointer;font-family:inherit}.btn:disabled{opacity:.4}
@@ -98,7 +98,6 @@ body{min-height:100vh;user-select:none;-webkit-user-select:none;touch-action:man
 .ball.bird{width:100%;height:100%}
 .ballwrap.lifted .ball.bird{animation:bird-bob 600ms ease-in-out infinite}
 .ball.bird.landing{animation:bird-land var(--dur-bird-land) linear}
-.ball.bigsym{position:absolute;width:46%;height:46%;left:27%;top:48%;border-radius:50%;box-shadow:0 0 0 1px #0006;pointer-events:none}
 .pairsym.keysym{left:50%;top:66%}
 @media (prefers-reduced-motion: reduce){.ballwrap.lifted .ball.bird,.ball.bird.landing{animation:none}}
 
@@ -205,4 +204,22 @@ body.theme-low-end.theme-snow{background-image:url("assets-themes-theme-snow.web
 #menu.ov .card{max-height:100%;overflow-y:visible}
 /* v7a symbol check: theme.css .perch{filter:sepia(.15) saturate(.9)} also tinted the birds on it (white symbol disc -> cream, red/orange dulled) */
 #board .tube.perch{filter:none}
+/* v7b DESIGN 19.9: wood drawn by assets-v7ui-v7b-perch-wood.css on ::before (filter only on the wood, --wood-f per theme);
+   the tube itself stays unfiltered (theme.css .perch sepia would tint the birds) and carries no background of its own */
+#board .tube.perch,#board .tube.perch.small,#board .tube.perch.complete{background-image:none}
+#board .tube.perch.complete::before{filter:var(--wood-f,none) drop-shadow(0 0 3px #FFD54F)}
+/* v7b '심볼 크게' badge (assets-birds-badge-lg-overlay.css positions .bigsym in the bird box); wrapper mirrors the position
+   for left-facing side flight frames while the badge art itself stays unmirrored */
+.bigsym-wrap{position:absolute;inset:0;pointer-events:none;z-index:2}
+.bigsym-wrap.mirror{transform:scaleX(-1)}.bigsym-wrap.mirror .bigsym{transform:scaleX(-1)}
 body .hud .hud-mid #moves,body[class*="theme-"] .hud .hud-mid #moves{font-size:13px}
+
+/* v7.1 PM-1: toasts sit above the bottom buttons (JS sets bottom from footer.bottom; this is the fallback incl. safe-area) */
+#toast{top:auto;bottom:calc(var(--bottom-h,88px) + var(--banner-h,0px) + var(--sa-bottom,env(safe-area-inset-bottom,0px)) + 10px)}
+#toast:empty{visibility:hidden}
+/* v7.1 PM-2: tutorial bubble placed by JS outside the board; tail follows --tail-x */
+.tutor{position:fixed}
+.tutor .v7-bubble::after{left:var(--tail-x,50%)}
+/* v7.1 PM-5: clear card + '재시작' and the restart dialog keep 16px + safe-area below the last button */
+body #overlay.v5 .card,body #restartov .card{padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+#overlay .startip{font-size:13px;font-weight:800;opacity:.85}

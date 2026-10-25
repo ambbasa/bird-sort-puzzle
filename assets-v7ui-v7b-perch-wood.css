@@ -1,0 +1,9 @@
+/* v7b 제안 (DESIGN 19.9): 횃대 나무만 테마 톤 보정. 새(.stack)에는 필터가 걸리지 않음. style.css 84~87행 뒤에 로드 */
+.tube.perch{background:none}
+.tube.perch::before{display:block;content:"";position:absolute;inset:0;width:auto;height:auto;border:0;border-radius:0;box-shadow:none;opacity:1;transform:none;
+  background:url(assets-birds-perch-perch.svg?v=e14107a5) center bottom/100% 100% no-repeat;filter:var(--wood-f,none);pointer-events:none;z-index:0}
+.tube.perch.small::before{background-image:url(assets-v5ui-rec-perch-small.svg?v=110de3e4)}
+.tube.perch.complete::before{background-image:url(assets-v5ui-rec-perch-complete.svg?v=cdf0ce1e)}
+.tube.perch .stack{z-index:1}
+.theme-sunset .tube.perch{--wood-f:saturate(.85) brightness(1.05) sepia(.12)}
+.theme-snow .tube.perch{--wood-f:saturate(.55) brightness(1.1) hue-rotate(-8deg)}

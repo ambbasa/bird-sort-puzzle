@@ -557,21 +557,7 @@
       "symbolScale": 1.3,
       "symbolBacking": "white disc r=26*scale, #1A1A2E 1.6px",
       "appliesTo": "12 colors + hidden + key-a/b/c, front 7 + side 4",
-      "doc": "DESIGN.md 19.8",
-      "purpleSmallSizeFix": {
-        "from": "#842B76",
-        "to": "#870488",
-        "oklch_from": [
-          0.45,
-          0.151,
-          334.6
-        ],
-        "oklch_to": [
-          0.439,
-          0.2,
-          327.9
-        ]
-      }
+      "doc": "DESIGN.md 19.8"
     }
   }
 }

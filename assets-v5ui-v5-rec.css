@@ -67,7 +67,7 @@
 #themeov .card{background:linear-gradient(180deg,var(--v5-cream),var(--v5-cream-2));color:var(--v5-ink);border:4px solid var(--v5-ol);border-bottom:0}
 #themeov .tcard{position:relative;width:min(64vw,240px);aspect-ratio:260/340;border-radius:22px;overflow:hidden;background:center/cover no-repeat;animation:v5pop .5s cubic-bezier(.3,1.6,.5,1) both}
 #themeov .tcard::after{content:"";position:absolute;inset:0;background:center/100% 100% no-repeat}
-#themeov .tcard[data-theme="forest"]{background-image:url("assets-themes-theme-forest.svg?v=e3b63a69")}#themeov .tcard[data-theme="forest"]::after{background-image:url("assets-v5ui-rec-theme-card-forest.svg?v=4f8bd225")}
+#themeov .tcard[data-theme="forest"]{background-image:url("assets-themes-theme-forest.svg?v=e3b63a69")}#themeov .tcard[data-theme="forest"]::after{background-image:url("assets-v5ui-rec-theme-card-forest.svg?v=a49947db")}
 #themeov .tcard[data-theme="sunset"]{background-image:url("assets-themes-theme-sunset.svg?v=d4df827c")}#themeov .tcard[data-theme="sunset"]::after{background-image:url("assets-v5ui-rec-theme-card-sunset.svg?v=82e687cf")}
 #themeov .tcard[data-theme="snow"]{background-image:url("assets-themes-theme-snow.svg?v=d7b9f457")}#themeov .tcard[data-theme="snow"]::after{background-image:url("assets-v5ui-rec-theme-card-snow.svg?v=baa50bff")}
 #themeov .title{font:900 24px/1.2 var(--v5-font,system-ui)}
