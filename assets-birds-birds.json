@@ -90,7 +90,7 @@
     },
     {
       "key": "green",
-      "hex": "#8CF09E",
+      "hex": "#27A272",
       "bellySymbol": "square",
       "crest": "leaf",
       "pattern": "scale",
@@ -104,11 +104,12 @@
         "mid": "assets-birds-bird-green-mid.svg",
         "down": "assets-birds-bird-green-down.svg",
         "fold": "assets-birds-bird-green-fold.svg"
-      }
+      },
+      "hexV7a": "#1F9A55"
     },
     {
       "key": "cyan",
-      "hex": "#00ACC1",
+      "hex": "#1FC8DA",
       "bellySymbol": "diamond",
       "crest": "wave",
       "pattern": "wave",
@@ -144,7 +145,7 @@
     },
     {
       "key": "purple",
-      "hex": "#8E24AA",
+      "hex": "#870488",
       "bellySymbol": "heart",
       "crest": "antenna2",
       "pattern": "checker",
@@ -158,7 +159,9 @@
         "mid": "assets-birds-bird-purple-mid.svg",
         "down": "assets-birds-bird-purple-down.svg",
         "fold": "assets-birds-bird-purple-fold.svg"
-      }
+      },
+      "hexV7a": "#8E24AA",
+      "hexV7aPurple": "#842B76"
     },
     {
       "key": "white",
@@ -198,7 +201,7 @@
     },
     {
       "key": "brown",
-      "hex": "#6C2D18",
+      "hex": "#451B00",
       "bellySymbol": "hexagon",
       "crest": "spike",
       "pattern": "vstripe",
@@ -212,11 +215,12 @@
         "mid": "assets-birds-bird-brown-mid.svg",
         "down": "assets-birds-bird-brown-down.svg",
         "fold": "assets-birds-bird-brown-fold.svg"
-      }
+      },
+      "hexV7a": "#6C2D18"
     },
     {
       "key": "lime",
-      "hex": "#A6DC61",
+      "hex": "#ABD494",
       "bellySymbol": "x",
       "crest": "ball",
       "pattern": "zigzag",
@@ -230,11 +234,12 @@
         "mid": "assets-birds-bird-lime-mid.svg",
         "down": "assets-birds-bird-lime-down.svg",
         "fold": "assets-birds-bird-lime-fold.svg"
-      }
+      },
+      "hexV7a": "#ABE085"
     },
     {
       "key": "indigo",
-      "hex": "#1D1DBD",
+      "hex": "#0000DB",
       "bellySymbol": "drop",
       "crest": "star",
       "pattern": "sparkle",
@@ -248,7 +253,8 @@
         "mid": "assets-birds-bird-indigo-mid.svg",
         "down": "assets-birds-bird-indigo-down.svg",
         "fold": "assets-birds-bird-indigo-fold.svg"
-      }
+      },
+      "hexV7a": "#1D1DBD"
     }
   ],
   "hidden": {
@@ -401,7 +407,7 @@
     }
   },
   "characters": {
-    "version": 5,
+    "version": "7a",
     "desc": "v5 개성 캐릭터 메타(추가 키, 기존 스키마 불변)",
     "byKey": {
       "red": {
@@ -501,6 +507,70 @@
         "beakN": "작은 금빛 원뿔 부리",
         "tuftN": "열쇠고리 링+이빨",
         "browN": "반듯한 자신만만 눈썹"
+      }
+    },
+    "v7": {
+      "changed": [
+        "green",
+        "lime",
+        "cyan",
+        "indigo"
+      ],
+      "hex": {
+        "green": "#1F9A55",
+        "lime": "#ABE085",
+        "cyan": "#1FC8DA",
+        "indigo": "#1D1DBD"
+      },
+      "hexV6": {
+        "green": "#8CF09E",
+        "lime": "#A6DC61",
+        "cyan": "#00ACC1",
+        "indigo": "#1D1DBD"
+      },
+      "symbolScale": 1.3,
+      "symbolBacking": "white disc r=26*scale, #1A1A2E 1.6px",
+      "doc": "DESIGN.md 19.1"
+    },
+    "v7a": {
+      "changed": [
+        "green",
+        "purple",
+        "brown",
+        "lime",
+        "indigo"
+      ],
+      "hex": {
+        "green": "#27A272",
+        "purple": "#870488",
+        "brown": "#451B00",
+        "lime": "#ABD494",
+        "indigo": "#0000DB"
+      },
+      "hexV7a": {
+        "green": "#1F9A55",
+        "purple": "#8E24AA",
+        "brown": "#6C2D18",
+        "lime": "#ABE085",
+        "indigo": "#1D1DBD"
+      },
+      "symbolScale": 1.3,
+      "symbolBacking": "white disc r=26*scale, #1A1A2E 1.6px",
+      "appliesTo": "12 colors + hidden + key-a/b/c, front 7 + side 4",
+      "doc": "DESIGN.md 19.8",
+      "purpleSmallSizeFix": {
+        "from": "#842B76",
+        "to": "#870488",
+        "oklch_from": [
+          0.45,
+          0.151,
+          334.6
+        ],
+        "oklch_to": [
+          0.439,
+          0.2,
+          327.9
+        ]
       }
     }
   }
