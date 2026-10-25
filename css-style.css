@@ -223,3 +223,8 @@ body .hud .hud-mid #moves,body[class*="theme-"] .hud .hud-mid #moves{font-size:1
 /* v7.1 PM-5: clear card + '재시작' and the restart dialog keep 16px + safe-area below the last button */
 body #overlay.v5 .card,body #restartov .card{padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
 #overlay .startip{font-size:13px;font-weight:800;opacity:.85}
+/* v7.2 PM-1: toast = small translucent pill, never blocks taps */
+body #toast.v7-toast.v72-pill{background:rgba(255,253,246,.82);border-width:2px;padding:5px 12px;font-size:13px;gap:6px;min-height:0;border-radius:999px;box-shadow:0 2px 8px #0003;pointer-events:none;max-width:86vw}
+#toast.v7-toast--perch.v72-pill::before{width:20px;height:20px}
+/* v7.2 PM-3: short screens (<640px tall, e.g. PC 1024x594) shrink the clear art so the whole card fits; else scroll inside the card */
+@media (max-height:639px){body #overlay.v5 .card{max-height:calc(100dvh - 16px);overflow-y:auto}body #overlay.v5 .clear-art{width:min(56vw,200px);margin-top:0}body #overlay.v5 .bigstars{transform:scale(.85);margin:-4px 0}}

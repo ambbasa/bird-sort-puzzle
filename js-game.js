@@ -191,12 +191,18 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     fx.innerHTML = '<i class="v7-feather" style="--dx:-18px;--rot:-40deg"></i><i class="v7-feather" style="--dx:16px;--rot:50deg;--d:.05s"></i><i class="v7-feather v7-feather--sm" style="--dx:-6px;--rot:120deg;--d:.1s"></i><i class="v7-dust" style="--dx:-14px"></i><i class="v7-dust" style="--dx:14px;--flip:-1"></i>';
     document.body.appendChild(fx); setTimeout(function () { fx.remove(); }, 650); }
   var starPop = {};
+  function hideToast() { var t = $('toast'); if (!t) return; clearTimeout(t._h); clearTimeout(t._c); t.classList.remove('show'); t.innerHTML = ''; } // v7.2 PM-1: instant close (board tap / any modal)
   function toast(msg) { var t = $('toast'); if (!t) { t = document.createElement('div'); t.id = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
-    t.innerHTML = msg; t.className = 'v7-toast' + (/횃대/.test(msg) ? ' v7-toast--perch' : ''); // v7 19.2 toast frame
-    var ft = document.querySelector('footer.bottom'), fr = ft && ft.offsetParent !== null ? ft.getBoundingClientRect() : null; /* v7.1 PM-1: just above the bottom buttons (never over the HUD move counter) */
-    t.style.top = 'auto'; t.style.bottom = fr ? Math.round(innerHeight - fr.top + 10) + 'px' : '';
+    t.innerHTML = msg; t.className = 'v7-toast v72-pill' + (/횃대/.test(msg) ? ' v7-toast--perch' : ''); t.style.top = 'auto'; t.style.bottom = '';
+    // v7.2 PM-1: small pill placed in a free band — below the lowest bird and above the bottom buttons, else above the top bird, else under the HUD
+    var ft = document.querySelector('footer.bottom'), fr = ft && ft.offsetParent !== null ? ft.getBoundingClientRect() : null, bs = document.querySelectorAll('#board .ball'), lo = 0, hi = innerHeight, h = 40;
+    for (var i = 0; i < bs.length; i++) { var r = bs[i].getBoundingClientRect(); if (r.bottom > lo) lo = r.bottom; if (r.top < hi) hi = r.top; }
+    var floor = fr ? fr.top : innerHeight, hd = document.querySelector('header'), ceil = hd ? hd.getBoundingClientRect().bottom : 0;
+    if (!bs.length || floor - lo >= h + 8) t.style.bottom = Math.round(innerHeight - floor + 4) + 'px';
+    else if (hi - ceil >= h + 8) { t.style.bottom = 'auto'; t.style.top = Math.round(Math.max(ceil + 4, hi - h - 4)) + 'px'; }
+    else { t.style.bottom = 'auto'; t.style.top = Math.round(ceil + 4) + 'px'; } // still pointer-events:none -> birds below stay tappable
     t.classList.remove('show'); void t.offsetWidth; t.classList.add('show'); clearTimeout(t._h); clearTimeout(t._c);
-    t._h = setTimeout(function () { t.classList.remove('show'); t._c = setTimeout(function () { t.innerHTML = ''; }, 350); }, 2600); } /* PM-1: emptied after hiding (screen readers) */
+    t._h = setTimeout(function () { t.classList.remove('show'); t._c = setTimeout(function () { t.innerHTML = ''; }, 300); }, 1500); } /* v7.2: 1.5s, emptied after hiding */
   function starsFor(moves, min, n, daily) { /* v7.1 PM-4: 3 = min or fewer, 2 = <= ceil(min*1.3), 1 = clear; stages 1-5 always 3 (not for daily); undo still counts as a move */
     if (!daily && n <= C.stars.alwaysThreeTo) return 3; return moves <= min ? 3 : moves <= Math.ceil(min * C.stars.two) ? 2 : 1; }
   function starTip() { var e = $('startip'); if (e) e.textContent = '최소 ' + S.g.min + '수로 깨면 별 3개'; } /* v7.1 PM-4 */
@@ -380,8 +386,8 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     S.chain += C.coinsPerCombo * (S.combo - 1); // N2: accumulates (x2=5, x3=+10 -> 15)
     if (isCascade()) return snd('complete'); // N3: board is now an automatic end cascade -> no COMBO text (it will pay nothing)
     snd('combo', S.combo); // DESIGN §6: pitch +1 semitone per combo step (max +5)
-    var c = $('combo'); c.className = S.combo >= 4 ? 'c4' : S.combo === 3 ? 'c3' : ''; c.textContent = 'COMBO ×' + S.combo + '!';
-    void c.offsetWidth; c.className += ' combo';
+    var c = $('combo'); c.className = S.combo >= 4 ? 'c4' : S.combo === 3 ? 'c3' : ''; c.textContent = '콤보 ×' + S.combo + '!';
+    void c.offsetWidth; c.className += ' combo'; clearTimeout(c._e); c._e = setTimeout(function () { c.textContent = ''; c.className = ''; }, 1400); // v7.2 PM-2: emptied after the animation
     if (S.combo >= 3) { var f = document.createElement('div'); f.className = 'flash'; document.body.appendChild(f); setTimeout(function () { f.remove(); }, 300); }
     if (S.combo >= 4 && !reduced) { $('app').classList.add('screenshake'); setTimeout(function () { $('app').classList.remove('screenshake'); }, 200); }
   }
@@ -502,7 +508,9 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     mapRender();
   }
   $('undo').onclick = undo; function doRestart() { $('restartov').classList.remove('show'); if (S.a.addedTube) { S.a.addedTube = false; persist(); } load(S.n); }
-  $('restart').onclick = function () { if (S.locked || SP.ads.isBusy()) return; if (dirty()) $('restartov').classList.add('show'); else doRestart(); }; // v7 A4 + v7.1 PM-6: confirm whenever the board differs from the stage start (moves, added perch, ...)
+  $('board').addEventListener('pointerdown', hideToast, true); // v7.2 PM-1: tapping the board closes the toast (the tap itself still reaches the bird)
+  if (window.MutationObserver) { var tOb = new MutationObserver(function () { if (document.querySelector('.ov.show')) hideToast(); }); [].forEach.call(document.querySelectorAll('.ov'), function (o) { tOb.observe(o, { attributes: true, attributeFilter: ['class'] }); }); } // any modal/sheet -> toast closes at once
+  $('restart').onclick = function () { if (S.locked || SP.ads.isBusy()) return; if (dirty()) { $('restartMsg').textContent = (S.moves > 0 || (S.hist && S.hist.length)) ? '지금까지의 이동이 사라져요.' : (S.a.addedTube ? '추가한 횃대도 사라져요.' : '지금까지의 이동이 사라져요.'); $('restartov').classList.add('show'); } else doRestart(); }; // v7 A4 + v7.1 PM-6: confirm whenever the board differs from the stage start (moves, added perch, ...)
   function dirty() { if (S.moves > 0 || S.hist.length || S.a.addedTube) return true; var lk = S.lock.filter(Boolean).length, hd = 0; S.mask.forEach(function (m) { m.forEach(function (x) { if (x) hd++; }); });
     return JSON.stringify([S.tubes, S.g.caps ? S.caps : null, lk, hd]) !== S.init0; }
   $('restartYes').onclick = doRestart; $('restartNo').onclick = function () { $('restartov').classList.remove('show'); }; $('add').onclick = addTube; // QA F10: restart also removes the added perch (undo count kept); // M2: consumables persist via save.attempt
