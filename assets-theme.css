@@ -140,15 +140,15 @@ body{margin:0;background:linear-gradient(180deg,var(--bg-dark),var(--bg-dark-2))
   .bird-side > .f{ animation:none; opacity:0 } .bird-side > .f2{ opacity:1 }
 }
 /* 테마: themeIndex = floor((stage-1)/100) % 3 → forest / sunset / snow */
-.theme-forest{ --theme-bg:url("assets-themes-theme-forest.svg"); --perch-tint:#7A6248; --slot-backing:rgba(245,246,250,.28); --text-on-theme:#1A1A2E; }
-.theme-sunset{ --theme-bg:url("assets-themes-theme-sunset.svg"); --perch-tint:#7C5F4A; --slot-backing:rgba(245,246,250,.26); --text-on-theme:#1A1A2E; }
-.theme-snow  { --theme-bg:url("assets-themes-theme-snow.svg");   --perch-tint:#6E6A78; --slot-backing:rgba(26,26,46,.14);  --text-on-theme:#1A1A2E; }
+.theme-forest{ --theme-bg:url("assets-themes-theme-forest.svg?v=e3b63a69"); --perch-tint:#7A6248; --slot-backing:rgba(245,246,250,.28); --text-on-theme:#1A1A2E; }
+.theme-sunset{ --theme-bg:url("assets-themes-theme-sunset.svg?v=d4df827c"); --perch-tint:#7C5F4A; --slot-backing:rgba(245,246,250,.26); --text-on-theme:#1A1A2E; }
+.theme-snow  { --theme-bg:url("assets-themes-theme-snow.svg?v=d7b9f457");   --perch-tint:#6E6A78; --slot-backing:rgba(26,26,46,.14);  --text-on-theme:#1A1A2E; }
 .theme-forest, .theme-sunset, .theme-snow{ background: var(--theme-bg) center / cover no-repeat, var(--bg-light); }
 .perch{ filter: sepia(.15) saturate(.9); }
 /* v5(15.3): 고밀도 배경. SVG 우선, 미지원/저사양은 WebP(780x1688) 폴백 */
-.theme-forest{ --theme-bg-fallback:url("assets-themes-theme-forest.webp"); }
-.theme-sunset{ --theme-bg-fallback:url("assets-themes-theme-sunset.webp"); }
-.theme-snow  { --theme-bg-fallback:url("assets-themes-theme-snow.webp"); }
+.theme-forest{ --theme-bg-fallback:url("assets-themes-theme-forest.webp?v=7bfd38a2"); }
+.theme-sunset{ --theme-bg-fallback:url("assets-themes-theme-sunset.webp?v=202d51f2"); }
+.theme-snow  { --theme-bg-fallback:url("assets-themes-theme-snow.webp?v=b959c2f1"); }
 .theme-low-end.theme-forest, .theme-low-end.theme-sunset, .theme-low-end.theme-snow{ background-image: var(--theme-bg-fallback); }
 .slot-backing{ background: radial-gradient(closest-side, var(--slot-backing), transparent); border-radius:50%; }
 
@@ -159,16 +159,16 @@ body{margin:0;background:linear-gradient(180deg,var(--bg-dark),var(--bg-dark-2))
 .saga-band-label{ position:absolute; left:50%; transform:translate(-50%,-50%); font:900 17px/1 "Arial Rounded MT Bold",sans-serif; color:#1A1A2E; white-space:nowrap; pointer-events:none; }
 .map-node{ position:absolute; width:56px; height:56px; margin:-28px 0 0 -28px; border:0; padding:0; background:center/contain no-repeat; font:900 18px/52px "Arial Rounded MT Bold",sans-serif; color:#fff; text-align:center;
   text-shadow:0 0 2px #1A1A2E,0 1px 0 #1A1A2E,0 -1px 0 #1A1A2E,1px 0 0 #1A1A2E,-1px 0 0 #1A1A2E; cursor:pointer; -webkit-tap-highlight-color:transparent; }
-.map-node--locked { background-image:url("assets-map-node-locked.svg"); color:#E9EBF1; text-shadow:none; font-size:0; cursor:default; }
-.map-node--cleared{ background-image:url("assets-map-node-cleared.svg"); }
-.map-node--current{ background-image:url("assets-map-node-current.svg"); width:64px; height:64px; margin:-32px 0 0 -32px; line-height:60px; font-size:21px; z-index:2; }
+.map-node--locked { background-image:url("assets-map-node-locked.svg?v=6eb8115f"); color:#E9EBF1; text-shadow:none; font-size:0; cursor:default; }
+.map-node--cleared{ background-image:url("assets-map-node-cleared.svg?v=63af76ab"); }
+.map-node--current{ background-image:url("assets-map-node-current.svg?v=396034e7"); width:64px; height:64px; margin:-32px 0 0 -32px; line-height:60px; font-size:21px; z-index:2; }
 .map-node--current::before{ content:""; position:absolute; left:50%; top:47%; width:56px; height:56px; margin:-28px 0 0 -28px; border-radius:50%; border:4px solid #FFFFFF; box-shadow:0 0 0 3px #FF8A65; animation:node-pulse 1.4s ease-out infinite; pointer-events:none; }
 .map-node--current::after{ content:"▼"; position:absolute; left:50%; top:-26px; transform:translateX(-50%); font-size:18px; line-height:1; color:#FF8A65; animation:node-bob 1s ease-in-out infinite alternate; }
 @keyframes node-pulse{ 0%{transform:scale(1);opacity:.9} 100%{transform:scale(1.7);opacity:0} }
 @keyframes node-bob{ from{transform:translate(-50%,0)} to{transform:translate(-50%,-6px)} }
 .map-stars{ position:absolute; left:50%; top:-14px; transform:translateX(-50%); display:flex; gap:1px; pointer-events:none; }
-.map-star{ width:16px; height:16px; background:url("assets-map-star-off.svg") center/contain no-repeat; }
-.map-star.on{ background-image:url("assets-map-star-on.svg"); }
+.map-star{ width:16px; height:16px; background:url("assets-map-star-off.svg?v=4ddaeba9") center/contain no-repeat; }
+.map-star.on{ background-image:url("assets-map-star-on.svg?v=8d980a67"); }
 .map-stars .map-star:nth-child(2){ transform:translateY(-5px); width:18px; height:18px; }
 @media (prefers-reduced-motion: reduce){
   .map-node--current::before{ animation:none; transform:scale(1.25); opacity:.85; }   /* 정적 링으로 대체 */

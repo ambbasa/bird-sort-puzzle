@@ -11,36 +11,36 @@
   -webkit-text-stroke:7px var(--v5-ol);paint-order:stroke fill;text-shadow:0 4px 0 var(--v5-ol);letter-spacing:1px}
 #splash.v5 .splash-sub{font:900 14px/1 var(--v5-font);letter-spacing:6px;color:#fff;-webkit-text-stroke:4px var(--v5-ol);paint-order:stroke fill}
 #splash.v5 .splash-birds{position:relative;width:200px;height:96px;margin-top:14px}
-#splash.v5 .splash-birds .perch{position:absolute;left:0;bottom:0;width:200px;height:34px;background:url("assets-v5ui-splash-perch.svg") center/contain no-repeat}
+#splash.v5 .splash-birds .perch{position:absolute;left:0;bottom:0;width:200px;height:34px;background:url("assets-v5ui-splash-perch.svg?v=80e940e4") center/contain no-repeat}
 #splash.v5 .splash-birds i{position:absolute;bottom:14px;width:62px;height:62px;background:center/contain no-repeat;animation:v5hop .9s cubic-bezier(.3,1.6,.5,1) infinite}
-#splash.v5 .splash-birds i:nth-child(2){left:6px;background-image:url("assets-v5ui-splash-bird-pink.svg")}
-#splash.v5 .splash-birds i:nth-child(3){left:69px;background-image:url("assets-v5ui-splash-bird-green.svg");animation-delay:.15s}
-#splash.v5 .splash-birds i:nth-child(4){left:132px;background-image:url("assets-v5ui-splash-bird-cyan.svg");animation-delay:.3s}
+#splash.v5 .splash-birds i:nth-child(2){left:6px;background-image:url("assets-v5ui-splash-bird-pink.svg?v=d9e5f459")}
+#splash.v5 .splash-birds i:nth-child(3){left:69px;background-image:url("assets-v5ui-splash-bird-green.svg?v=2da704d1");animation-delay:.15s}
+#splash.v5 .splash-birds i:nth-child(4){left:132px;background-image:url("assets-v5ui-splash-bird-cyan.svg?v=0a8ad01d");animation-delay:.3s}
 #splash.v5 .splash-load{font:700 13px var(--v5-font);color:#fff;opacity:.9}
 @keyframes v5hop{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-16px)}}
 @media (prefers-reduced-motion:reduce){#splash.v5 .splash-birds i{animation:none}}
 
 /* ---------- A03 횃대 추가 아이콘 / A04 광고 슬롯 프레임 ---------- */
-.v5-ico-add-perch{width:30px!important;height:28px!important;background:url("assets-v5ui-icons-add-perch.svg") center/contain no-repeat;display:inline-block}
-.banner.v5-adslot{background:url("assets-v5ui-ad-slot-frame.svg") center/100% 100% no-repeat,#0000;border-top:0;color:transparent;font-size:0;
+.v5-ico-add-perch{width:30px!important;height:28px!important;background:url("assets-v5ui-icons-add-perch.svg?v=e4387ec4") center/contain no-repeat;display:inline-block}
+.banner.v5-adslot{background:url("assets-v5ui-ad-slot-frame.svg?v=fdc1d68f") center/100% 100% no-repeat,#0000;border-top:0;color:transparent;font-size:0;
   margin:0 auto;width:min(100%,360px);height:calc(var(--banner-h) + var(--sa-bottom,env(safe-area-inset-bottom)))}
 
 /* ---------- A05 201+ '곧 추가' 밴드 + 잠금 ---------- */
-.saga-seg.saga-seg--soon{background-image:url("assets-map-map-band-coming-soon.svg")!important;background-size:100% 100%}
+.saga-seg.saga-seg--soon{background-image:url("assets-map-map-band-coming-soon.svg?v=03a37a9c")!important;background-size:100% 100%}
 .saga-seg--soon .saga-band-label{display:none}            /* '201~ 눈 내린 밤' 문구 숨김 — 그림에 '곧 추가돼요!' 포함 */
 .saga-seg--soon::after{content:"";position:absolute;inset:0;background:rgba(20,22,40,.12);pointer-events:none}
 .map-node--soon{filter:grayscale(1) brightness(.85);pointer-events:none}   /* 201+ 노드를 그리는 경우(선택) */
 
 /* ---------- A08 이모지 → v5 아이콘 ---------- */
 .v5i{display:inline-block;width:1.25em;height:1.25em;vertical-align:-.28em;background:center/contain no-repeat}
-.v5i-calendar{background-image:url("assets-v5ui-icons-calendar.svg")}.v5i-coin{background-image:url("assets-v5ui-icons-coin.svg")}
-.v5i-fire{background-image:url("assets-v5ui-icons-fire.svg")}.v5i-gift{background-image:url("assets-v5ui-icons-gift.svg")}
-.v5i-hand{background-image:url("assets-v5ui-icons-hand-point.svg")}.v5i-party{background-image:url("assets-v5ui-icons-party.svg")}
+.v5i-calendar{background-image:url("assets-v5ui-icons-calendar.svg?v=e8b5e016")}.v5i-coin{background-image:url("assets-v5ui-icons-coin.svg?v=9ea18eef")}
+.v5i-fire{background-image:url("assets-v5ui-icons-fire.svg?v=9b7bf078")}.v5i-gift{background-image:url("assets-v5ui-icons-gift.svg?v=e885757e")}
+.v5i-hand{background-image:url("assets-v5ui-icons-hand-point.svg?v=772163dd")}.v5i-party{background-image:url("assets-v5ui-icons-party.svg?v=1ced7353")}
 /* 달력: 날짜 없는 그림 + 오버레이 슬롯. <span class="v5-cal"><b>24</b></span> → 개발자가 실제 일(日) 숫자를 넣음 */
-.v5-cal{position:relative;display:inline-block;width:1.6em;height:1.6em;vertical-align:-.4em;background:url("assets-v5ui-icons-calendar.svg") center/contain no-repeat}
+.v5-cal{position:relative;display:inline-block;width:1.6em;height:1.6em;vertical-align:-.4em;background:url("assets-v5ui-icons-calendar.svg?v=e8b5e016") center/contain no-repeat}
 .v5-cal>b{position:absolute;left:0;right:0;top:50%;bottom:8%;display:flex;align-items:center;justify-content:center;
   font:900 .72em/1 var(--v5-font);color:var(--v5-ol)}
-.hintmark.v5{font-size:0;width:40px;height:40px;background:url("assets-v5ui-icons-hand-point.svg") center/contain no-repeat;filter:drop-shadow(0 2px 0 rgba(0,0,0,.25))}
+.hintmark.v5{font-size:0;width:40px;height:40px;background:url("assets-v5ui-icons-hand-point.svg?v=772163dd") center/contain no-repeat;filter:drop-shadow(0 2px 0 rgba(0,0,0,.25))}
 
 /* ---------- A11 상단 바 가독성(대비 ≥ 4.5:1, 3테마 공통) ---------- */
 .hud .hud-mid{display:flex;flex-direction:column;align-items:center;gap:2px}
@@ -54,20 +54,20 @@
 
 /* ---------- A14 클리어 팝업(200 엔딩 팝업 .endcard와 같은 구조: 그림 → 제목 → 설명 → 주/보조 버튼) ---------- */
 #overlay.v5 .card{background:linear-gradient(180deg,#FFF8E7,#FFE9B8);color:var(--v5-ink);border:4px solid var(--v5-ol);border-bottom:0}
-#overlay.v5 .clear-art{width:min(86vw,320px);aspect-ratio:320/170;background:url("assets-v5ui-clear-art.svg") center/contain no-repeat;margin-top:-56px;animation:v5pop .5s cubic-bezier(.3,1.6,.5,1) both}
+#overlay.v5 .clear-art{width:min(86vw,320px);aspect-ratio:320/170;background:url("assets-v5ui-clear-art.svg?v=e390f014") center/contain no-repeat;margin-top:-56px;animation:v5pop .5s cubic-bezier(.3,1.6,.5,1) both}
 #overlay.v5 .title{font:900 26px/1.2 var(--v5-font);color:var(--v5-ink)}
 #overlay.v5 .bigstars{gap:6px}
 #overlay.v5 .bigstars svg{display:none}
-#overlay.v5 .bigstars span{width:56px;height:56px;background:url("assets-v5ui-star-big-on.svg") center/contain no-repeat}
+#overlay.v5 .bigstars span{width:56px;height:56px;background:url("assets-v5ui-star-big-on.svg?v=b8fe394c") center/contain no-repeat}
 #overlay.v5 .bigstars span:nth-child(2){transform:translateY(-10px) scale(1.12)}
-#overlay.v5 .bigstars span.off{background-image:url("assets-v5ui-star-big-off.svg")}
+#overlay.v5 .bigstars span.off{background-image:url("assets-v5ui-star-big-off.svg?v=19a76c75")}
 #overlay.v5 .sub{color:var(--v5-ink-2);font-weight:700}
 #overlay.v5 .btn{border:3px solid var(--v5-ol);box-shadow:0 3px 0 var(--v5-ol);font:900 17px var(--v5-font)}
 #overlay.v5 .btn.primary{background:#FFD54F;color:var(--v5-ink)}
 #overlay.v5 .btn:not(.primary){background:#fff;color:var(--v5-ink)}       /* '재시작'이 텍스트처럼 보이던 문제 해결 */
 /* 200 엔딩 팝업도 같은 스킨(선택): .endart 이모지 대신 end-art.svg */
 #endov.v5 .card{background:linear-gradient(180deg,#FFF8E7,#FFE9B8);color:var(--v5-ink);border:4px solid var(--v5-ol);border-bottom:0}
-#endov.v5 .endart{width:min(86vw,320px);aspect-ratio:320/130;background:url("assets-v5ui-end-art.svg") center/contain no-repeat;font-size:0}
+#endov.v5 .endart{width:min(86vw,320px);aspect-ratio:320/130;background:url("assets-v5ui-end-art.svg?v=d7623dc5") center/contain no-repeat;font-size:0}
 #endov.v5 .endart span{display:none}
 #endov.v5 .btn{border:3px solid var(--v5-ol);box-shadow:0 3px 0 var(--v5-ol)}#endov.v5 .btn:not(.primary){background:#fff;color:var(--v5-ink)}
 #endov.v5 .sub{color:var(--v5-ink-2)}

@@ -1,0 +1,94 @@
+/* ==== v7 UI (DESIGN.md 19장) — assets-v7ui-v7.css ====
+   index.html: <link rel="stylesheet" href="assets-v7ui-v7.css"> 를 v5-launch.css / v5-rec.css / css-style.css 뒤에.
+   이미지 경로는 이 파일 기준(assets-v7ui-). pages-flat 빌드는 build-pages-flat.js가 url()을 평탄화한다고 가정. */
+:root{--v7-ol:#1A1A2E;--v7-sat:var(--sa-top,env(safe-area-inset-top,0px));--v7-sab:env(safe-area-inset-bottom,0px)}
+
+/* ---- 19.2 C13 착지 스쿼시 (새 요소에 .v7-land 를 0.15s 붙였다 뗌; 발 쥠 y≈89 기준) ---- */
+.v7-land{animation:v7-squash .15s cubic-bezier(.3,.7,.4,1) both;transform-origin:50% 89%}
+@keyframes v7-squash{0%{transform:scale(1.18,.82)}55%{transform:scale(.94,1.07)}100%{transform:scale(1,1)}}
+
+/* ---- 깃털/먼지 파티클: 착지 지점(새 발 위치)에 <div class="v7-fx"> 하나 생성, 650ms 뒤 제거 ----
+   <div class="v7-fx" style="left:Xpx;top:Ypx">
+     <i class="v7-feather" style="--dx:-18px;--rot:-40deg"></i> <i class="v7-feather" style="--dx:16px;--rot:50deg;--d:.05s"></i>
+     <i class="v7-feather v7-feather--sm" style="--dx:-6px;--rot:120deg;--d:.1s"></i>
+     <i class="v7-dust" style="--dx:-14px"></i><i class="v7-dust" style="--dx:14px;--flip:-1"></i></div> */
+.v7-fx{position:absolute;width:0;height:0;pointer-events:none;z-index:6}
+.v7-feather{position:absolute;left:-9px;top:-18px;width:18px;height:18px;background:url("assets-v7ui-feather.svg?v=66362e5a") center/contain no-repeat;opacity:0;
+  animation:v7-feather .65s ease-out var(--d,0s) both}
+.v7-feather--sm{width:12px;height:12px;left:-6px}
+@keyframes v7-feather{0%{opacity:0;transform:translate(0,0) rotate(0)}15%{opacity:1}
+  60%{transform:translate(calc(var(--dx,0px)*.8),-22px) rotate(calc(var(--rot,30deg)*.7))}
+  100%{opacity:0;transform:translate(var(--dx,0px),-8px) rotate(var(--rot,30deg))}}
+.v7-dust{position:absolute;left:-14px;top:-8px;width:28px;height:14px;background:url("assets-v7ui-dust-puff.svg?v=5fd049ce") center/contain no-repeat;opacity:0;
+  animation:v7-dust .4s ease-out both}
+@keyframes v7-dust{0%{opacity:.9;transform:translateX(0) scale(.5,.5) scaleX(var(--flip,1))}100%{opacity:0;transform:translateX(var(--dx,0px)) scale(1.1,1) scaleX(var(--flip,1))}}
+
+/* ---- 19.2 횃대 추가 토스트: 기존 #toast 재사용, 클래스만 추가 → toast('횃대가 하나 늘었어요') 시 #toast.v7-toast--perch ---- */
+#toast.v7-toast,.v7-toast{display:flex;align-items:center;gap:8px;background:#FFFDF6;color:var(--v7-ol);border:3px solid var(--v7-ol);
+  box-shadow:0 4px 0 var(--v7-ol);font:800 15px/1.2 "Jua","Pretendard",system-ui,sans-serif;padding:8px 16px 8px 10px;border-radius:999px;white-space:nowrap;max-width:calc(100vw - 32px)}
+#toast.v7-toast--perch::before,.v7-toast--perch::before{content:"";flex:none;width:32px;height:32px;background:url("assets-v7ui-toast-perch-add.svg?v=5f371a49") center/contain no-repeat}
+#toast.v7-toast.show{animation:v7-toast-in .32s cubic-bezier(.3,1.6,.5,1) both}
+@keyframes v7-toast-in{0%{transform:translate(-50%,-24px) scale(.9);opacity:0}100%{transform:translate(-50%,0) scale(1);opacity:1}}
+
+/* ---- 19.2 튜토리얼 손가락 + 말풍선 ----
+   손가락 끝(svg 14,4 / 64x80 기준) = 탭 지점. 요소 left/top = 대상 중심 → margin으로 끝 보정.
+   <img class="v7-tut-finger" src="assets-v7ui-tut-finger.svg?v=efae3a0d" style="left:Xpx;top:Ypx" alt="">
+   <i class="v7-tut-ring" style="left:Xpx;top:Ypx"></i>
+   <div class="v7-bubble" role="status">새를 탭하고, 옮길 둥지를 탭하세요</div> */
+.v7-tut-finger{position:absolute;width:52px;height:65px;margin:-3px 0 0 -11px;pointer-events:none;z-index:30;
+  filter:drop-shadow(0 3px 0 rgba(26,26,46,.25));animation:v7-tap 1.1s ease-in-out infinite}
+@keyframes v7-tap{0%,100%{transform:translate(6px,10px)}45%{transform:translate(0,0)}55%{transform:translate(0,0) scale(.94)}}
+.v7-tut-ring{position:absolute;width:56px;height:56px;margin:-28px 0 0 -28px;background:url("assets-v7ui-tut-tap-ring.svg?v=5e6142a0") center/contain no-repeat;pointer-events:none;z-index:29;
+  animation:v7-ring 1.1s ease-out infinite}
+@keyframes v7-ring{0%,40%{transform:scale(.4);opacity:0}55%{opacity:1}100%{transform:scale(1.15);opacity:0}}
+.v7-bubble{position:relative;display:inline-block;max-width:min(300px,calc(100vw - 32px));padding:10px 16px;background:#FFFDF6;color:var(--v7-ol);
+  border:3px solid var(--v7-ol);border-radius:16px;box-shadow:0 4px 0 rgba(26,26,46,.9);font:800 15px/1.35 "Jua","Pretendard",system-ui,sans-serif;text-align:center;word-break:keep-all;
+  animation:v7-bubble-in .3s cubic-bezier(.3,1.6,.5,1) both}
+.v7-bubble::after{content:"";position:absolute;left:50%;bottom:-13px;width:18px;height:18px;margin-left:-9px;background:#FFFDF6;border:3px solid var(--v7-ol);border-top:0;border-left:0;transform:rotate(45deg);border-radius:0 0 4px 0}
+.v7-bubble--up::after{bottom:auto;top:-13px;transform:rotate(-135deg)}
+@keyframes v7-bubble-in{0%{transform:translateY(6px) scale(.9);opacity:0}100%{transform:none;opacity:1}}
+
+/* ---- 19.3 C14 지도: -wide 배경(780폭, 좌우 195px 여백) — 남색 띠 제거 ----
+   JS: 청크/띠 src 를 '-wide.svg' 로 바꾸고 .saga-seg 에 v7-wide 클래스. 노드 좌표계(390)는 그대로. */
+.saga-seg.v7-wide{left:-195px;width:780px;background-size:780px 100%}
+/* 곧 추가 띠: v5-launch.css의 !important 배경을 테마별 wide로 교체 (JS: soonSeg에 'v7-soon-'+테마키 클래스) */
+.saga-seg.saga-seg--soon.v7-wide{background-size:780px 100%}
+.saga-seg.saga-seg--soon.v7-wide.v7-soon-forest{background-image:url("assets-map-map-band-coming-soon-forest-wide.svg?v=be72f125")!important}
+.saga-seg.saga-seg--soon.v7-wide.v7-soon-sunset{background-image:url("assets-map-map-band-coming-soon-sunset-wide.svg?v=c2b7ea6e")!important}
+.saga-seg.saga-seg--soon.v7-wide.v7-soon-snow{background-image:url("assets-map-map-band-coming-soon-snow-wide.svg?v=375378eb")!important}
+.saga-seg--soon.v7-wide::after{display:none}
+#mapwrap.v7-map-forest{background:#A8E883}#mapwrap.v7-map-sunset{background:#FFC98E}#mapwrap.v7-map-snow{background:#E4E9FF}
+/* 클리어 별: 노드 위 3개, 획득 수만큼 on */
+.v7-star{display:inline-block;width:18px;height:18px;background:url("assets-v7ui-star-clear-off.svg?v=03c92bf9") center/contain no-repeat}
+.v7-star.on{background-image:url("assets-v7ui-star-clear-on.svg?v=13b67445")}
+.v7-star.on.pop{animation:v7-star-pop .35s cubic-bezier(.3,1.8,.5,1) both}
+@keyframes v7-star-pop{0%{transform:scale(.2) rotate(-30deg)}100%{transform:none}}
+
+/* ---- 19.4 E16 클리어 연출: 노치 포함 화면 안에 전부, 낮은 화면은 compact ----
+   style.css 175~181행(개발자 v7 E16)을 이 블록으로 대체 가능. 기준: 시트 본문(리본+별+보상+버튼2) ≈ 400px. */
+#overlay.v5{padding-top:calc(var(--v7-sat) + 8px);padding-bottom:calc(var(--v7-sab) + 8px);box-sizing:border-box}
+#overlay.v5 .card{max-height:calc(100dvh - var(--v7-sat) - var(--v7-sab) - 16px);overflow:visible}
+#overlay.v5 .clear-art{width:min(86vw,320px);aspect-ratio:320/170;margin-top:-40px}
+@media (max-height:780px){
+  #overlay.v5 .clear-art{width:min(72vw,260px);margin-top:-24px}
+}
+@media (max-height:700px){
+  #overlay.v5 .clear-art{width:min(80vw,280px);aspect-ratio:320/112;background-image:url("assets-v7ui-clear-art-compact.svg?v=d56627ae");margin-top:0}
+  #overlay.v5 .card{gap:6px;padding-top:10px;padding-bottom:12px}
+  #overlay.v5 .ribbon{transform:scale(.88);margin:-4px 0}
+  #overlay.v5 .bigstars span,#overlay.v5 .bigstars img{width:44px;height:44px}
+  #overlay.v5 .btn{min-height:46px;padding-top:8px;padding-bottom:8px}
+}
+@media (max-height:600px){
+  #overlay.v5 .clear-art{width:min(64vw,220px)}
+  #overlay.v5 .bigstars span,#overlay.v5 .bigstars img{width:36px;height:36px}
+  #overlay.v5 .btn{min-height:44px}
+}
+@media (max-height:520px){#overlay.v5 .clear-art{display:none}}
+/* 하단 고정 시트 공통(클리어/설정/지도) */
+.ov .card,.sheet{max-height:calc(100dvh - var(--v7-sat) - var(--v7-sab) - 16px);overflow-y:auto;overscroll-behavior:contain}
+
+@media (prefers-reduced-motion:reduce){
+  .v7-land,.v7-feather,.v7-dust,.v7-tut-finger,.v7-tut-ring,.v7-bubble,#toast.v7-toast.show,.v7-star.on.pop{animation:none}
+  .v7-feather,.v7-dust{display:none}
+}

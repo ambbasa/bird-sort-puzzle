@@ -3,13 +3,15 @@ var SP = (typeof window !== 'undefined') ? (window.SP = window.SP || {}) : (glob
   var CAP = 4;
   function rng(seed) { var a = seed >>> 0; return function () { a = (a + 0x6D2B79F5) | 0; var t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
   function canMove(t, a, b) { if (a === b || !t[a].length || t[b].length >= CAP) return false; return !t[b].length || t[b][t[b].length - 1] === t[a][t[a].length - 1]; }
+  // v7 (GDD A1): one move = the whole same-colour top run, as many as fit
+  function moveRun(t, a, b) { var c = t[a][t[a].length - 1], k = 0; while (t[a].length && t[a][t[a].length - 1] === c && t[b].length < CAP) { t[b].push(t[a].pop()); k++; } return k; }
   function isDone(tb) { return tb.length === CAP && tb.every(function (c) { return c === tb[0]; }); }
   function isSolved(t) { return t.every(function (tb) { return !tb.length || isDone(tb); }); }
   function key(t) { return t.map(function (x) { return x.join(','); }).sort().join('|'); }
-  // BFS: exact min moves (one ball per move). Prunes provably useless moves.
+  // BFS: exact min moves (v7: one same-colour run per move). Prunes provably useless moves.
   // full=true explores the whole reachable graph (up to limit) and returns deadEnds:
   // number of reachable states from which the solved state is unreachable.
-  function solve(start, limit, full) {
+  function solve(start, limit, full, single) { // single=true: legacy v6 one-bird moves (only tools/build-stages.js, to keep 1-30 layouts reproducible)
     limit = limit || 3e6;
     var s0 = start.map(function (x) { return x.slice(); });
     var ids = new Map(), states = [s0], parent = [-1], pm = [null], edges = [], solvedIds = [], found = -1;
@@ -24,7 +26,7 @@ var SP = (typeof window !== 'undefined') ? (window.SP = window.SP || {}) : (glob
         var mono = A.every(function (c) { return c === A[0]; });
         for (var b = 0; b < n; b++) {
           if (!canMove(t, a, b) || (mono && !t[b].length)) continue;
-          var nt = t.map(function (x) { return x.slice(); }); nt[b].push(nt[a].pop());
+          var nt = t.map(function (x) { return x.slice(); }); if (single) nt[b].push(nt[a].pop()); else moveRun(nt, a, b);
           var k = key(nt), id = ids.get(k);
           if (id === undefined) {
             if (states.length >= limit) { aborted = true; continue; }
@@ -77,6 +79,6 @@ var SP = (typeof window !== 'undefined') ? (window.SP = window.SP || {}) : (glob
     if (!best) throw new Error('stage ' + n + ' generation failed');
     return best;
   }
-  SP.core = { rng: rng, canMove: canMove, isDone: isDone, isSolved: isSolved, solve: solve, reverseShuffle: reverseShuffle, generate: generate };
+  SP.core = { rng: rng, canMove: canMove, moveRun: moveRun, isDone: isDone, isSolved: isSolved, solve: solve, reverseShuffle: reverseShuffle, generate: generate };
 })();
 if (typeof module !== 'undefined') module.exports = SP;

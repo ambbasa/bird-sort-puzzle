@@ -1,7 +1,18 @@
 SP.platform.whenReady(function () { // L5: runs once the platform adapter has loaded the (user-keyed) save
   var C = SP.CONFIG, core = SP.core, E = SP.engine, GA = C.gimmickAssets, $ = function (id) { return document.getElementById(id); };
   var LAST = Math.min(C.lastStage || C.maxStage, Math.max.apply(null, Object.keys(SP.STAGES).map(Number))), KEY = 'sortpuzzle.v1', STAR = $('staricon').innerHTML;
-  var reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // DESIGN §5.6/§9: reduced motion = OS preference OR in-game setting ('a11y.reduceMotion'); haptics toggle ('settings.haptics', default on)
+  var osReduced = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches), RM_KEY = 'a11y.reduceMotion', HAP_KEY = 'settings.haptics';
+  var reduced = osReduced || SP.store.get(RM_KEY) === 'true', hapticsOn = SP.store.get(HAP_KEY) !== 'off';
+  function applyReduced() { // mirror every @media (prefers-reduced-motion) rule unconditionally while the in-game setting is on
+    document.documentElement.classList.toggle('reduce-motion', reduced);
+    var old = document.getElementById('rm-mirror'); if (old) old.remove();
+    if (!reduced || osReduced) return;
+    var css = []; [].forEach.call(document.styleSheets, function (sh) { var rs; try { rs = sh.cssRules; } catch (e) { return; }
+      [].forEach.call(rs || [], function (r) { if (r.media && /prefers-reduced-motion:\s*reduce/.test(r.media.mediaText)) [].forEach.call(r.cssRules, function (x) { css.push(x.cssText); }); }); });
+    var st = document.createElement('style'); st.id = 'rm-mirror'; st.textContent = css.join('\n'); document.head.appendChild(st);
+  }
+  applyReduced();
   var save = null; try { save = JSON.parse(SP.store.get(KEY) || 'null'); } catch (e) { console.warn('save parse', e); }
   if (!save || typeof save !== 'object') save = { unlocked: 1, stars: {}, coins: 0, current: 1 };
   // ART-AUDIT A05: a save with current/unlocked > LAST (e.g. 201), NaN, negative or non-numeric froze the boot -> clamp to 1..LAST
@@ -22,7 +33,9 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   function today() { return DD ? DD.dateKey() : ''; }
   function dailyLabel(k) { var p = k.split('-'); return +p[1] + '월 ' + +p[2] + '일'; }
   function sn() { return S.g.source || S.n; } // star thresholds / bands follow the daily puzzle's source stage
-  var S, fx = {}, sfx = SP.sfx || { play: function () {} };
+  var HAPTIC = { invalid: 10, complete: 15, combo: [15, 40, 25], clear: [30, 60, 40] }; // DESIGN §5.6: vibration rides on the same events as sfx (works while muted)
+  var rawSfx = SP.sfx || { play: function () {} }, S, fx = {}, sfx = { play: function (n, a) { if (HAPTIC[n]) vibrate(HAPTIC[n]); rawSfx.play(n, a); } };
+  SP._haptics = []; // QA: log of vibrate() calls that actually fired
   // DESIGN §6 move: ball flies along a parabola (220–340ms), then drop-bounce. Landing sounds/glow wait for touchdown.
   var pend = null, flights = []; SP._flights = 0;
   function snd(name, arg) { if (pend) pend.push([name, arg]); else sfx.play(name, arg); }
@@ -46,11 +59,14 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   //  Body angle follows the velocity vector. Side frames flap fast while rising, glide (wings spread, frame 2) while falling,
   //  front fold just before touchdown. Two feathers drift off at takeoff. Speed setting 'fast' scales every phase by 0.6.
   var FLY_KEY = 'settings.flightSpeed', flySpeed = SP.store.get(FLY_KEY) === 'fast' ? 'fast' : 'normal', rafOn = false;
-  function flyTimes(adx) { var k = SP.store.get(FLY_KEY) === 'fast' ? 0.6 : 1; return { crouch: 100 * k, air: Math.max(480, Math.min(650, 460 + 0.45 * adx)) * k, land: 150 * k }; }
+  // v7 (GDD A2): air time 0.8-1.0 s parabola (normal) / 0.4 s ('빠른 비행'); landing squash+bounce ~0.15 s. Run moves launch
+  // one bird every 0.12 s (C.flight.stagger), capped so a 4-bird run adds at most 0.36 s.
+  function flyTimes(adx) { var fast = SP.store.get(FLY_KEY) === 'fast', F = C.flight; return fast ? { crouch: F.fastCrouch, air: F.fastAir, land: F.fastLand } : { crouch: F.crouch, air: Math.max(F.airMin, Math.min(F.airMax, F.airMin + F.airPerPx * adx)), land: F.land }; }
   SP._flyTimes = flyTimes;
   function tick(now) {
     flights.slice().forEach(function (f) { var e = now - f.t0, P = f.P, x, y, a = 0, sx = 1, sy = 1;
-      if (e < P.crouch) { var q = Math.sin(Math.PI * e / P.crouch); sx = 1 + 0.12 * q; sy = 1 - 0.18 * q; x = f.x0; y = f.y0 + f.B * 0.09 * q; }
+      if (e < 0) { x = f.x0; y = f.y0; } // staggered run member waiting on the branch
+      else if (e < P.crouch) { var q = Math.sin(Math.PI * e / P.crouch); sx = 1 + 0.12 * q; sy = 1 - 0.18 * q; x = f.x0; y = f.y0 + f.B * 0.09 * q; }
       else if (e < P.crouch + P.air) { var t = (e - P.crouch) / P.air, vy = f.v0 + f.g * t; x = f.x0 + f.dx * t; y = f.y0 + f.v0 * t + 0.5 * f.g * t * t;
         a = (f.dx < 0 ? -1 : 1) * Math.max(-55, Math.min(55, Math.atan2(vy, Math.abs(f.dx) || 1e-6) * 180 / Math.PI * 0.8));
         if (!f.flown) { f.flown = true; if (f.side) { f.im.className = f.sideCls; f.im.dataset.kind = f.sk; } spawnFeathers(f, x, y); }
@@ -68,7 +84,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   function spawnFeathers(f, x, y) { if (f.color == null || !C.palette[f.color]) return; f.feathers = [];
     for (var i = 0; i < 2; i++) { var el = document.createElement('i'); el.className = 'feather'; el.style.background = C.palette[f.color].hex; document.body.appendChild(el);
       f.feathers.push({ el: el, t0: performance.now(), x: x + f.B * (0.3 + 0.3 * i), y: y + f.B * 0.5, vx: (f.dx < 0 ? 1 : -1) * (14 + 10 * i), vy: -6 + 10 * i, r: i * 60 }); } }
-  function fly(from, to, ball, tube, fresh, sounds, color, slot) {
+  function fly(from, to, ball, tube, fresh, sounds, color, slot, delay) {
     var r = ball.getBoundingClientRect(), B = r.width, x0 = from.left, y0 = from.top, x2 = r.left, y2 = r.top, dx = x2 - x0, adx = Math.abs(dx);
     var perchTop = Math.min.apply(null, [].map.call(document.querySelectorAll('#board .tube'), function (t) { return t.getBoundingClientRect().top; }));
     var h = Math.max(0.4 * adx, B * 0.9), ya = Math.min(Math.min(y0, y2) - h, perchTop - B * 0.5); // apex: 40% of |dx| (min ~0.9 bird), always above the perch tops
@@ -78,10 +94,10 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     var im = document.createElement('img'); im.alt = ''; im.draggable = false; im.className = 'ball bird'; im.src = ball.firstChild.getAttribute('src'); c.appendChild(im);
     c.style.transform = 'translate3d(' + x0 + 'px,' + y0 + 'px,0)'; document.body.appendChild(c); ball.style.visibility = 'hidden'; SP._flights++;
     var f = { clone: c, im: im, to: to, slot: slot, color: color, ball: ball, tube: tube, side: side, sk: sk, front: front, B: B, x0: x0, y0: y0, y2: y2, dx: dx, g: g, v0: v0,
-      P: flyTimes(adx), t0: performance.now(), sideCls: 'bird-side bird-side-img' + (dx < 0 && sk !== 'hidden' ? ' bird-side--left' : ''),
+      P: flyTimes(adx), t0: performance.now() + (delay || 0), sideCls: 'bird-side bird-side-img' + (dx < 0 && sk !== 'hidden' ? ' bird-side--left' : ''),
       sideSrc: function (i) { return sideFrame(sk, i); }, flap: function (i) { return C.palette[color] ? birdFrame(color, BF.frames[i]) : front; },
-      land: function (instant) { f.ball.style.visibility = ''; if (fresh) { f.tube.classList.add('fresh'); if (!instant) sparkle(f.tube); } sounds.forEach(function (a) { sfx.play(a[0], a[1]); }); } };
-    SP._lastFlight = { ms: f.P.crouch + f.P.air + f.P.land, apexRatio: adx ? +((Math.min(y0, y2) - ya) / adx).toFixed(2) : null, dx: Math.round(adx) };
+      land: function (instant) { f.ball.style.visibility = ''; if (!instant) landFx(f.ball); if (fresh) { f.tube.classList.add('fresh'); if (!instant) sparkle(f.tube); } sounds.forEach(function (a) { sfx.play(a[0], a[1]); }); } };
+    SP._lastFlight = { ms: f.P.crouch + f.P.air + f.P.land, air: f.P.air, delay: delay || 0, apexRatio: adx ? +((Math.min(y0, y2) - ya) / adx).toFixed(2) : null, dx: Math.round(adx) };
     flights.push(f); if (!rafOn) { rafOn = true; requestAnimationFrame(tick); }
   }
   function whenLanded(cb) { (function w() { if (!flights.length) return cb(); setTimeout(w, 30); })(); } // clear waits for the last bird to touch down
@@ -142,8 +158,21 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   function themeUnlock(th) { var o = $('themeov'); if (!o) return toast('새 테마 해금! ' + th.name);
     o.querySelector('.tcard').dataset.theme = th.key; $('themesub').textContent = th.name + '에서 새 친구들이 기다려요'; o.classList.add('show');
     $('themeOk').onclick = function () { o.classList.remove('show'); }; }
+  // v7 B9: stages 1-3 short tutorial bubble (CSS placeholder until the designer's finger/bubble art lands: .tutor / .tutor-finger)
+  var TUTOR = { 1: '새를 탭하고, 옮길 둥지를 탭하세요', 2: '같은 새 4마리를 모으면 완성!', 3: '막히면 되돌리기나 횃대 추가를 써 보세요' };
+  function tutor() { var el = $('tutor'), m = !S.daily && TUTOR[S.n], on = !!m && !S.won && !(S.n === 1 && S.moves > 1); if (!el) return; el.hidden = !on;
+    var fg = $('tutfinger'), rg = $('tutring'); if (fg) fg.hidden = rg.hidden = true; if (!on) return; el.querySelector('.tutor-text').textContent = m;
+    if (S.n === 1 && fg) { var h = nextMove(); if (!h) return; var tb = document.querySelectorAll('#board .tube')[S.sel < 0 ? h[0] : h[1]]; if (!tb) return; var r = tb.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + 6; /* tip on the perch cap (at the perch centre the hand covered the birds' symbol discs, v7a symbol check) */ var bs = [].slice.call(tb.querySelectorAll('img.bird')); if (S.sel < 0 && bs.length) { var q = bs.map(function (i) { return i.getBoundingClientRect(); }).sort(function (u, v) { return u.top - v.top; })[0]; y = q.top + 2; } /* first tap: tip on the top bird's head */
+      fg.style.left = rg.style.left = x + 'px'; fg.style.top = rg.style.top = y + 'px'; fg.hidden = rg.hidden = false; document.querySelectorAll('.hintmark').forEach(function (m) { m.hidden = true; }); } } // finger only on stage 1 (tap bird -> tap nest)
+  function landFx(el) { // v7 A2/19.2: 0.15s squash (.v7-land) + feathers/dust (.v7-fx) from assets-v7ui-v7.css
+    var bird = el.querySelector('.bird, svg, img') || el; bird.classList.remove('v7-land'); void bird.offsetWidth; bird.classList.add('v7-land'); setTimeout(function () { bird.classList.remove('v7-land'); }, 160);
+    var r = el.getBoundingClientRect(), fx = document.createElement('div'); fx.className = 'v7-fx'; fx.style.position = 'fixed'; fx.style.left = (r.left + r.width / 2) + 'px'; fx.style.top = (r.top + r.height * 0.89) + 'px';
+    fx.innerHTML = '<i class="v7-feather" style="--dx:-18px;--rot:-40deg"></i><i class="v7-feather" style="--dx:16px;--rot:50deg;--d:.05s"></i><i class="v7-feather v7-feather--sm" style="--dx:-6px;--rot:120deg;--d:.1s"></i><i class="v7-dust" style="--dx:-14px"></i><i class="v7-dust" style="--dx:14px;--flip:-1"></i>';
+    document.body.appendChild(fx); setTimeout(function () { fx.remove(); }, 650); }
+  var starPop = {};
   function toast(msg) { var t = $('toast'); if (!t) { t = document.createElement('div'); t.id = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
-    t.innerHTML = msg; t.classList.remove('show'); void t.offsetWidth; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(function () { t.classList.remove('show'); }, 2600); }
+    t.innerHTML = msg; t.className = 'v7-toast' + (/횃대/.test(msg) ? ' v7-toast--perch' : ''); // v7 19.2 toast frame
+    t.classList.remove('show'); void t.offsetWidth; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(function () { t.classList.remove('show'); }, 2600); }
   function starsFor(moves, min, n) { var three = n >= 101 ? C.stars.threeFrom101 : n >= 21 ? C.stars.threeFrom21 : C.stars.three; return moves <= min * three ? 3 : moves <= min * C.stars.two ? 2 : 1; }
   function starsHtml(k) { var h = ''; for (var i = 0; i < 3; i++) h += '<span class="' + (i < k ? '' : 'off') + '" style="animation-delay:' + (i * 150) + 'ms">' + STAR + '</span>'; return h; }
   function rows(n) { // DESIGN §4 grid rule
@@ -151,12 +180,12 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     var a = Math.ceil(n / 3), b = Math.ceil((n - a) / 2); return [a, b, n - a - b];
   }
   function render() {
-    $('stage').innerHTML = S.daily ? CAL(S.daily) + ' 일일 도전 · ' + dailyLabel(S.daily) : (S.g.rest ? '휴식 · ' : '') + '스테이지 ' + S.n;
+    $('stage').innerHTML = S.daily ? CAL(S.daily) + ' 오늘의 도전 · ' + dailyLabel(S.daily) : (S.g.rest ? '휴식 · ' : '') + '스테이지 ' + S.n;
     $('hudstars').innerHTML = starsHtml(S.moves === 0 ? 3 : starsFor(S.moves, S.g.min, sn()));
     $('stagesBtn').classList.toggle('dot', !!DD && !DD.doneToday(save.daily, today())); // unplayed daily -> red dot on the '스테이지' button (opens map + daily; QA F4)
-    $('moves').innerHTML = '이동 ' + S.moves + ' · 최소 ' + S.g.min + '<span class="mv-note"> (되돌리기 포함)</span>'; $('moves').title = '되돌리기도 이동 1회로 세요';
+    $('moves').textContent = '이동 ' + S.moves + ' / 최소 ' + S.g.min; $('moves').title = '되돌리기도 이동 1회로 세요'; // v7 B5
     var tutorialHint = S.g.tutorial && !S.won ? nextMove() : null, h = S.hint || tutorialHint;
-    var stuck = !S.won && isStuck(); if (reduced || S.won) cancelFlights(); var fl = !reduced && fx.fly && fx.fly.from ? fx.fly : null, flyBall = null;
+    var stuck = !S.won && isStuck(); if (reduced || S.won) cancelFlights(); var fl = !reduced && fx.fly && fx.fly.from ? fx.fly : null, flyBalls = [];
     var b = $('board'), ae = document.activeElement, fi = ae && ae.parentNode && ae.classList.contains('tube') && b.contains(ae) ? [].indexOf.call(b.querySelectorAll('.tube'), ae) : -1; b.innerHTML = ''; // a11y: keep keyboard focus across re-renders
     fitBalls(b);
     var idx = 0;
@@ -184,7 +213,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
           if (E.isKey(c)) { im.className += ' key-ready'; if (!S.mask[i][j]) w.appendChild(pairSym(GA.pair[c].symbol, 'keysym')); }
           var top = j === t.length - 1;
           if (top && i === S.sel) w.className += ' lifted';
-          if (top && fx.drop === i) { if (fl) flyBall = w; else w.className += ' dropping'; }
+          if (fx.drop === i && j >= t.length - (fl ? fl.n || 1 : 1)) { if (fl) flyBalls[j - (t.length - (fl.n || 1))] = w; else if (top) w.className += ' dropping'; }
           st.appendChild(w);
         });
         d.appendChild(st);
@@ -201,9 +230,10 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     if (fi >= 0) { var ft = b.querySelectorAll('.tube')[fi]; if (ft) try { ft.focus({ preventScroll: true }); } catch (e) { ft.focus(); } }
     placeLockSyms(b); rebind(b);
     if (fx.unlock) { consume(fx.keyFrom, fx.unlock.tube, fx.keySrc, fx.unlock.solved); fl = null; fx.fly = null; }
-    if (fl && flyBall) { var ln = S.tubes[fl.to].length - 1; fly(fl.from, fl.to, flyBall, flyBall.parentNode.parentNode, fx.fresh === fl.to, fl.sounds, S.mask[fl.to][ln] ? null : S.tubes[fl.to][ln], ln); }
+    if (fl && flyBalls.length && fl.from) { var nn = flyBalls.length, base = S.tubes[fl.to].length - nn;
+      flyBalls.forEach(function (fb, q) { var ln = base + q, last = q === nn - 1; fly(fl.froms[q] || fl.from, fl.to, fb, fb.parentNode.parentNode, last && fx.fresh === fl.to, last ? fl.sounds : [], S.mask[fl.to][ln] ? null : S.tubes[fl.to][ln], ln, Math.min(q, 3) * C.flight.stagger); }); }
     else if (fx.fly && fx.fly.sounds) fx.fly.sounds.forEach(function (a) { sfx.play(a[0], a[1]); });
-    btns(); $('hint').disabled = S.locked; $('restart').disabled = S.locked;
+    btns(); tutor(); $('hint').disabled = S.locked; $('restart').disabled = S.locked;
     fx = {};
   }
   // QA N1: min 8px pair symbol. The art's own key/lock symbol shrinks with the tubes; when it would render < 8px (.sym-boost)
@@ -219,7 +249,8 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   function btns() { // L2: rewarded-ad buttons are disabled while no rewarded ad is loaded
     var rw = SP.ads.rewardedReady();
     var noAd = SP.ads.mode() === 'none'; // QA F2: web build -> no ad labels
-    $('undocnt').textContent = S.a.undoLeft > 0 ? S.a.undoLeft : noAd ? '' : '▶광고'; $('add').querySelector('.cnt').hidden = noAd;
+    $('undocnt').textContent = S.a.undoLeft > 0 ? S.a.undoLeft : noAd ? '' : '▶광고'; var ac = $('add').querySelector('.cnt'); ac.hidden = false; ac.textContent = S.a.addedTube ? '0' : '1'; // v7 A3: remaining-uses badge (1 per stage)
+    $('add').setAttribute('aria-label', '횃대 추가, 남은 횟수 ' + (S.a.addedTube ? 0 : 1) + (noAd ? '' : ', 광고 보고 받기')); $('undo').setAttribute('aria-label', '되돌리기, ' + (S.a.undoLeft > 0 ? '남은 횟수 ' + S.a.undoLeft : '광고 보고 받기'));
     $('undo').disabled = !S.hist.length || S.locked || (S.a.undoLeft <= 0 && !rw); $('add').disabled = S.a.addedTube || S.locked || !rw;
     $('add').title = rw ? '' : '광고를 불러오는 중이에요';
   }
@@ -235,7 +266,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     var h = b.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom), w = b.clientWidth - 16;
     // per row: tube 4.9b (+ lift/badge room 0.5b) ; between rows: gap 0.6b+6 ; per tube width 1.3b + border 6 + gap 12
     var g = n > 2 ? 0.35 : 0.6, gp = n > 2 ? 3 : 6, fromH = (h - (n - 1) * gp - 12) / (n * 6.0 + (n - 1) * g), fromW = (w - (c - 1) * 8) / (c * 80 / 56); // perch: 80u wide, (60*4+80)u tall per 56u bird
-    var cap = n <= 2 && c <= 5 ? 62 : 44; // DESIGN 18.2 A12: few perches -> bigger birds (60-64px)
+    var cap = n <= 2 ? 62 : 44; // v7 B8: perch size maximised to the screen width for 1-2 rows (width still limits) // DESIGN 18.2 A12: few perches -> bigger birds (60-64px)
     var size = Math.floor(Math.max(18, Math.min(cap, fromH, fromW)));
     document.documentElement.style.setProperty('--ball-size', size + 'px');
     b.style.gap = Math.round(size * g + gp) + 'px'; // QA N2: tighter row gap for 3-row layouts
@@ -281,12 +312,16 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     if (S.sel < 0) { if (pickable(i)) { S.sel = i; warmSide(S.tubes[i][S.tubes[i].length - 1]); sfx.play('select'); } else { fx.shake = i; sfx.play('invalid'); } }
     else if (S.sel === i) S.sel = -1;
     else if (E.canMove(est(), S.sel, i)) {
-      var from = S.sel, src = document.querySelectorAll('#board .tube')[from], sb = src && src.querySelector('.ballwrap:last-child');
-      var air = flights.filter(function (f) { return f.to === from && f.slot === S.tubes[from].length - 1; })[0], airRect = air ? air.clone.getBoundingClientRect() : null; if (air) finishFlight(air, true); // retarget mid-air
+      var from = S.sel, src = document.querySelectorAll('#board .tube')[from], sb = src && src.querySelector('.ballwrap:last-child'), kk = E.moveCount(est(), from, i), L0 = S.tubes[from].length;
+      for (var q0 = 1; q0 < kk; q0++) if (S.mask[from][L0 - 1 - q0]) { kk = q0; break; } // v7: a hidden '?' bird stops the run
+      var wraps = src ? [].slice.call(src.querySelectorAll('.ballwrap')) : [], froms = [];
+      for (var q = 0; q < kk; q++) { var sl = L0 - 1 - q, air = flights.filter(function (f) { return f.to === from && f.slot === sl; })[0], ar = air ? air.clone.getBoundingClientRect() : null; if (air) finishFlight(air, true); // retarget mid-air
+        froms.push(ar || (wraps[sl] ? wraps[sl].getBoundingClientRect() : null)); }
+      var airRect = froms[0];
       var h = snap(); h.chain = S.chain; h.banked = S.banked; h.combo = S.combo; h.lastDone = S.lastDone; h.path = S.path; S.hist.push(h); pend = []; // R2 + gimmick state snapshot
       var sol = S.g.solution; S.path = S.path >= 0 && sol && sol[S.path] && sol[S.path][0] === from && sol[S.path][1] === i ? S.path + 1 : -1;
       var ball = S.tubes[from][S.tubes[from].length - 1], unlock = E.isKey(ball) && S.lock[i] === ball;
-      var ns = E.apply(est(), from, i); S.tubes = ns.t; S.lock = ns.lock; S.mask[from].pop(); if (!unlock) S.mask[i].push(false);
+      var ns = E.apply(est(), from, i, kk); S.tubes = ns.t; S.lock = ns.lock; for (var q2 = 0; q2 < kk; q2++) { S.mask[from].pop(); if (!unlock) S.mask[i].push(false); }
       S.moves++; S.sel = -1; S.hint = null;
       var rv = revealTops(); if (rv.length) { fx.reveal = rv; snd('select'); } // hidden ball revealed the moment it becomes the top ball
       var solved = E.isSolved(est()), isd = !unlock && done(i);
@@ -294,14 +329,14 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
       else { fx.drop = i; if (!isd) snd('drop', S.tubes[i].length - 1); if (S.caps[i] < 4 && S.tubes[i].length >= S.caps[i]) fx.full = i; }
       if (!isd && S.chain > 0) { S.banked += S.chain; S.chain = 0; } // chain broken by a normal move -> banked (paid on clear)
       if (isd) onTubeDone(i, solved);
-      fx.fly = { from: !unlock && sb ? (airRect || sb.getBoundingClientRect()) : null, to: i, sounds: pend }; pend = null;
+      fx.fly = { from: !unlock && sb ? (airRect || sb.getBoundingClientRect()) : null, froms: unlock ? [] : froms, n: unlock ? 1 : kk, to: i, sounds: pend }; pend = null; SP._lastRun = kk;
       if (unlock) { fx.fly.sounds.forEach(function (a) { sfx.play(a[0], a[1]); }); fx.fly = null; render(); return; }
       if (solved) { S.locked = true; S.sel = -1; render(); return reduced ? setTimeout(win, 50) : whenLanded(function () { setTimeout(win, 250); }); } // H1: lock all input during clear sequence
     } else if (pickable(i)) { S.sel = i; warmSide(S.tubes[i][S.tubes[i].length - 1]); sfx.play('select'); }
-    else { fx.shake = i; vibrate(10); sfx.play('invalid'); }
+    else { fx.shake = i; sfx.play('invalid'); }
     render();
   }
-  function vibrate(ms) { if (navigator.vibrate) try { navigator.vibrate(ms); } catch (e) {} }
+  function vibrate(ms) { if (!hapticsOn) return; SP._haptics.push(ms); if (navigator.vibrate) try { navigator.vibrate(ms); } catch (e) {} }
   // Remaining solution completes a tube on every move until solved => automatic end-of-stage cascade.
   function isCascade() {
     if (S.lock.some(Boolean)) return false;
@@ -322,7 +357,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     var c = $('combo'); c.className = S.combo >= 4 ? 'c4' : S.combo === 3 ? 'c3' : ''; c.textContent = 'COMBO ×' + S.combo + '!';
     void c.offsetWidth; c.className += ' combo';
     if (S.combo >= 3) { var f = document.createElement('div'); f.className = 'flash'; document.body.appendChild(f); setTimeout(function () { f.remove(); }, 300); }
-    if (S.combo >= 4 && !reduced) { $('app').classList.add('screenshake'); setTimeout(function () { $('app').classList.remove('screenshake'); }, 200); vibrate(20); }
+    if (S.combo >= 4 && !reduced) { $('app').classList.add('screenshake'); setTimeout(function () { $('app').classList.remove('screenshake'); }, 200); }
   }
   function confetti() {
     if (reduced) return;
@@ -336,19 +371,19 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   function win() {
     if (!E.isSolved(est())) { S.locked = false; render(); return; } // H1: re-check before saving
     S.won = true; var st = starsFor(S.moves, S.g.min, sn()), prev = save.stars[S.n] || 0;
-    $('cleartitle').textContent = S.daily ? '일일 도전 완료!' : '클리어!'; $('next').textContent = S.daily ? '캠페인으로' : '다음';
+    $('cleartitle').textContent = S.daily ? '오늘의 도전 완료!' : '스테이지 클리어!'; $('cleartitle').classList.toggle('sr-only', !S.daily); /* v7 B6: art ribbon already says 스테이지 클리어 -> title for screen readers only (daily keeps its title) */ $('next').textContent = S.daily ? '캠페인으로' : '다음';
     if (S.daily) return winDaily(st);
     var got = prev === 0 ? C.coinsFirstClear : Math.max(0, st - prev) * C.coinsPerStarImprove; // GDD v0.2
     // N1: combo coins paid only on clear; lifetime cap per stage persisted in save.comboPaid
     save.comboPaid = save.comboPaid || {}; var paid = save.comboPaid[S.n] || 0;
     var combo = Math.max(0, Math.min(S.banked, C.maxComboCoinsPerStage - paid)); save.comboPaid[S.n] = paid + combo;
-    save.stars[S.n] = Math.max(prev, st); save.coins += got + combo;
+    if (st > prev) starPop[S.n] = prev; /* v7 C14: newly earned map stars pop once */ save.stars[S.n] = Math.max(prev, st); save.coins += got + combo;
     if (S.n <= save.unlocked) save.unlocked = Math.max(save.unlocked, Math.min(S.n + 1, LAST)); // L3: debug-jumped stages don't unlock
     if (S.n < LAST) save.current = S.n + 1; // L2
     save.attempt[S.n] = { undoLeft: C.freeUndos, addedTube: false }; // GDD v0.2: clear resets this stage's consumables (restart does not)
     persist(); render();
     $('bigstars').innerHTML = starsHtml(st); $('result').textContent = '이동 ' + S.moves + ' / 최소 ' + S.g.min;
-    $('coinsGot').innerHTML = IC('coin') + ' +' + (got + combo) + (combo ? ' (콤보 +' + combo + ')' : '') + ' · 보유 ' + save.coins;
+    $('coinsGot').innerHTML = IC('coin') + ' 코인 +' + (got + combo) + ' (보유 ' + save.coins + ')' + (combo ? ' · 콤보 +' + combo : ''); // v7 B6
     $('next').style.display = S.n < LAST ? '' : 'none'; confetti();
     sfx.play('clear'); for (var k = 0; k < st; k++) setTimeout(sfx.play.bind(sfx, 'star', k), 1000 + k * 150); $('overlay').classList.add('show'); // DESIGN §7: fanfare, then a ding per star
     if (S.n === LAST) $('endov').classList.add('show'); // QA F3: all stages cleared -> '새 스테이지 곧 추가' ending
@@ -383,9 +418,10 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
       while (S.tubes.length < S.g.tubes.length + (S.a.addedTube ? 1 : 0)) { S.tubes.push([]); S.caps.push(4); S.lock.push(null); S.mask.push([]); } // M1: added tube is not undoable
       S.moves++; S.sel = -1; S.combo = 0; S.lastDone = -99; S.chain = h.chain; S.banked = h.banked; S.hint = null; sfx.play('undo'); render(); // R2: revoke chain/banked coins accrued by the undone move // undo counts as a move for stars
     };
+    if (!SP.store.get('tip.undoMove')) { SP.store.set('tip.undoMove', '1'); toast('되돌리기도 이동 1회로 세요'); } /* v7 B5: one-time tip */
     if (S.a.undoLeft > 0) { S.a.undoLeft--; persist(); go(); } else SP.ads.showRewarded('undo', function (ok) { if (ok) go(); });
   }
-  function addTube() { if (S.a.addedTube || S.locked || SP.ads.isBusy()) return; SP.ads.showRewarded('add_tube', function (ok) { if (ok && !S.a.addedTube && !S.locked) { S.a.addedTube = true; persist(); S.tubes.push([]); S.caps.push(4); S.lock.push(null); S.mask.push([]); S.sel = -1; render(); } }); }
+  function addTube() { if (S.a.addedTube || S.locked || SP.ads.isBusy()) return; SP.ads.showRewarded('add_tube', function (ok) { if (ok && !S.a.addedTube && !S.locked) { S.a.addedTube = true; persist(); S.tubes.push([]); S.caps.push(4); S.lock.push(null); S.mask.push([]); S.sel = -1; render(); toast('횃대가 하나 늘었어요'); } }); }
   // DESIGN ch.16 saga map: bottom-to-top winding path, 10-stage chunk tiles per theme + a transition band above every 100.
   // Virtualized: only segments/nodes within ±1 screen of the viewport are in the DOM (positions are O(1) from the formula),
   // tile backgrounds are set when IntersectionObserver sees the segment (rootMargin 1 screen). Works for any LAST (200+).
@@ -393,19 +429,22 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   function nodeXY(i) { var y = M.chunkH - 45 - 90 * i; return { x: 195 + 105 * Math.sin(2 * Math.PI * y / 450), y: y }; }
   function mapPos(n) { var b = Math.floor((n - 1) / 100), j = (n - 1) % 100, c = Math.floor(j / 10), q = nodeXY(j % 10); return { x: q.x, y: mapTotal - (b * BLK + c * M.chunkH + (M.chunkH - q.y)) }; }
   SP._mapPos = function (n) { return mapPos(n); };
-  function soonSeg(e) { e.classList.add('saga-seg--soon'); e.setAttribute('aria-label', '새 스테이지 곧 추가'); return e; } // DESIGN 17.4 (A05): band above the last stage = '곧 추가돼요!' (no '201~' label)
+  function soonSeg(e, th) { e.classList.add('saga-seg--soon'); if (th && M.wide) e.classList.add('v7-soon-' + th); e.setAttribute('aria-label', '새 스테이지 곧 추가'); return e; } // DESIGN 17.4 (A05): band above the last stage = '곧 추가돼요!' (no '201~' label)
   function mapSeg(key, top, h, src, label) {
-    var e = document.createElement('div'); e.className = 'saga-seg'; e.style.top = top + 'px'; e.style.height = h + 'px'; e.dataset.src = src;
+    var e = document.createElement('div'); e.className = 'saga-seg' + (M.wide ? ' saga-seg--wide v7-wide' : ''); /* v7 C14 */ e.style.top = top + 'px'; e.style.height = h + 'px'; e.dataset.src = src;
     if (label) { var l = document.createElement('div'); l.className = 'saga-band-label'; l.style.top = '50%'; l.textContent = label; e.appendChild(l); }
     if (mapIO) mapIO.observe(e); else e.style.backgroundImage = 'url("' + src + '")'; return e;
   }
   function mapRender() {
+    var W = M.wide || null;
+    var mw = $('mapwrap'), vb = Math.max(0, Math.floor((mapTotal - ($('sagamap').scrollTop + $('sagamap').clientHeight / 2) / mapK) / BLK)), vk = C.themes[vb % C.themes.length].key; // v7 C14 panel fill = visible theme
+    if (mw && !mw.classList.contains('v7-map-' + vk)) { C.themes.forEach(function (t) { mw.classList.remove('v7-map-' + t.key); }); mw.classList.add('v7-map-' + vk); }
     var m = $('sagamap'), tr = $('sagatrack'), vh = m.clientHeight / mapK, st = m.scrollTop / mapK, lo = mapTotal - (st + 2 * vh), hi = mapTotal - (st - vh), want = {}, blocks = Math.ceil(LAST / 100);
     for (var b = Math.max(0, Math.floor(lo / BLK)); b <= Math.min(blocks - 1, Math.floor(hi / BLK)); b++) {
       var th = C.themes[b % C.themes.length].key, nx = C.themes[(b + 1) % C.themes.length];
       for (var c = 0; c <= M.per; c++) { var y0 = b * BLK + c * M.chunkH, h = c < M.per ? M.chunkH : M.bandH; if (y0 + h < lo || y0 > hi) continue;
         var k = 'g' + b + '_' + c; want[k] = 1;
-        if (!mapLive[k]) tr.insertBefore(mapLive[k] = c < M.per ? mapSeg(k, mapTotal - y0 - h, h, M.chunk.replace('{key}', th)) : (b === blocks - 1 ? soonSeg(mapSeg(k, mapTotal - y0 - h, h, 'assets-map-map-band-coming-soon.svg')) : mapSeg(k, mapTotal - y0 - h, h, M.band.replace('{from}', th).replace('{to}', nx.key), (b * 100 + 101) + '~ ' + nx.name)), tr.firstChild);
+        if (!mapLive[k]) tr.insertBefore(mapLive[k] = c < M.per ? mapSeg(k, mapTotal - y0 - h, h, (W ? W.chunk : M.chunk).replace('{key}', th)) : (b === blocks - 1 ? soonSeg(mapSeg(k, mapTotal - y0 - h, h, W ? W.soon.replace('{key}', th) : 'assets-map-map-band-coming-soon.svg?v=03a37a9c'), th) : mapSeg(k, mapTotal - y0 - h, h, (W ? W.band : M.band).replace('{from}', th).replace('{to}', nx.key), (b * 100 + 101) + '~ ' + nx.name)), tr.firstChild);
         if (c === M.per) continue;
         for (var i = 0; i < M.per; i++) { var n = b * 100 + c * 10 + i + 1; if (n > LAST) break; want['n' + n] = 1; if (mapLive['n' + n]) continue; tr.appendChild(mapLive['n' + n] = mapNode(n)); } } }
     for (var key in mapLive) if (!want[key]) { if (mapIO && key[0] === 'g') mapIO.unobserve(mapLive[key]); mapLive[key].remove(); delete mapLive[key]; }
@@ -415,7 +454,9 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     var p = mapPos(n), cur = Math.min(save.unlocked, LAST), stt = n > save.unlocked ? 'locked' : n === cur && !save.stars[n] ? 'current' : n < cur || save.stars[n] ? 'cleared' : 'current';
     var e = document.createElement('button'); e.className = 'map-node map-node--' + stt + (n === S.n ? ' map-node--playing' : ''); e.style.left = p.x + 'px'; e.style.top = p.y + 'px'; e.dataset.n = n;
     e.textContent = n; e.setAttribute('aria-label', '스테이지 ' + n + ' ' + ({ locked: '잠김', current: '현재', cleared: '클리어' })[stt]); e.disabled = stt === 'locked';
-    if (stt === 'cleared' && !SP.STAGES[n].rest) { var w = document.createElement('div'); w.className = 'map-stars'; for (var i = 0; i < 3; i++) { var t = document.createElement('i'); t.className = 'map-star' + (i < (save.stars[n] || 0) ? ' on' : ''); w.appendChild(t); } e.appendChild(w); }
+    if (stt === 'cleared') { // v7 B7: every cleared node shows earned stars (filled) + empty ones
+       var w = document.createElement('div'); w.className = 'map-stars'; for (var i = 0; i < 3; i++) { var t = document.createElement('i'); t.className = 'map-star v7-star' + (i < (save.stars[n] || 0) ? ' on' : '') + (n in starPop && i >= starPop[n] && i < (save.stars[n] || 0) ? ' pop' : ''); /* v7 B7: v7ui star-clear on/off art via .v7-star */ w.appendChild(t); } e.appendChild(w); }
+    if (n in starPop) setTimeout(function () { delete starPop[n]; }, 0);
     e.onclick = function () { $('menu').classList.remove('show'); load(n); }; return e;
   }
   var mapRaf = 0;
@@ -434,7 +475,9 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     if (!m._bound) { m._bound = true; m.addEventListener('scroll', function () { if (!mapRaf) mapRaf = requestAnimationFrame(function () { mapRaf = 0; mapRender(); }); }, { passive: true }); }
     mapRender();
   }
-  $('undo').onclick = undo; $('restart').onclick = function () { if (S.locked || SP.ads.isBusy()) return; if (S.a.addedTube) { S.a.addedTube = false; persist(); } load(S.n); }; $('add').onclick = addTube; // QA F10: restart also removes the added perch (undo count kept); // M2: consumables persist via save.attempt
+  $('undo').onclick = undo; function doRestart() { $('restartov').classList.remove('show'); if (S.a.addedTube) { S.a.addedTube = false; persist(); } load(S.n); }
+  $('restart').onclick = function () { if (S.locked || SP.ads.isBusy()) return; if (S.moves >= 1) $('restartov').classList.add('show'); else doRestart(); }; // v7 A4: confirm once a move was made
+  $('restartYes').onclick = doRestart; $('restartNo').onclick = function () { $('restartov').classList.remove('show'); }; $('add').onclick = addTube; // QA F10: restart also removes the added perch (undo count kept); // M2: consumables persist via save.attempt
   $('hint').onclick = function () { if (S.locked) return; S.hint = nextMove(); S.sel = -1; render(); };
   // gear + HUD '스테이지' button: pointer events (touch/pen act on pointerup, the synthetic click after it is swallowed) + click (mouse/keyboard)
   function onTap(el, fn) { if (!el) return; var skip = 0;
@@ -449,7 +492,9 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   function endClose() { $('endov').classList.remove('show'); $('overlay').classList.remove('show'); SP.ads.cancelDue(); }
   $('endDaily').onclick = function () { endClose(); load(DAILY); };
   $('endMap').onclick = function () { endClose(); menu(); };
-  function syncSym() { $('bigsym').checked = symbolsLarge; $('sound').checked = !(SP.sfx && SP.sfx.isMuted()); }
+  function syncSym() { $('bigsym').checked = symbolsLarge; $('sound').checked = !(SP.sfx && SP.sfx.isMuted()); $('haptics').checked = hapticsOn; $('rmotion').checked = reduced; $('rmotion').disabled = osReduced; $('rmnote').hidden = !osReduced; }
+  $('haptics').onchange = function () { hapticsOn = this.checked; SP.store.set(HAP_KEY, hapticsOn ? 'on' : 'off'); if (hapticsOn) vibrate(15); };
+  $('rmotion').onchange = function () { if (osReduced) return; reduced = this.checked; SP.store.set(RM_KEY, String(reduced)); applyReduced(); if (S) render(); };
   $('sound').onchange = function () { if (SP.sfx) { SP.sfx.setMuted(!this.checked); if (this.checked) sfx.play('select'); } }; // DESIGN §5.6 settings: sound on/off (persisted)
   $('bigsym').onchange = function () { symbolsLarge = this.checked; SP.store.set(A11Y_KEY, String(symbolsLarge)); document.documentElement.classList.toggle('symbols-large', symbolsLarge); render(); };
   $('fastfly').checked = SP.store.get(FLY_KEY) === 'fast'; $('fastfly').onchange = function () { flySpeed = this.checked ? 'fast' : 'normal'; SP.store.set(FLY_KEY, flySpeed); };
@@ -463,6 +508,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   SP.platform.onBack(function () {
     if (SP.ads.isBusy()) return true;                         // the ad owns the back key while it plays
     if (shown('exitov')) { exitModal(false); return true; }   // popup close
+    if (shown('restartov')) { $('restartov').classList.remove('show'); return true; }
     if (shown('endov')) { $('endMap').onclick(); return true; }
     if (shown('themeov')) { $('themeov').classList.remove('show'); return true; }
     if (shown('setov')) { $('setov').classList.remove('show'); return true; }
@@ -472,7 +518,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   });
   $('exitYes').onclick = function () { exitModal(false); persist(); SP.platform.close(); };
   $('exitNo').onclick = function () { exitModal(false); };
-  $('exitBtn').onclick = function () { exitModal(true); };
+  $('exitBtn').onclick = function () { exitModal(true); }; $('exitBtn').hidden = !SP.platform.isToss; // v7 B11: '게임 종료' only inside the Toss app
   SP.ads.onChange(function () { if (S) btns(); });
   var start = Math.min(save.current || 1, save.unlocked);
   SP.ads.showBanner(); load(start); if (bootToMap) try { menu(); } catch (e) {}

@@ -56,7 +56,7 @@ body{min-height:100vh;user-select:none;-webkit-user-select:none;touch-action:man
 .tube .lock-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;border-radius:0 0 999px 999px}
 .tube .lock{position:absolute;left:50%;top:-20px;width:70%;margin-left:-35%;z-index:3;pointer-events:none}/* DESIGN 13.2: lock hangs over the mouth */
 .keyfly{position:fixed;left:0;top:0;z-index:30;pointer-events:none;will-change:transform}.keyfly .ball{width:100%;height:100%}
-.tube.small{align-self:flex-end;background:url(assets-gimmicks-tube-small.svg) center/100% 100% no-repeat;border-color:transparent}.tube.small::before{background:var(--small-tube-stroke)}
+.tube.small{align-self:flex-end;background:url(assets-gimmicks-tube-small.svg?v=d8fc240a) center/100% 100% no-repeat;border-color:transparent}.tube.small::before{background:var(--small-tube-stroke)}
 .tube .capbadge{position:absolute;top:-30px;left:50%;width:22px;transform:translateX(-50%);pointer-events:none}
 
 /* Launch (LAUNCH.md L4/L6): splash, portrait lock fallback, exit modal */
@@ -81,10 +81,10 @@ body{min-height:100vh;user-select:none;-webkit-user-select:none;touch-action:man
 
 /* DESIGN ch.14: birds on wooden nest perches (assets-birds-perch-*; geometry from perch.json: bird 56u, perch 80u wide, 60u slot pitch, height 60n+80u) */
 :root{--pu:calc(var(--ball-size)/56);--tube-w:calc(var(--pu)*80);--tube-h:calc(var(--pu)*320);--small-tube-h:calc(var(--pu)*260);--tube-gap:8px}
-.tube.perch{border:0;border-radius:0;background:url(assets-birds-perch-perch.svg) center bottom/100% 100% no-repeat;align-self:flex-end}
+.tube.perch{border:0;border-radius:0;background:url(assets-birds-perch-perch.svg?v=e14107a5) center bottom/100% 100% no-repeat;align-self:flex-end}
 .tube.perch::before{display:none}
-.tube.perch.small{height:var(--small-tube-h);background-image:url(assets-v5ui-rec-perch-small.svg)}
-.tube.perch.complete{background-image:url(assets-v5ui-rec-perch-complete.svg);border:0;filter:drop-shadow(0 0 3px #FFD54F)}
+.tube.perch.small{height:var(--small-tube-h);background-image:url(assets-v5ui-rec-perch-small.svg?v=110de3e4)}
+.tube.perch.complete{background-image:url(assets-v5ui-rec-perch-complete.svg?v=cdf0ce1e);border:0;filter:drop-shadow(0 0 3px #FFD54F)}
 .tube.perch.complete.fresh{animation:perch-glow 900ms ease-out}
 .tube.complete:not(.fresh),.tube.perch.complete:not(.fresh),.tube.perch.complete:not(.fresh) .leaf,.tube.perch.complete:not(.fresh) .bloom{animation:none}/* theme.css animates every .complete -> replayed on each re-render (bug v5); only the freshly completed tube animates */
 .tube.perch .stack{bottom:calc(var(--pu)*24)}
@@ -129,12 +129,12 @@ body[class*="theme-"] .ov .card{color:var(--text)}/* overlay cards keep their ow
 .ball.flyer{transition:none;will-change:transform;transform-origin:50% 85%}
 .feather{position:fixed;left:0;top:0;width:7px;height:3px;border-radius:50% 50% 50% 0;z-index:29;pointer-events:none;will-change:transform,opacity;box-shadow:0 0 0 .5px #1A1A2E66}
 /* DESIGN 15.3 backgrounds: set directly here (url relative to css/) instead of theme.css var(--theme-bg); .theme-low-end -> WebP 780x1688 */
-body.theme-forest{background:url("assets-themes-theme-forest.svg") center/cover no-repeat,var(--bg-light)}
-body.theme-sunset{background:url("assets-themes-theme-sunset.svg") center/cover no-repeat,var(--bg-light)}
-body.theme-snow{background:url("assets-themes-theme-snow.svg") center/cover no-repeat,var(--bg-light)}
-body.theme-low-end.theme-forest{background-image:url("assets-themes-theme-forest.webp")}
-body.theme-low-end.theme-sunset{background-image:url("assets-themes-theme-sunset.webp")}
-body.theme-low-end.theme-snow{background-image:url("assets-themes-theme-snow.webp")}
+body.theme-forest{background:url("assets-themes-theme-forest.svg?v=e3b63a69") center/cover no-repeat,var(--bg-light)}
+body.theme-sunset{background:url("assets-themes-theme-sunset.svg?v=d4df827c") center/cover no-repeat,var(--bg-light)}
+body.theme-snow{background:url("assets-themes-theme-snow.svg?v=d7b9f457") center/cover no-repeat,var(--bg-light)}
+body.theme-low-end.theme-forest{background-image:url("assets-themes-theme-forest.webp?v=7bfd38a2")}
+body.theme-low-end.theme-sunset{background-image:url("assets-themes-theme-sunset.webp?v=202d51f2")}
+body.theme-low-end.theme-snow{background-image:url("assets-themes-theme-snow.webp?v=b959c2f1")}
 /* DESIGN ch.16 saga map inside the stage-select card (map styles themselves: assets-theme.css ch.16 block) */
 #menu .card{max-height:100%;border-radius:0;height:100%;overflow-y:auto}
 #mapwrap{position:relative;width:100%;flex:1 0 340px;min-height:340px;border-radius:16px;overflow:hidden;background:#1A1A2E}
@@ -171,3 +171,38 @@ body.theme-low-end.theme-snow{background-image:url("assets-themes-theme-snow.web
 #menu .card{display:flex;flex-direction:column;overflow:hidden}
 #menu #mapwrap{flex:1 1 200px;min-height:200px}
 #menu #closeMenu,#menu #dailycard,#menu .title,#menu #coins{flex:none}
+.toggle .note:not([hidden]){display:block;font-size:11px;font-weight:400;color:var(--text-muted)}
+/* v7 E16: clear sheet + art (birds/confetti art) always inside the visible screen incl. notch (safe-area-inset-top);
+   the art scales with the available height; bottom sheets never exceed the screen height */
+/* v7: safe-area top for sheets — the clear sheet's padding now comes from assets-v7ui-v7.css (#overlay.v5); other sheets only clear the notch */
+.ov{padding-top:var(--sa-top,env(safe-area-inset-top,0px));box-sizing:border-box}
+.ov .card{max-height:100%;box-sizing:border-box}
+#overlay.v5 .card{overflow:visible}
+/* v7 B7: no navy strip on the map's right side — track centred, wide (bleed) art fills the whole panel width */
+#mapwrap{background:#A8E883}
+#mapwrap .saga-map{overflow-x:hidden}
+#sagatrack{margin:0 auto;transform-origin:top center}
+.saga-seg.saga-seg--wide{left:-195px;width:780px;background-size:780px 100%}
+#sagatrack{position:absolute;top:0;left:50%;margin:0 0 0 -195px}
+/* v7 B5: HUD text >= 13px */
+.hud #moves,.hud .sub{font-size:13px}
+.hud .lvl{font-size:max(13px,1em)}
+/* v7 B6: clear sheet — ribbon art only (title for screen readers), stars on one line, reward line >= 15px */
+.sr-only{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+#overlay.v5 .bigstars span:nth-child(2){transform:none}
+#overlay.v5 .bigstars{align-items:center;justify-content:center}
+#overlay #coinsGot{font-size:15px;font-weight:800}
+/* v7 B8: board a little below the vertical centre */
+#board{padding-top:max(30px,7vh);padding-bottom:8px}
+/* v7 B9 tutorial bubble — CSS placeholder; swap .tutor background / .tutor-finger for the designer's v7 bubble+finger art */
+.tutor{position:absolute;left:0;right:0;text-align:center;bottom:calc(var(--banner-h,0px) + 100px + var(--sa-bottom,env(safe-area-inset-bottom,0px)));z-index:6;pointer-events:none}
+.tutor[hidden],#tutfinger[hidden],#tutring[hidden]{display:none}
+/* v7 A2 landing dust + A3 toast — CSS placeholder (designer v7 art: landing feathers/dust, toast frame) */
+/* v7 toggle condition (DESIGN 19): focus ring on the whole row */
+.toggle:focus-within{outline:3px solid #1E63E5;outline-offset:2px}
+.toggle input:focus-visible{outline:none}
+/* v7: map sheet is a flex card that sizes its own scroller -> keep it at the padded height (v7.css .ov .card cap is 8px tighter) */
+#menu.ov .card{max-height:100%;overflow-y:visible}
+/* v7a symbol check: theme.css .perch{filter:sepia(.15) saturate(.9)} also tinted the birds on it (white symbol disc -> cream, red/orange dulled) */
+#board .tube.perch{filter:none}
+body .hud .hud-mid #moves,body[class*="theme-"] .hud .hud-mid #moves{font-size:13px}

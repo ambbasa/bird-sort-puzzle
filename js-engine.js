@@ -33,10 +33,17 @@ var SP = (typeof window !== 'undefined') ? (window.SP = window.SP || {}) : (glob
     if (isKey(ball)) return !B.length;
     return !B.length || B[B.length - 1] === ball;
   }
-  function apply(s, a, b) { // returns new state (does not check legality)
-    var n = clone(s), ball = n.t[a].pop();
-    if (isKey(ball) && n.lock[b] === ball) n.lock[b] = null; // key + lock disappear together
-    else n.t[b].push(ball);
+  // v7 (GDD A1): same-colour run move. One tap moves every same bird stacked on top of the source, as many as fit in the
+  // destination (genre standard); it still counts as ONE move. Keys always move alone.
+  function moveCount(s, a, b) {
+    var A = s.t[a], ball = A[A.length - 1]; if (isKey(ball)) return 1;
+    var run = 0; for (var i = A.length - 1; i >= 0 && A[i] === ball; i--) run++;
+    return Math.max(1, Math.min(run, s.cap[b] - s.t[b].length));
+  }
+  function apply(s, a, b, cnt) { // returns new state (does not check legality); cnt: optional cap on the run size (game: '?' birds)
+    var k = Math.min(cnt || 99, moveCount(s, a, b)), n = clone(s), ball = n.t[a].pop();
+    if (isKey(ball) && n.lock[b] === ball) { n.lock[b] = null; return n; } // key + lock disappear together
+    n.t[b].push(ball); for (var i = 1; i < k; i++) n.t[b].push(n.t[a].pop());
     return n;
   }
   function moves(s, prune) {
@@ -139,14 +146,14 @@ var SP = (typeof window !== 'undefined') ? (window.SP = window.SP || {}) : (glob
     for (var i = 0; i < path.length; i++) {
       var a = path[i][0], b = path[i][1];
       if (!canMove(s, a, b)) return { ok: false, failedAt: i, reason: 'illegal move ' + a + '->' + b };
-      var ball = s.t[a][s.t[a].length - 1], id = ids[a].pop();
-      var unlock = isKey(ball) && s.lock[b] === ball; s = apply(s, a, b); if (!unlock) ids[b].push(id);
+      var ball = s.t[a][s.t[a].length - 1], cnt = moveCount(s, a, b);
+      var unlock = isKey(ball) && s.lock[b] === ball; s = apply(s, a, b); for (var q = 0; q < cnt; q++) { var id = ids[a].pop(); if (q > 0 && hid[id] === -1) hid[id] = 'MOVED_HIDDEN'; if (!unlock) ids[b].push(id); } // v7: a '?' bird never rides along in a run (the game stops the run at it)
       reveal(i + 1);
     }
     return { ok: true, solved: isSolved(s), reveals: hid, state: s };
   }
   function firstMoveOptions(stage) { return moves(init(stage), false).length; }
   function completeAtStart(stage) { var s = init(stage); for (var i = 0; i < s.t.length; i++) if (isDone(s, i)) return true; return false; }
-  SP.engine = { init: init, canMove: canMove, apply: apply, moves: moves, isSolved: isSolved, isDone: isDone, key: key, solve: solve, replay: replay, firstMoveOptions: firstMoveOptions, completeAtStart: completeAtStart, isKey: isKey, dfs: dfs, deadEndScore: deadEndScore };
+  SP.engine = { init: init, canMove: canMove, apply: apply, moveCount: moveCount, moves: moves, isSolved: isSolved, isDone: isDone, key: key, solve: solve, replay: replay, firstMoveOptions: firstMoveOptions, completeAtStart: completeAtStart, isKey: isKey, dfs: dfs, deadEndScore: deadEndScore };
 })();
 if (typeof module !== 'undefined') module.exports = SP.engine;

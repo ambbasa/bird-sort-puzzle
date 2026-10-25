@@ -4,7 +4,7 @@
 // SDK names follow the official docs (developers-apps-in-toss.toss.im, SDK 3.x domain API).
 var SP = window.SP = window.SP || {};
 (function () {
-  var T = window.SPToss || null, KEYS = ['sortpuzzle.v1', 'sortpuzzle.ads.v1', 'sfx.muted', 'a11y.symbolsLarge'];
+  var T = window.SPToss || null, KEYS = ['sortpuzzle.v1', 'sortpuzzle.ads.v1', 'sfx.muted', 'a11y.symbolsLarge', 'a11y.reduceMotion', 'settings.haptics', 'settings.flightSpeed', 'tip.undoMove'];
   var cache = {}, prefix = '', mode = 'localStorage', isReady = false, queue = [], backFns = [], dirty = {}, flushT = 0, sdkStorage = false;
   function ls(k, v) { try { if (arguments.length > 1) localStorage.setItem(k, v); else return localStorage.getItem(k); } catch (e) { return null; } }
   function sup(fn) { try { return !!fn && (typeof fn.isSupported !== 'function' || fn.isSupported()); } catch (e) { return false; } }
