@@ -64,13 +64,15 @@ SP.CONFIG = {
 };
 //@qa-start (v8.1 review switch: web/dev only — the toss build strips it, so toss follows features.v81 alone)
 SP.CONFIG.v81Toggle = true;
+SP.CONFIG.qaPractice = typeof location !== 'undefined' && /[?&]qa=bsp8(?:&|$)/.test(location.search); // v8.1.1: QA practice never writes the v81 flag
 //@qa-end
 // v8.1 flag switch for QA / planner review (web/dev builds; toss: stripped): index.html?v81=1 turns v8.1 on and remembers it on this device
 // (localStorage 'settings.ff.v81'), ?v81=0 turns it off again. Shipping default stays features.v81 = false.
 (function () { var C = SP.CONFIG || SP; var F = C.features; if (!F || C.v81Toggle !== true) return; try { // v81Toggle is set only in the //@qa block above
   var q = typeof location !== 'undefined' && /[?&]v81=([01])/.exec(location.search), ls = typeof localStorage !== 'undefined' ? localStorage : null;
-  if (q && ls) { if (q[1] === '1') ls.setItem('settings.ff.v81', '1'); else ls.removeItem('settings.ff.v81'); }
-  if (ls && ls.getItem('settings.ff.v81') === '1') F.v81 = true; else if (q) F.v81 = q[1] === '1';
+  var qa = C.qaPractice === true; // v8.1.1: QA practice (set in the //@qa block) applies ?v81 for the session only
+  if (q && ls && !qa) { if (q[1] === '1') ls.setItem('settings.ff.v81', '1'); else ls.removeItem('settings.ff.v81'); }
+  if (q && qa) F.v81 = q[1] === '1'; else if (ls && ls.getItem('settings.ff.v81') === '1') F.v81 = true; else if (q) F.v81 = q[1] === '1';
 } catch (e) {}
   if (F.v81 && C.v8 && C.v81) for (var k in C.v81.sfx) C.v8.sfx[k] = C.v81.sfx[k]; })();
 //@qa-start (v8.0.1: web/flat only — tools/build-release.js strips this block from the toss build)

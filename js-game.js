@@ -16,6 +16,10 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   var save = null; try { save = JSON.parse(SP.store.get(KEY) || 'null'); } catch (e) { console.warn('save parse', e); }
   if (!save || typeof save !== 'object') save = { unlocked: 1, stars: {}, coins: 0, current: 1 };
   var F80 = !!(C.features && C.features.v80) && !!SP.v8, EC = C.economy, V8 = SP.v8, V8A = C.v8;
+  var QAP = false; // v8.1.1: true only in the QA practice mode (the toss build strips the block below, so it stays false there)
+  //@qa-start
+  QAP = !!SP.QA;
+  //@qa-end
   var F81 = F80 && !!C.features.v81, E81 = C.economy81, V81 = C.v81, M81 = SP.v81; // v8.1 (GDD v8 §4): off = exactly the v8.0 game
   if (F80 && save.v !== 8) { var raw0 = SP.store.get(KEY); if (raw0 && !SP.store.get(KEY + '.bak')) SP.store.set(KEY + '.bak', raw0); save = V8.migrateV8(save); } // v8 G4: original kept in sortpuzzle.v1.bak
   // ART-AUDIT A05: a save with current/unlocked > LAST (e.g. 201), NaN, negative or non-numeric froze the boot -> clamp to 1..LAST
@@ -353,7 +357,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
       if (w) w.remove(); if (lo) lo.remove(); if (d) d.querySelectorAll('.locksym').forEach(function (x) { x.remove(); }); if (ov) ov.remove(); if (d) d.classList.remove('locked', 'unlocking');
       if (S !== S0) return; // stage changed meanwhile
       if (solved) return cheer();
-      S.locked = false; S.consuming = false; render();
+      S.locked = false; S.consuming = false; render(); flushTaps();
     }, T.end);
   }
   function sparkle(d) { for (var i = 0; i < 5; i++) { var s = document.createElement('i'); s.className = 'spark'; s.style.left = (Math.random() * 100) + '%'; s.style.top = (Math.random() * 90) + '%'; s.style.animationDelay = (i * 30) + 'ms'; d.appendChild(s); } }
@@ -362,9 +366,11 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     var st = stageOf(), s = E.solve(st, { limit: 1e5 }); if (s.solvable) return s.path[0] || null;
     var d = E.dfs(st, 1e5); return d.solvable && d.path.length ? d.path[0] : null;
   }
+  function flushTaps() { var b = S.tbuf || []; S.tbuf = []; if (document.querySelector('.ov.show') || S.won) return; SP._tbufRan = (SP._tbufRan || 0) + b.length; b.forEach(function (k) { tap(k); }); }
+  function clearTaps() { if (S) S.tbuf = []; }
   function tap(i) {
     if (S.cheer) return S.cheer.skip(); // tap during the clear celebration -> straight to the card
-    if (S.locked || SP.ads.isBusy()) return;
+    if (S.locked || SP.ads.isBusy()) { if (S.locked && !S.won && !S.solvedLock && !document.querySelector('.ov.show')) { S.tbuf = S.tbuf || []; if (S.tbuf.length < 2) S.tbuf.push(i); SP._tbuf = S.tbuf.slice(); } return; } // v8.1.1: up to 2 taps buffered during a locked animation
     var pickable = function (k) { return S.tubes[k].length && !done(k) && !S.lock[k] && !(F81 ? E.fixedTop(est(), k) : E.cagedTop(est(), k)); }; // v8 M1: caged top birds can't be picked
     if (S.sel < 0) { if (pickable(i)) { S.sel = i; warmSide(S.tubes[i][S.tubes[i].length - 1]); sfx.play('select'); } else { fx.shake = i; sfx.play('invalid'); } }
     else if (S.sel === i) S.sel = -1;
@@ -380,15 +386,15 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
       var ball = S.tubes[from][S.tubes[from].length - 1], unlock = E.isKey(ball) && S.lock[i] === ball;
       var cg0 = S.cage, ns = E.apply(est(), from, i, kk); S.tubes = ns.t; S.lock = ns.lock; S.cage = ns.cage || null; if (cg0) cageFx(cg0, S.cage); if (F81) { var x0 = { egg: S.egg, slp: S.slp, al: S.al }; setX(ns); xFx(x0); } for (var q2 = 0; q2 < kk; q2++) { S.mask[from].pop(); if (!unlock) S.mask[i].push(false); }
       S.moves++; S.sel = -1; S.hint = null;
-      var rv = revealTops(); if (rv.length) { fx.reveal = rv; snd('select'); } // hidden ball revealed the moment it becomes the top ball
+      var rv = revealTops(); if (rv.length) { fx.reveal = rv; snd(F80 ? 'reveal-pop' : 'select'); } /* v8.1.1: M2a reveal-pop was never played */ // hidden ball revealed the moment it becomes the top ball
       var solved = E.isSolved(est()), isd = !unlock && done(i);
-      if (unlock) { fx.unlock = { tube: i, key: ball, solved: solved }; fx.keyFrom = sb ? (airRect || sb.getBoundingClientRect()) : null; fx.keySrc = ballSrc(ball).src; S.locked = true; S.consuming = true; } // undo: key move + unlock = 1 move (one hist entry)
+      if (unlock) { fx.unlock = { tube: i, key: ball, solved: solved }; fx.keyFrom = sb ? (airRect || sb.getBoundingClientRect()) : null; fx.keySrc = ballSrc(ball).src; S.locked = true; S.consuming = true; if (solved) S.solvedLock = true; } // undo: key move + unlock = 1 move (one hist entry)
       else { fx.drop = i; if (!isd) snd('drop', S.tubes[i].length - 1); if (S.caps[i] < 4 && S.tubes[i].length >= S.caps[i]) fx.full = i; }
       if (!isd && S.chain > 0) { S.banked += S.chain; S.chain = 0; } // chain broken by a normal move -> banked (paid on clear)
       if (isd) onTubeDone(i, solved);
       fx.fly = { from: !unlock && sb ? (airRect || sb.getBoundingClientRect()) : null, froms: unlock ? [] : froms, n: unlock ? 1 : kk, to: i, sounds: pend }; pend = null; SP._lastRun = kk;
       if (unlock) { fx.fly.sounds.forEach(function (a) { sfx.play(a[0], a[1]); }); fx.fly = null; render(); return; }
-      if (solved) { S.locked = true; S.sel = -1; render(); return whenLanded(function () { setTimeout(cheer, CLEAR_DELAY); }); } // H1: lock all input during clear sequence (perch hop wave -> card)
+      if (solved) { S.locked = true; S.solvedLock = true; S.tbuf = []; S.sel = -1; render(); return whenLanded(function () { setTimeout(cheer, CLEAR_DELAY); }); } // H1: lock all input during clear sequence (perch hop wave -> card)
       if (F80) { render(); afterMove(); return; } // v8 G5: dead-end check after every move
     } else if (pickable(i)) { S.sel = i; warmSide(S.tubes[i][S.tubes[i].length - 1]); sfx.play('select'); }
     else { fx.shake = i; sfx.play('invalid'); }
@@ -449,11 +455,11 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
       $('hint').classList.toggle('v8-glow', r === 'unsolvable'); if (r === 'unsolvable' && S.unsolvRun === 1) toast('막힌 것 같아요'); })(); }
   function bagSheet() { var I = save.inventory; sheet('가방', null, [ // v8.0: map shows owned boosters only (buying outside a stage = v8.1 P2)
       { k: 'token', icon: V8A.token, label: '횃대 토큰 ' + I.perchToken + ' / ' + EC.tokenMax, disabled: true, go: function () {} },
-      { k: 'hint', label: '힌트 ' + I.hint, disabled: true, go: function () {} },
+      { k: 'hint', label: '힌트 ' + I.hint + ' · 판당 ' + EC.freeHintsPerStage + '회 무료(1~' + EC.freeHintUnlimitedTo + '판 무제한)', disabled: true, go: function () {} },
       { k: 'coins', icon: V8A.coinBtn, label: '코인 ' + Math.min(save.coins, EC.coinMax).toLocaleString('ko-KR'), disabled: true, go: function () {} }]); }
   function adAvail() { return SP.ads.mode() !== 'none' && SP.ads.rewardedReady(); } // R2: web build (mode none), PLACEHOLDER IDs, load errors -> coin / free paths
   function closeSheet() { var o = $('v8sheet'); if (o) o.classList.remove('show'); }
-  function sheet(title, art, opts) { var o = $('v8sheet'); if (!o) { o = document.createElement('div'); o.id = 'v8sheet'; o.className = 'ov v8ov'; document.body.appendChild(o); }
+  function sheet(title, art, opts) { clearTaps(); var o = $('v8sheet'); if (!o) { o = document.createElement('div'); o.id = 'v8sheet'; o.className = 'ov v8ov'; document.body.appendChild(o); }
     o.innerHTML = '<div class="card v8-sheet" role="dialog" aria-label="' + title + '">' + (art ? '<img class="v8-sheet-art" src="' + art + '" alt="">' : '') + '<div class="title">' + title + '</div><div class="v8-sheet-btns"></div><button class="btn wide" id="v8close">닫기</button></div>';
     var bx = o.querySelector('.v8-sheet-btns'); opts.forEach(function (p) { var b = document.createElement('button'); b.className = 'v8-sheet-btn' + (p.ad ? ' ad' : ''); b.innerHTML = (p.icon ? '<img src="' + p.icon + '" alt="">' : '') + '<span>' + p.label + '</span>'; b.disabled = !!p.disabled; b.dataset.k = p.k;
       b.onclick = function () { if (b.disabled) return; b.disabled = true; p.go(); }; bx.appendChild(b); });
@@ -496,14 +502,15 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     if (!el) { el = document.createElement('div'); el.id = 'v8flame'; el.className = 'v8-flame'; el.setAttribute('role', 'status'); document.querySelector('header.hud').appendChild(el); }
     el.hidden = !L || !!S.daily; el.innerHTML = L ? '<img src="' + V81.flame.replace('{n}', L) + '" alt="" width="20" height="20">' + n + '연승' : ''; el.setAttribute('aria-label', n + '연승 중'); }
   function metaStart(n, g) { var k = save.streak, msg = [];
-    if (k.n >= E81.streakUndoAt && S.a.streakAt !== k.n) { var b = M81.streakBonus(k.n, E81), I = save.inventory; S.a.streakAt = k.n;
+    if (!QAP && k.n >= E81.streakUndoAt && S.a.streakAt !== k.n) { var b = M81.streakBonus(k.n, E81), I = save.inventory; S.a.streakAt = k.n;
       if (b.undo) { S.a.undoLeft += b.undo; msg.push('되돌리기 +' + b.undo); }
       if (b.token && I.perchToken < EC.tokenMax) { I.perchToken++; msg.push('횃대 토큰 +1'); }
       if (b.hint && I.hint < E81.hintMax) { I.hint++; msg.push('힌트 +1'); }
       persist(); render(); if (msg.length) setTimeout(function () { toast(k.n + '연승 보너스 · ' + msg.join(' · ')); }, 400); }
     flameHud(); document.body.classList.toggle('v8-boss', !!g.boss);
     var bb = $('v8bossbanner'); if (g.boss) { if (!bb) { bb = document.createElement('div'); bb.id = 'v8bossbanner'; bb.className = 'v8-boss-banner v8-boss-intro'; bb.setAttribute('role', 'status'); document.body.appendChild(bb); }
-      bb.textContent = '보스 스테이지 ' + n; bb.hidden = false; clearTimeout(bb._h); bb._h = setTimeout(function () { bb.hidden = true; }, 2200); } else if (bb) bb.hidden = true;
+      bb.textContent = '보스 스테이지 ' + n; bb.hidden = true; clearTimeout(bb._h); var tries = 0; // v8.1.1: show 1.5 s once the board is really on screen (map / splash / sheets closed), never blocks input
+      (function go() { var cover = document.querySelector('#menu.show, #splash, .ov.show'); if (cover && tries++ < 60) { bb._h = setTimeout(go, 100); return; } if (S.n !== n) return; bb.classList.remove('v8-boss-intro'); void bb.offsetWidth; bb.classList.add('v8-boss-intro'); bb.hidden = false; SP._bossShownAt = performance.now(); bb._h = setTimeout(function () { bb.hidden = true; }, 1500); })(); } else if (bb) { clearTimeout(bb._h); bb.hidden = true; }
     if ((g.eggs || []).length) tip('egg', '알은 무리를 ' + Math.max.apply(null, g.eggs.map(function (e) { return e.n; })) + '번 완성하면 깨어나요');
     if ((g.sleep || []).length) tip('sleep', '시계 든 새의 무리를 완성하면 다들 깨어나요');
     if (g.chain) tip('chain', '자물쇠 안에 또 열쇠가 있어요'); }
@@ -514,7 +521,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     var ch = M81.chestAccrue(save, E81); if (ch) h += ' · 별 상자 +' + ch + ' (지도에서 열어요)';
     flameHud(); SP._meta = { clean: clean, streak: n, album: al, chests: ch, coins: coins }; return { coins: coins, html: h }; }
   function metaMenu() { var co = $('coins'); co.insertAdjacentHTML('beforeend', ' <button class="btn v8-bag" id="v8albumBtn">도감</button>'); $('v8albumBtn').onclick = albumOpen;
-    M81.albumSync(save, debuts(), E81, EC); M81.chestAccrue(save, E81); var got = M81.chestOpen(save, E81, EC); persist();
+    var got = []; if (!QAP) { M81.albumSync(save, debuts(), E81, EC); M81.chestAccrue(save, E81); got = M81.chestOpen(save, E81, EC); persist(); } // v8.1.1: QA practice opens / grants nothing
     var pr = M81.chestProgress(save, E81), row = $('v8chestrow'); if (!row) { row = document.createElement('div'); row.id = 'v8chestrow'; row.className = 'v8-chestrow'; co.insertAdjacentElement('afterend', row); }
     row.innerHTML = '<img src="' + V81.chestClosed + '" alt="" width="36" height="36"><div class="v8-chestinfo"><b>별 상자까지 ' + pr.left + '개</b><div class="v8-star-bar" aria-hidden="true"><i style="width:' + (75 * pr.have / pr.need).toFixed(1) + '%"></i></div><small>' + pr.have + ' / ' + pr.need + '</small></div>';
     row.setAttribute('aria-label', '별 상자까지 별 ' + pr.left + '개 남음');
@@ -599,10 +606,11 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   }
   function win(defer) { // defer: save + fill the card now, return show() for the celebration to call later
     if (S.cheer) S.cheer = null;
-    if (!E.isSolved(est())) { S.locked = false; render(); return; } // H1: re-check before saving
+    if (!E.isSolved(est())) { S.locked = false; S.solvedLock = false; render(); return; } // H1: re-check before saving
     S.won = true; var st = starsFor(S.moves, S.g.min, sn(), !!S.daily), prev = save.stars[S.n] || 0;
     $('cleartitle').textContent = S.daily ? '오늘의 도전 완료!' : '스테이지 클리어!'; $('cleartitle').classList.toggle('sr-only', !S.daily); /* v7 B6: art ribbon already says 스테이지 클리어 -> title for screen readers only (daily keeps its title) */ $('next').textContent = S.daily ? '캠페인으로' : '다음';
     if (S.daily) return winDaily(st, defer);
+    var qsnap = QAP ? JSON.stringify(save) : null; // v8.1.1: QA practice -> nothing about the clear is kept, not even in memory
     var got = prev === 0 ? C.coinsFirstClear : Math.max(0, st - prev) * C.coinsPerStarImprove; // GDD v0.2
     // N1: combo coins paid only on clear; lifetime cap per stage persisted in save.comboPaid
     save.comboPaid = save.comboPaid || {}; var paid = save.comboPaid[S.n] || 0;
@@ -616,6 +624,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     persist(); render();
     $('bigstars').innerHTML = starsHtml(st); $('result').textContent = '이동 ' + S.moves + ' / 최소 ' + S.g.min; starTip();
     $('coinsGot').innerHTML = IC('coin') + ' 코인 +' + (got + combo) + ' (보유 ' + save.coins + ')' + (combo ? ' · 콤보 +' + combo : '') + (fe ? ' · 깃털 배지 +' + fe : '') + (mx ? mx.html : ''); // v7 B6
+    if (qsnap) { $('coinsGot').innerHTML += ' <b class="qa-nosave">(QA 연습: 저장 안 됨)</b>'; var q0 = JSON.parse(qsnap); Object.keys(save).forEach(function (k) { delete save[k]; }); Object.assign(save, q0); render(); }
     $('next').style.display = S.n < LAST ? '' : 'none';
     if (!(F80 && V8A.debut.indexOf(S.n) >= 0)) SP.ads.noteClear(S.n); // v8 F1: no interstitial right after a gimmick debut stage // L7: interstitial (if due) shows only when the player taps 다음
     var end = S.n === LAST, show = function () { reveal(st); if (end) $('endov').classList.add('show'); }; // QA F3: all stages cleared -> '새 스테이지 곧 추가' ending
@@ -643,7 +652,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     clearInterval(cdT); if (done) { var tick = function () { var s = Math.ceil(DD.msToMidnight() / 1000), c = $('dailyCd'); if (!c || !$('menu').classList.contains('show')) return clearInterval(cdT); if (today() !== k) return dailyCard();
       c.textContent = Math.floor(s / 3600) + ':' + ('0' + Math.floor(s / 60) % 60).slice(-2) + ':' + ('0' + s % 60).slice(-2); }; tick(); cdT = setInterval(tick, 1000); }
   }
-  function doUndo() { // v8: the undo itself (consumable already handled by the caller)
+  function doUndo() { clearTaps(); // v8: the undo itself (consumable already handled by the caller)
     if (S.locked || !S.hist.length) return; var st = $('v8stuck'); if (st) st.classList.remove('show');
     cancelFlights(); var h = S.hist.pop(); S.tubes = h.tubes; S.caps = h.caps; S.lock = h.lock; S.mask = h.mask; S.path = h.path;
     S.cage = h.cage; if (h.x) setX(h.x); while (S.tubes.length < S.g.tubes.length + perches(S.a)) { S.tubes.push([]); S.caps.push(4); S.lock.push(null); S.mask.push([]); if (S.cage) S.cage.push(null); }
