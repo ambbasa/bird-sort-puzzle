@@ -49,6 +49,12 @@ var SP = window.SP = window.SP || {};
     'cage-open': function () { tone('sine', [700, 1400], 0, 0.16, 0.18); tone('triangle', 2100, 0.1, 0.15, 0.08); },
     'reveal-pop': function () { tone('sine', [600, 1500], 0, 0.1, 0.2); },
     stuck: function () { tone('sine', [330, 247], 0, 0.28, 0.2); },
+    // v8.1 synth fallbacks (only played when features.v81 is on)
+    'egg-crack': function () { noise(0, 0.06, 0.2, 2500, 900); }, hatch: function () { tone('sine', [500, 1200], 0, 0.14, 0.18); tone('triangle', 1800, 0.08, 0.12, 0.08); },
+    'alarm-ring': function () { [0, 0.1, 0.2].forEach(function (t) { tone('square', 2200, t, 0.06, 0.05); }); }, wake: function () { tone('sine', [400, 900], 0, 0.2, 0.15); },
+    'chest-open': function () { [0, 4, 7, 12].forEach(function (x, i) { tone('sine', semi(C5 * 2, x), i * 0.07, 0.2, 0.15); }); },
+    'boss-clear': function () { [0, 7, 12, 16, 19].forEach(function (x, i) { tone('triangle', semi(C5, x), i * 0.1, 0.35, 0.16); }); },
+    'streak-up': function () { tone('sine', [900, 1800], 0, 0.16, 0.15); },
     star: function (i) { tone('sine', semi(C5 * 2, [0, 4, 7][i] || 0), 0, 0.4, 0.2); tone('sine', semi(C5 * 4, [0, 4, 7][i] || 0), 0, 0.25, 0.05); } // "띵" per star
   };
   // v8.0 (DESIGN 20.3): sample files for the new events; decoded lazily on first gesture, synth fallback while missing

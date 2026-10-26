@@ -257,3 +257,29 @@ body:has(.v8ov.show) #v8tip,body:has(#menu.show) #v8tip{display:none} /* tip bub
    but '.ov .card' / 'body[class*=theme-] .ov .card{color:var(--text)}' (light text for the dark cards) still applied -> white on cream.
    Dark ink #1A1A2E on cream #FFF3D6-ish = ~15:1. */
 body .v8ov .card.v8-sheet,body[class*="theme-"] .v8ov .card.v8-sheet,body .v8ov .card.v8-sheet .title{color:#1A1A2E}
+/* ---- v8.1 meta (only rendered when features.v81) ---- */
+.v8-flame{position:absolute;left:50%;top:calc(100% + 2px);transform:translateX(-50%);display:flex;align-items:center;gap:3px;padding:2px 8px;border-radius:12px;background:#FFF3D6;border:2px solid #1A1A2E;font:800 12px/1 sans-serif;color:#1A1A2E;z-index:3}
+.v8-flame[hidden]{display:none}
+.v8-chestrow{display:flex;align-items:center;gap:8px;margin:6px 12px 0;padding:4px 10px;border-radius:14px;background:#FFF3D6;border:2px solid #1A1A2E;color:#1A1A2E}
+.v8-chestinfo{flex:1;min-width:0}.v8-chestinfo b{font-size:13px}.v8-chestinfo small{font-size:11px;font-weight:700}.v8-chestrow .v8-star-bar{height:22px}
+.v8ov .card.v8-album{max-height:86vh;overflow:auto;width:min(92vw,400px)}
+.v8-album-sub{font-size:12px;font-weight:700;color:#1A1A2E;margin:-4px 0 8px}
+.v8-album-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;justify-items:center;width:100%;box-sizing:border-box}
+.v8-album-grid .v8-album-card{width:100%;max-width:96px;height:auto;aspect-ratio:3/4;border:0;padding:0;cursor:pointer;background-color:transparent}
+.v8-album-grid .v8-album-card>b{font-size:12px}
+.v8-album-face{display:flex;justify-content:center;gap:6px;margin:8px 0}.v8-album-face img{width:52px;height:52px}.v8-album-face[hidden]{display:none}
+.v8-boss-intro{position:fixed;left:50%;top:22%;transform:translateX(-50%);z-index:40;pointer-events:none;max-width:92vw;animation:v8bossIn .5s ease-out}
+.v8-boss-intro[hidden]{display:none}
+@keyframes v8bossIn{from{transform:translateX(-50%) scale(.7);opacity:0}to{transform:translateX(-50%) scale(1);opacity:1}}
+@media (prefers-reduced-motion:reduce){.v8-boss-intro{animation:none}}
+body.v8-boss #board{filter:none}body.v8-boss header.hud{box-shadow:0 0 0 3px #F2C14E inset;border-radius:14px}
+.map-node.v8-boss-node{overflow:visible}.v8-boss-ico{position:absolute;left:50%;top:-26px;width:34px;height:34px;transform:translateX(-50%);pointer-events:none}
+header.hud:has(> .v8-flame){position:relative}
+
+/* v8.1 planner live feedback (2026-10-26, all flags): sheets never scroll sideways; stuck sheet 3 buttons in one row at 360; bag = icon button by the coin chip */
+.v8ov,.v8ov .card.v8-sheet{overflow-x:hidden}
+.v8ov .card.v8-sheet *{max-width:100%;box-sizing:border-box}
+#v8stuck .v8-sheet-btns{flex-direction:row;gap:6px}
+#v8stuck .v8-sheet-btn{flex:1 1 0;min-width:0;padding-left:4px;padding-right:4px;white-space:nowrap;font-size:15px}
+.v8-bag.v8-bag-ico{min-width:44px;width:44px;padding:0;display:inline-flex;align-items:center;justify-content:center}
+.v8-bag-svg{width:24px;height:24px;display:block;flex:none;background:no-repeat center/24px 24px url(assets-v8-icon-bag.svg?v=7b2fc77b)} /* designer asset 2026-10-26 */

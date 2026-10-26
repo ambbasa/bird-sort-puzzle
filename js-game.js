@@ -16,7 +16,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   var save = null; try { save = JSON.parse(SP.store.get(KEY) || 'null'); } catch (e) { console.warn('save parse', e); }
   if (!save || typeof save !== 'object') save = { unlocked: 1, stars: {}, coins: 0, current: 1 };
   var F80 = !!(C.features && C.features.v80) && !!SP.v8, EC = C.economy, V8 = SP.v8, V8A = C.v8;
-  var F81 = F80 && !!C.features.v81, E81 = C.economy81, V81 = C.v81; // v8.1 (GDD v8 §4): off = exactly the v8.0 game
+  var F81 = F80 && !!C.features.v81, E81 = C.economy81, V81 = C.v81, M81 = SP.v81; // v8.1 (GDD v8 §4): off = exactly the v8.0 game
   if (F80 && save.v !== 8) { var raw0 = SP.store.get(KEY); if (raw0 && !SP.store.get(KEY + '.bak')) SP.store.set(KEY + '.bak', raw0); save = V8.migrateV8(save); } // v8 G4: original kept in sortpuzzle.v1.bak
   // ART-AUDIT A05: a save with current/unlocked > LAST (e.g. 201), NaN, negative or non-numeric froze the boot -> clamp to 1..LAST
   var clampN = function (v) { v = Math.floor(+v); return isFinite(v) && v >= 1 ? Math.min(v, LAST) : 1; };
@@ -121,6 +121,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   function revealTops() { var r = []; S.mask.forEach(function (m, i) { if (m.length && m[m.length - 1]) { m[m.length - 1] = false; r.push(i); } }); return r; }
   function perches(a) { return a.perches != null ? a.perches : a.addedTube ? 1 : 0; } // v8: number of added perches this attempt (v7 saves: addedTube boolean)
   function load(n) {
+    if (F81 && S && !S.won && !S.daily && S.moves > 0 && n !== S.n && !(S.a && S.a.sandbox)) { M81.streakReset(save); } // P4: leaving a stage half-played breaks the streak
     cancelFlights();
     var sb = false;
     var dk = n === DAILY ? today() : null, g = dk ? DD.build(SP.STAGES, dk, C.palette.length) : SP.STAGES[n];
@@ -135,7 +136,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     S = { n: n, daily: dk, g: g, a: a, tubes: tubes, caps: caps, lock: lock, mask: mask, cage: cage, egg: null, slp: null, alarm: null, al: null, hist: [], sel: -1, path: 0, moves: 0, lastDone: -99, combo: 0, chain: 0, banked: 0, won: false, locked: false, hint: null, undos: 0, unsolvRun: 0 };
     if (F81) setX(E.init(g)); S.init0 = JSON.stringify([g.tubes, g.caps || null, (g.locks || []).length, (g.hidden || []).length]); /* v7.1 PM-6: the stage's pristine layout */
     applyTheme(dk ? 1 + 100 * (g.seed % C.themes.length) : n, sb || !!dk); // daily: theme rotates by date, no unlock toast
-    if (!sb) { if (!dk) save.current = n; persist(); } fx = {}; render(); if (F80) stageTips(); try { artStage(g, n); } catch (e) { console.error('artStage', e); } // art warm-up must never break a stage
+    if (!sb) { if (!dk) save.current = n; persist(); } fx = {}; render(); if (F80) stageTips(); if (F81 && !sb && !dk) metaStart(n, g); try { artStage(g, n); } catch (e) { console.error('artStage', e); } // art warm-up must never break a stage
   }
   // v5 art budget (birds 4-7KB each): load only what the current stage uses. The board waits (max 350ms) for the idle
   // frames it shows to decode -> no pop-in; then, when idle, expressions + flap frames of these colors and the next
@@ -228,7 +229,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     $('stage').innerHTML = S.daily ? CAL(S.daily) + ' 오늘의 도전 · ' + dailyLabel(S.daily) : (S.g.rest ? '휴식 · ' : '') + '스테이지 ' + S.n;
     $('hudstars').innerHTML = starsHtml(S.moves === 0 ? 3 : starsFor(S.moves, S.g.min, sn()));
     $('stagesBtn').classList.toggle('dot', redDot()); // unplayed daily -> red dot on the '스테이지' button (opens map + daily; QA F4)
-    $('moves').textContent = '이동 ' + S.moves + ' / 최소 ' + S.g.min; $('moves').title = '되돌리기도 이동 1회로 세요'; // v7 B5
+    $('moves').textContent = '이동 ' + S.moves + ' / 최소 ' + S.g.min; $('moves').title = '되돌리기도 1수로 세요'; // v7 B5
     var tutorialHint = S.g.tutorial && !S.won ? nextMove() : null, h = S.hint || tutorialHint;
     var stuck = !S.won && isStuck(); if (S.won) cancelFlights(); var fl = fx.fly && fx.fly.from ? fx.fly : null, flyBalls = []; // v7.1: reduced motion never shortens/skips flights (only '빠른 비행' changes timing)
     var b = $('board'), ae = document.activeElement, fi = ae && ae.parentNode && ae.classList.contains('tube') && b.contains(ae) ? [].indexOf.call(b.querySelectorAll('.tube'), ae) : -1; b.innerHTML = ''; // a11y: keep keyboard focus across re-renders
@@ -307,7 +308,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     $('add').title = rw ? '' : '광고를 불러오는 중이에요';
     if (F80) { var pl = EC.perchMaxPerStage - perches(S.a); $('undocnt').textContent = S.a.undoLeft > 0 ? S.a.undoLeft : '+'; ac.textContent = pl; $('undo').disabled = S.locked; $('undo').classList.toggle('v8-idle', !S.hist.length && S.a.undoLeft > 0); $('add').disabled = S.locked || pl <= 0; $('add').title = '';
       $('add').setAttribute('aria-label', '횃대 추가, 남은 횟수 ' + pl); $('undo').setAttribute('aria-label', '되돌리기, ' + (S.a.undoLeft > 0 ? '남은 횟수 ' + S.a.undoLeft : '코인이나 광고로 받기'));
-      var hf = hintFree(), hc = $('hintcnt'); if (!hc) { hc = document.createElement('span'); hc.className = 'cnt'; hc.id = 'hintcnt'; $('hint').appendChild(hc); } hc.textContent = hf ? (!S.daily && S.n <= EC.freeHintUnlimitedTo ? '∞' : '1') : '+'; $('hint').setAttribute('aria-label', '힌트' + (hf ? ', 무료' : ', 코인이나 광고로 받기')); }
+      var hf = hintFree(), hc = $('hintcnt'); if (!hc) { hc = document.createElement('span'); hc.className = 'cnt'; hc.id = 'hintcnt'; $('hint').appendChild(hc); } hc.textContent = hf ? (!S.daily && S.n <= EC.freeHintUnlimitedTo ? '∞' : '1') : (F81 && save.inventory.hint > 0 ? save.inventory.hint : '+'); $('hint').setAttribute('aria-label', '힌트' + (hf ? ', 무료' : F81 && save.inventory.hint > 0 ? ', 보유 ' + save.inventory.hint + '개' : ', 코인이나 광고로 받기')); }
   }
   // a11y: Korean bird names (DESIGN 14.14.1 캐릭터 표) + colour; symbols in Korean (no English 'red circle')
   var BIRD_KO = { red: ['루비', '빨간'], orange: ['망고', '주황'], yellow: ['레모', '노란'], green: ['새싹', '초록'], cyan: ['파도', '하늘색'], blue: ['탑', '파란'], purple: ['보라', '보라색'], white: ['구름', '하얀'], pink: ['복숭', '분홍'], brown: ['도토리', '갈색'], lime: ['라임', '연두'], indigo: ['별밤', '남색'] };
@@ -460,18 +461,21 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   SP._sheet = function () { var o = $('v8sheet'); return o && o.classList.contains('show') ? [].map.call(o.querySelectorAll('.v8-sheet-btn'), function (b) { return { k: b.dataset.k, label: b.textContent, disabled: b.disabled }; }) : null; };
   function coinOpt(k, price, label, grant) { var short = price - save.coins; return { k: k, icon: V8A.coinBtn, label: short > 0 ? label + ' · 코인 ' + short + '개 부족' : label + ' · 코인 ' + price, disabled: short > 0,
     go: function () { if (!V8.spend(save, price)) return; grant(); persist(); sfx.play('coin-spend'); closeSheet(); } }; } // R1: deduct + grant, then a single persist (atomic)
-  function adOpt(k, reason, label, grant) { return { k: k, ad: true, icon: V8A.adBadge, label: label, go: function () { closeSheet(); SP.ads.showRewarded(reason, function (ok) { if (ok === true) grant(); }); } }; } // G9: only ok === true pays
+  function adShow() { return F81 ? SP.ads.mode() !== 'none' : adAvail(); } // v8.1: toss/dummy always show the ad button (disabled until an ad is loaded); web never
+  function adOpt(k, reason, label, grant) { if (F81 && !adAvail()) return { k: k, ad: true, icon: V8A.adBadge, label: label + ' · 광고 준비 중', disabled: true, go: function () {} };
+    return adOpt0(k, reason, label, grant); }
+  function adOpt0(k, reason, label, grant) { return { k: k, ad: true, icon: V8A.adBadge, label: label, go: function () { closeSheet(); SP.ads.showRewarded(reason, function (ok) { if (ok === true) grant(); }); } }; } // G9: only ok === true pays
   function undoSheet() { var o = []; // v8.0.1: also opens with no move yet (0 left shows '+'); then the bought undos are stored, none used
-    if (adAvail()) o.push(adOpt('ad', 'undo', '광고 보고 되돌리기 1회', function () { if (S.hist.length) doUndo(); else { S.a.undoLeft++; persist(); render(); toast('되돌리기 +1'); } }));
-    o.push(coinOpt('coin', EC.undo3, '되돌리기 +' + EC.undo3Gives, function () { S.a.undoLeft += EC.undo3Gives; if (S.hist.length) { S.a.undoLeft--; doUndo(true); } else { render(); toast('되돌리기 +' + EC.undo3Gives); } })); sheet('되돌리기를 더 받을까요?', null, o); }
-  function perchSheet() { var o = [], key = V8.dayKey(), fl = V8.freePerchLeft(save, EC, key), ad = adAvail() && !S.a.adPerch;
+    if (adShow()) o.push(adOpt('ad', 'undo', '광고 보고 되돌리기 1회', function () { if (S.hist.length) doUndo(); else { S.a.undoLeft++; persist(); render(); toast('되돌리기 +1'); } }));
+    o.push(coinOpt('coin', EC.undo3, '되돌리기 +' + EC.undo3Gives, function () { S.a.undoLeft += EC.undo3Gives; if (S.hist.length) { S.a.undoLeft--; doUndo(true); if (F81) toast('되돌리기 +' + EC.undo3Gives + ' (1회 사용)'); } else { render(); toast('되돌리기 +' + EC.undo3Gives); } })); sheet('되돌리기를 더 받을까요?', null, o); }
+  function perchSheet() { var o = [], key = V8.dayKey(), fl = V8.freePerchLeft(save, EC, key), ad = adShow() && !S.a.adPerch;
     if (save.inventory.perchToken > 0) o.push({ k: 'token', icon: V8A.token, label: '횃대 토큰 쓰기 (보유 ' + save.inventory.perchToken + ')', go: function () { save.inventory.perchToken--; closeSheet(); addPerch(); } });
     if (ad) o.push(adOpt('ad', 'add_tube', '광고 보고 횃대 추가', function () { S.a.adPerch = true; addPerch(); }));
     o.push(coinOpt('coin', EC.perch, '횃대 추가', function () { addPerch(true); }));
     if (!adAvail() && save.coins < EC.perch && fl > 0) o.push({ k: 'free', label: '무료 횃대 (오늘 ' + fl + '번 남음)', go: function () { if (V8.useFreePerch(save, EC, key)) { closeSheet(); addPerch(); } } });
     sheet('횃대를 추가할까요?', null, o); }
   function hintSheet() { var o = []; if (save.inventory.hint > 0) o.push({ k: 'inv', label: '보유 힌트 쓰기 (' + save.inventory.hint + ')', go: function () { save.inventory.hint--; persist(); closeSheet(); showHint(); } });
-    if (adAvail()) o.push(adOpt('ad', 'hint', '광고 보고 힌트 1회', function () { showHint(); }));
+    if (adShow()) o.push(adOpt('ad', 'hint', '광고 보고 힌트 1회', function () { showHint(); }));
     o.push(coinOpt('coin', EC.hint, '힌트 1회', function () { showHint(true); })); sheet('힌트를 더 받을까요?', null, o); }
   function stuckSheet() { if (S.won || $('v8stuck') && $('v8stuck').classList.contains('show')) return; sfx.play('stuck'); var o = $('v8stuck');
     if (!o) { o = document.createElement('div'); o.id = 'v8stuck'; o.className = 'ov v8ov'; document.body.appendChild(o); }
@@ -484,6 +488,50 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     S.tubes.push([]); S.caps.push(4); S.lock.push(null); S.mask.push([]); if (S.cage) S.cage.push(null); S.sel = -1; render(); toast('횃대가 하나 늘었어요'); }
   function hintFree() { return (!S.daily && S.n <= EC.freeHintUnlimitedTo) || (S.a.hintsUsed || 0) < EC.freeHintsPerStage; }
   function showHint(paid) { S.a.hintsUsed = (S.a.hintsUsed || 0) + 1; persist(); S.hint = nextMove(); S.sel = -1; $('hint').classList.remove('v8-glow'); render(); if (!S.daily && S.n > EC.freeHintUnlimitedTo) tip('hint11', '힌트는 판마다 1번 무료예요'); }
+  // ---------------- v8.1 meta (GDD v8 §4 P1 별 상자 · P2 도감 · P3 보스 · P4 연승). Only reached when F81. ----------------
+  var ALBUM_GIM = { hidden: ['숨은 새', 'assets-v8-bird-hidden-surprised.svg?v=dcf5c5be'], key: ['열쇠 새', 'assets-v8-bird-key-a-surprised.svg?v=28a72eb2'], cage: ['새장 새', 'assets-v8-cage-front.svg?v=4b4aae46'],
+    egg: ['알', 'assets-v8-egg-base.svg?v=188c1e8a'], sleep: ['잠꾸러기', 'assets-v8-bird-indigo-sleepy.svg?v=07b0f725'], alarm: ['알람 새', 'assets-v8-badge-alarm.svg?v=3b80b6a4'] }, debuts81 = null;
+  function debuts() { return debuts81 || (debuts81 = M81.albumDebuts(SP.STAGES, C.palette, LAST)); }
+  function flameHud() { var el = $('v8flame'), n = save.streak.n, L = M81.flameLevel(n);
+    if (!el) { el = document.createElement('div'); el.id = 'v8flame'; el.className = 'v8-flame'; el.setAttribute('role', 'status'); document.querySelector('header.hud').appendChild(el); }
+    el.hidden = !L || !!S.daily; el.innerHTML = L ? '<img src="' + V81.flame.replace('{n}', L) + '" alt="" width="20" height="20">' + n + '연승' : ''; el.setAttribute('aria-label', n + '연승 중'); }
+  function metaStart(n, g) { var k = save.streak, msg = [];
+    if (k.n >= E81.streakUndoAt && S.a.streakAt !== k.n) { var b = M81.streakBonus(k.n, E81), I = save.inventory; S.a.streakAt = k.n;
+      if (b.undo) { S.a.undoLeft += b.undo; msg.push('되돌리기 +' + b.undo); }
+      if (b.token && I.perchToken < EC.tokenMax) { I.perchToken++; msg.push('횃대 토큰 +1'); }
+      if (b.hint && I.hint < E81.hintMax) { I.hint++; msg.push('힌트 +1'); }
+      persist(); render(); if (msg.length) setTimeout(function () { toast(k.n + '연승 보너스 · ' + msg.join(' · ')); }, 400); }
+    flameHud(); document.body.classList.toggle('v8-boss', !!g.boss);
+    var bb = $('v8bossbanner'); if (g.boss) { if (!bb) { bb = document.createElement('div'); bb.id = 'v8bossbanner'; bb.className = 'v8-boss-banner v8-boss-intro'; bb.setAttribute('role', 'status'); document.body.appendChild(bb); }
+      bb.textContent = '보스 스테이지 ' + n; bb.hidden = false; clearTimeout(bb._h); bb._h = setTimeout(function () { bb.hidden = true; }, 2200); } else if (bb) bb.hidden = true;
+    if ((g.eggs || []).length) tip('egg', '알은 무리를 ' + Math.max.apply(null, g.eggs.map(function (e) { return e.n; })) + '번 완성하면 깨어나요');
+    if ((g.sleep || []).length) tip('sleep', '시계 든 새의 무리를 완성하면 다들 깨어나요');
+    if (g.chain) tip('chain', '자물쇠 안에 또 열쇠가 있어요'); }
+  function metaWin(st, prev) { var a = S.a, clean = !S.undos && !a.hintsUsed && !perches(a) && !a.addedTube, h = '', coins = 0;
+    var n0 = save.streak.n, n = M81.streakWin(save, clean); if (n >= 2 && n > n0) { sfx.play('streak-up'); h += ' · ' + IC('fire') + ' ' + n + '연승'; }
+    save.v8paid = save.v8paid || {}; if (S.g.boss && !save.v8paid['boss' + S.n]) { save.v8paid['boss' + S.n] = 1; V8.addCoins(save, E81.bossBonus, EC); coins += E81.bossBonus; h += ' · 보스 +' + E81.bossBonus; setTimeout(function () { sfx.play('boss-clear'); }, 900); }
+    var al = M81.albumSync(save, debuts(), E81, EC); if (al.got.length) h += ' · 도감 카드 +' + al.got.length; if (al.coins) { coins += al.coins; h += ' · 도감 보상 +' + al.coins; }
+    var ch = M81.chestAccrue(save, E81); if (ch) h += ' · 별 상자 +' + ch + ' (지도에서 열어요)';
+    flameHud(); SP._meta = { clean: clean, streak: n, album: al, chests: ch, coins: coins }; return { coins: coins, html: h }; }
+  function metaMenu() { var co = $('coins'); co.insertAdjacentHTML('beforeend', ' <button class="btn v8-bag" id="v8albumBtn">도감</button>'); $('v8albumBtn').onclick = albumOpen;
+    M81.albumSync(save, debuts(), E81, EC); M81.chestAccrue(save, E81); var got = M81.chestOpen(save, E81, EC); persist();
+    var pr = M81.chestProgress(save, E81), row = $('v8chestrow'); if (!row) { row = document.createElement('div'); row.id = 'v8chestrow'; row.className = 'v8-chestrow'; co.insertAdjacentElement('afterend', row); }
+    row.innerHTML = '<img src="' + V81.chestClosed + '" alt="" width="36" height="36"><div class="v8-chestinfo"><b>별 상자까지 ' + pr.left + '개</b><div class="v8-star-bar" aria-hidden="true"><i style="width:' + (75 * pr.have / pr.need).toFixed(1) + '%"></i></div><small>' + pr.have + ' / ' + pr.need + '</small></div>';
+    row.setAttribute('aria-label', '별 상자까지 별 ' + pr.left + '개 남음');
+    if (got.length) { sfx.play('chest-open'); var t = { coins: 0, hint: 0, token: 0 }; got.forEach(function (r) { for (var x in r) t[x] += r[x]; });
+      var parts = []; if (t.coins) parts.push('코인 +' + t.coins); if (t.hint) parts.push('힌트 +' + t.hint); if (t.token) parts.push('횃대 토큰 +' + t.token);
+      $('coins').firstChild && (co.innerHTML = co.innerHTML.replace(/^[\s\S]*?(?= <button)/, IC('coin') + ' ' + Math.min(save.coins, EC.coinMax).toLocaleString('ko-KR'))); $('v8bag').onclick = bagSheet; $('v8albumBtn').onclick = albumOpen;
+      sheet('별 상자 ' + got.length + '개를 열었어요', V81.chestOpen, [{ k: 'got', label: parts.join(' · '), disabled: true, go: function () {} }]);
+      if (save.chests.pending) toast('남은 상자 ' + save.chests.pending + '개는 다음에 열려요'); SP._chestGot = got; } }
+  function albumOpen() { var o = $('v8album'); if (!o) { o = document.createElement('div'); o.id = 'v8album'; o.className = 'ov v8ov'; document.body.appendChild(o); }
+    var ids = M81.albumIds(C.palette), A = save.album, have = ids.filter(function (i) { return A[i]; }).length, D = debuts();
+    var cards = ids.map(function (id) { var own = !!A[id], P = id[0] === 'c' ? C.palette[+id.slice(1)] : null, nm = P ? BIRD_KO[P.key][0] : ALBUM_GIM[id][0], im = P ? BF.expr(+id.slice(1), 'idle') : ALBUM_GIM[id][1];
+      return '<button class="v8-album-card' + (own ? '' : ' locked') + '" data-id="' + id + '" aria-label="' + (own ? nm : '잠긴 카드, ' + (D[id] || '?') + '스테이지 클리어 시 획득') + '">' + (own ? '<img src="' + im + '" alt="">' : '') + '<b>' + (own ? nm : (D[id] || '?') + '판') + '</b></button>'; }).join('');
+    o.innerHTML = '<div class="card v8-sheet v8-album" role="dialog" aria-label="새 도감"><div class="title">새 도감 ' + have + '/' + ids.length + '</div><div class="v8-album-sub">6장마다 코인 ' + E81.albumReward + '</div><div class="v8-album-grid">' + cards + '</div><div class="v8-album-face" id="v8face" hidden></div><button class="btn wide" id="v8albumClose">닫기</button></div>';
+    o.querySelectorAll('.v8-album-card').forEach(function (b) { b.onclick = function () { var id = b.dataset.id, f = $('v8face'); if (!A[id] || id[0] !== 'c') { f.hidden = true; return; } var c = +id.slice(1), P = C.palette[c];
+      f.innerHTML = ['idle', 'happy', 'sad'].map(function (x) { return '<img src="' + BF.expr(c, x) + '" alt="">'; }).join('') + '<img src="assets-v8-bird-' + P.key + '-sleepy.svg" alt="">'; f.hidden = false; }; });
+    $('v8albumClose').onclick = function () { o.classList.remove('show'); }; o.classList.add('show'); }
+  SP._meta81 = function () { return { streak: save.streak, chests: save.chests, album: save.album, inv: save.inventory, debuts: debuts() }; };
   SP._v8 = function () { return { save: save, S: S, adAvail: adAvail() }; }; // QA hook
   function vibrate(ms) { if (!hapticsOn) return; SP._haptics.push(ms); if (navigator.vibrate) try { navigator.vibrate(ms); } catch (e) {} }
   // Remaining solution completes a tube on every move until solved => automatic end-of-stage cascade.
@@ -564,9 +612,10 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     if (S.n <= save.unlocked) save.unlocked = Math.max(save.unlocked, Math.min(S.n + 1, LAST)); // L3: debug-jumped stages don't unlock
     if (S.n < LAST) save.current = S.n + 1; // L2
     save.attempt[S.n] = { undoLeft: C.freeUndos, addedTube: false, perches: 0 }; // GDD v0.2: clear resets this stage's consumables (restart does not)
+    var mx = F81 ? metaWin(st, prev) : null; if (mx) got += mx.coins;
     persist(); render();
     $('bigstars').innerHTML = starsHtml(st); $('result').textContent = '이동 ' + S.moves + ' / 최소 ' + S.g.min; starTip();
-    $('coinsGot').innerHTML = IC('coin') + ' 코인 +' + (got + combo) + ' (보유 ' + save.coins + ')' + (combo ? ' · 콤보 +' + combo : '') + (fe ? ' · 깃털 배지 +' + fe : ''); // v7 B6
+    $('coinsGot').innerHTML = IC('coin') + ' 코인 +' + (got + combo) + ' (보유 ' + save.coins + ')' + (combo ? ' · 콤보 +' + combo : '') + (fe ? ' · 깃털 배지 +' + fe : '') + (mx ? mx.html : ''); // v7 B6
     $('next').style.display = S.n < LAST ? '' : 'none';
     if (!(F80 && V8A.debut.indexOf(S.n) >= 0)) SP.ads.noteClear(S.n); // v8 F1: no interstitial right after a gimmick debut stage // L7: interstitial (if due) shows only when the player taps 다음
     var end = S.n === LAST, show = function () { reveal(st); if (end) $('endov').classList.add('show'); }; // QA F3: all stages cleared -> '새 스테이지 곧 추가' ending
@@ -602,14 +651,14 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   function undo() {
     if (F80 && S && !S.locked && !SP.ads.isBusy() && !S.hist.length) { if (S.a.undoLeft <= 0) return undoSheet(); toast('되돌릴 이동이 아직 없어요'); sfx.play('invalid'); return; } // v8.0.1: no silent dead button
     if (!S.hist.length || S.locked || SP.ads.isBusy()) return;
-    if (F80) { if (!SP.store.get('tip.undoMove')) { SP.store.set('tip.undoMove', '1'); toast('되돌리기도 이동 1회로 세요'); } if (S.a.undoLeft > 0) { S.a.undoLeft--; return doUndo(); } return undoSheet(); }
+    if (F80) { if (!SP.store.get('tip.undoMove')) { SP.store.set('tip.undoMove', '1'); toast('되돌리기도 1수로 세요'); } if (S.a.undoLeft > 0) { S.a.undoLeft--; return doUndo(); } return undoSheet(); }
     var go = function () {
       if (S.locked || !S.hist.length) return;
       cancelFlights(); var h = S.hist.pop(); S.tubes = h.tubes; S.caps = h.caps; S.lock = h.lock; S.mask = h.mask; S.path = h.path; // undo restores '?' state and key/lock
       S.cage = h.cage; if (h.x) setX(h.x); while (S.tubes.length < S.g.tubes.length + perches(S.a)) { S.tubes.push([]); S.caps.push(4); S.lock.push(null); S.mask.push([]); if (S.cage) S.cage.push(null); } // M1: added tube is not undoable
       S.moves++; S.sel = -1; S.combo = 0; S.lastDone = -99; S.chain = h.chain; S.banked = h.banked; S.hint = null; sfx.play('undo'); render(); // R2: revoke chain/banked coins accrued by the undone move // undo counts as a move for stars
     };
-    if (!SP.store.get('tip.undoMove')) { SP.store.set('tip.undoMove', '1'); toast('되돌리기도 이동 1회로 세요'); } /* v7 B5: one-time tip */
+    if (!SP.store.get('tip.undoMove')) { SP.store.set('tip.undoMove', '1'); toast('되돌리기도 1수로 세요'); } /* v7 B5: one-time tip */
     if (S.a.undoLeft > 0) { S.a.undoLeft--; persist(); go(); } else SP.ads.showRewarded('undo', function (ok) { if (ok) go(); });
   }
   function addTube() { if (F80) { if (S.locked || SP.ads.isBusy() || perches(S.a) >= EC.perchMaxPerStage) return; return perchSheet(); } if (S.a.addedTube || S.locked || SP.ads.isBusy()) return; SP.ads.showRewarded('add_tube', function (ok) { if (ok && !S.a.addedTube && !S.locked) { S.a.addedTube = true; persist(); S.tubes.push([]); S.caps.push(4); S.lock.push(null); S.mask.push([]); S.sel = -1; render(); toast('횃대가 하나 늘었어요'); } }); }
@@ -648,6 +697,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     e.textContent = n; e.setAttribute('aria-label', '스테이지 ' + n + ' ' + ({ locked: '잠김', current: '현재', cleared: '클리어' })[stt]); e.disabled = stt === 'locked';
     if (stt === 'cleared') { // v7 B7: every cleared node shows earned stars (filled) + empty ones
        var w = document.createElement('div'); w.className = 'map-stars'; for (var i = 0; i < 3; i++) { var t = document.createElement('i'); t.className = 'map-star v7-star' + (i < (save.stars[n] || 0) ? ' on' : '') + (!reduced && n in starPop && i >= starPop[n] && i < (save.stars[n] || 0) ? ' pop' : ''); /* v7 B7: v7ui star-clear on/off art via .v7-star */ w.appendChild(t); } e.appendChild(w); }
+    if (F81 && SP.STAGES[n] && SP.STAGES[n].boss) { e.classList.add('v8-boss-node'); var bi = document.createElement('img'); bi.className = 'v8-boss-ico'; bi.src = V81.bossNode; bi.alt = ''; e.appendChild(bi); e.setAttribute('aria-label', e.getAttribute('aria-label') + ', 보스 스테이지'); }
     if (F80 && save.badges.feather[n]) { var fb = document.createElement('img'); fb.className = 'v8-feather'; fb.src = V8A.feather; fb.alt = '노 되돌리기 배지'; e.appendChild(fb); }
     if (n in starPop) setTimeout(function () { delete starPop[n]; }, 0);
     e.onclick = function () { $('menu').classList.remove('show'); load(n); }; return e;
@@ -659,7 +709,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   function menu() {
     if (redDot()) { save.seen = save.seen || {}; save.seen.daily = today(); persist(); $('stagesBtn').classList.remove('dot'); }
     $('menu').classList.add('show'); // show first: a map/daily problem must never leave the gear doing nothing
-    try { $('coins').innerHTML = IC('coin') + ' ' + (F80 ? Math.min(save.coins, EC.coinMax).toLocaleString('ko-KR') : save.coins) + (F80 ? ' <button class="btn v8-bag" id="v8bag">가방</button>' : ''); if (F80) $('v8bag').onclick = bagSheet; dailyCard(); } catch (e) { console.error('menu: daily card', e); }
+    try { $('coins').innerHTML = IC('coin') + ' ' + (F80 ? Math.min(save.coins, EC.coinMax).toLocaleString('ko-KR') : save.coins) + (F80 ? ' <button class="btn v8-bag v8-bag-ico" id="v8bag" aria-label="가방" title="가방"><span class="v8-bag-svg" aria-hidden="true"></span></button>' : ''); if (F80) $('v8bag').onclick = bagSheet; if (F81) metaMenu(); dailyCard(); } catch (e) { console.error('menu: daily card', e); }
     try { mapOpen(); } catch (e) { console.error('menu: saga map', e); }
   }
   function mapOpen() {
@@ -672,7 +722,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     if (!m._bound) { m._bound = true; m.addEventListener('scroll', function () { if (!mapRaf) mapRaf = requestAnimationFrame(function () { mapRaf = 0; mapRender(); }); }, { passive: true }); }
     mapRender();
   }
-  $('undo').onclick = undo; function doRestart() { $('restartov').classList.remove('show'); var st = $('v8stuck'); if (st) st.classList.remove('show'); if (S.a.addedTube || S.a.perches) { S.a.addedTube = false; S.a.perches = 0; persist(); } load(S.n); }
+  $('undo').onclick = undo; function doRestart() { if (F81 && !S.daily && !S.won) M81.streakReset(save); $('restartov').classList.remove('show'); var st = $('v8stuck'); if (st) st.classList.remove('show'); if (S.a.addedTube || S.a.perches) { S.a.addedTube = false; S.a.perches = 0; persist(); } load(S.n); }
   $('board').addEventListener('pointerdown', hideToast, true); // v7.2 PM-1: tapping the board closes the toast (the tap itself still reaches the bird)
   if (window.MutationObserver) { var tOb = new MutationObserver(function () { if (document.querySelector('.ov.show')) hideToast(); }); [].forEach.call(document.querySelectorAll('.ov'), function (o) { tOb.observe(o, { attributes: true, attributeFilter: ['class'] }); }); } // any modal/sheet -> toast closes at once
   $('restart').onclick = function () { if (S.locked || SP.ads.isBusy()) return; if (dirty()) { $('restartMsg').textContent = (S.moves > 0 || (S.hist && S.hist.length)) ? '지금까지의 이동이 사라져요.' : (S.a.addedTube ? '추가한 횃대도 사라져요.' : '지금까지의 이동이 사라져요.'); $('restartov').classList.add('show'); } else doRestart(); }; // v7 A4 + v7.1 PM-6: confirm whenever the board differs from the stage start (moves, added perch, ...)

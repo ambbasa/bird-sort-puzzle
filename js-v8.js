@@ -27,6 +27,41 @@ var SP = (typeof window !== 'undefined') ? (window.SP = window.SP || {}) : (glob
   function addCoins(save, n, E) { save.coins = Math.min(E.coinMax, (save.coins || 0) + n); }
   // R3 combo reward table: combo 2 -> +5, 3 -> +5 (+ free undo), >=4 -> +10 (+ perch token)
   function comboCoins(c, E) { return c < 2 ? 0 : E.comboCoins[Math.min(c, 4)] || 0; }
+
+  // ---- v8.1 meta (GDD v8 §4 P1/P2/P4). Pure: the caller persists. Never lowers stars / progress / coins already owned.
+  function starTotal(save) { var t = 0; for (var k in save.stars) if (/^\d+$/.test(k)) t += Math.max(0, Math.min(3, +save.stars[k] || 0)); return t; }
+  // P1 star chests: one per E81.chestEvery stars (earned = floor(stars / every)); new ones go to pending, opened at map entry
+  function chestAccrue(save, E81) { var ch = save.chests, earned = Math.floor(starTotal(save) / E81.chestEvery), add = Math.max(0, earned - ch.opened - ch.pending); ch.pending += add; return add; }
+  function chestReward(i, E81) { return E81.chestCycle[i % E81.chestCycle.length]; }
+  // opens up to max pending chests (migration retro + each later map entry: E81.chestMaxAtOnce); returns the rewards in order
+  function chestOpen(save, E81, EC, max) { var out = [], ch = save.chests, I = save.inventory; max = max == null ? E81.chestMaxAtOnce : max;
+    while (ch.pending > 0 && out.length < max) { var r = chestReward(ch.opened, E81); ch.pending--; ch.opened++;
+      if (r.coins) addCoins(save, r.coins, EC); if (r.hint) I.hint = Math.min(E81.hintMax, I.hint + r.hint); if (r.token) I.perchToken = Math.min(EC.tokenMax, I.perchToken + r.token); out.push(r); }
+    return out; }
+  function chestProgress(save, E81) { var t = starTotal(save), e = E81.chestEvery; return { have: t % e, need: e, left: e - (t % e), total: t }; }
+  // P2 album: card id -> debut stage (first campaign stage showing it). Card owned once its debut stage has stars.
+  var ALBUM_GIM = ['hidden', 'key', 'cage', 'egg', 'sleep', 'alarm'];
+  function albumDebuts(STAGES, palette, last) { var d = {};
+    for (var n = 1; n <= last; n++) { var g = STAGES[n]; if (!g) continue; var mark = function (id) { if (!(id in d)) d[id] = n; };
+      g.tubes.forEach(function (t) { t.forEach(function (c) { if (typeof c === 'number' && palette[c]) mark('c' + c); }); });
+      if ((g.hidden || []).length) mark('hidden'); if ((g.locks || []).length) mark('key'); if ((g.cages || []).length) mark('cage');
+      if ((g.eggs || []).length) mark('egg'); if ((g.sleep || []).length) { mark('sleep'); mark('alarm'); } }
+    return d; }
+  function albumIds(palette) { return palette.map(function (_, i) { return 'c' + i; }).concat(ALBUM_GIM); }
+  // grants every card whose debut stage is cleared; every E81.albumEvery cards -> E81.albumReward coins (paid once, tracked in album._paid)
+  function albumSync(save, debuts, E81, EC) { var A = save.album, got = [], coins = 0;
+    for (var id in debuts) if (!A[id] && (save.stars[debuts[id]] || 0) > 0) { A[id] = 1; got.push(id); }
+    var have = Object.keys(A).filter(function (k) { return k[0] !== '_'; }).length, due = Math.floor(have / E81.albumEvery), paid = A._paid || 0;
+    if (due > paid) { coins = (due - paid) * E81.albumReward; A._paid = due; addCoins(save, coins, EC); }
+    return { got: got, coins: coins, have: have }; }
+  // P4 streak: clears without hint / undo / perch in a row (daily excluded). Returns the new streak.
+  function streakWin(save, clean) { var k = save.streak; k.n = clean ? k.n + 1 : 0; k.best = Math.max(k.best, k.n); return k.n; }
+  function streakReset(save) { save.streak.n = 0; }
+  // start-of-stage bonus for the current streak: >=2 undo +1, ==4 perch token +1, >=6 hint +1 (inventory caps kept)
+  function streakBonus(n, E81) { return { undo: n >= E81.streakUndoAt ? 1 : 0, token: n === E81.streakTokenAt ? 1 : 0, hint: n >= E81.streakHintAt ? 1 : 0 }; }
+  function flameLevel(n) { return n >= 6 ? 3 : n >= 4 ? 2 : n >= 2 ? 1 : 0; }
+  SP.v81 = { starTotal: starTotal, chestAccrue: chestAccrue, chestReward: chestReward, chestOpen: chestOpen, chestProgress: chestProgress, albumDebuts: albumDebuts, albumIds: albumIds, albumSync: albumSync,
+    streakWin: streakWin, streakReset: streakReset, streakBonus: streakBonus, flameLevel: flameLevel };
   SP.v8 = { migrateV8: migrateV8, dayKey: dayKey, freePerchLeft: freePerchLeft, useFreePerch: useFreePerch, spend: spend, addCoins: addCoins, comboCoins: comboCoins };
 })();
-if (typeof module !== 'undefined') module.exports = SP.v8;
+if (typeof module !== 'undefined') { module.exports = SP.v8; module.exports.v81 = SP.v81; }
