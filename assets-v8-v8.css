@@ -1,0 +1,56 @@
+/* v8.0 아트 스타일 (DESIGN 20). 게임 JS 무관 — 클래스만 제공. */
+.v8-cage{position:absolute;inset:0;background:url(assets-v8-cage-front.svg?v=4b4aae46) center/100% 100% no-repeat;pointer-events:none}
+.v8-cage.open{background-image:url(assets-v8-cage-open.svg?v=84012097);animation:v8-fade .35s ease-out .25s forwards}
+.v8-cage-badge{position:absolute;inset:0;pointer-events:none;background:center/100% 100% no-repeat}
+.v8-cage-badge.n1{background-image:url(assets-v8-badge-cage-1.svg?v=9996cedc)}.v8-cage-badge.n2{background-image:url(assets-v8-badge-cage-2.svg?v=653db979)}.v8-cage-badge.n3{background-image:url(assets-v8-badge-cage-3.svg?v=5a3c74b8)}
+.v8-cage-badge.tick{animation:v8-tick .25s ease-out}
+@keyframes v8-tick{40%{transform:scale(1.12)}}
+@keyframes v8-fade{to{opacity:0}}
+.v8-surprised{animation:v8-hop .4s ease-out}
+@keyframes v8-hop{30%{transform:translateY(-6%) scale(1.04)}}
+.v8-sheet{border:32px solid transparent;border-image:url(assets-v8-sheet-booster.svg?v=04db0948) 32 fill / 32px stretch;padding:4px;margin:0 8px}
+.v8-sheet-btn{min-height:48px;min-width:44px;display:flex;align-items:center;gap:8px;padding:0 14px;border-radius:14px;border:3px solid #1A1A2E;font-weight:900;font-size:16px;color:#1A1A2E;background:#FFE3A3}
+.v8-sheet-btn.ad{background:#B3E5FC}.v8-sheet-btn img{width:28px;height:28px}
+.v8-sheet-btn:disabled{background:#E2E4EA;color:#5C6070;border-style:dashed}
+/* chip-remaining.svg 형태를 CSS로 동형 구현 */.v8-chip{display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 10px;border-radius:14px;background:#FFFFFFE6;border:2px solid #1A1A2E;box-sizing:border-box;font:900 13px/1 Arial,sans-serif;color:#1A1A2E}
+.v8-chip i{width:12px;height:12px;border-radius:50%;border:1.5px solid #1A1A2E;display:inline-block}
+.v8-tip{border:24px solid transparent;border-image:url(assets-v8-tip-bubble.svg?v=c495a311) 24 24 24 24 fill / 24px;padding:0 4px 8px;font-size:14px;color:#1A1A2E}
+.v8-pop{width:160px;height:80px;background:url(assets-v8-combo-reward-pop.svg?v=a887328f) center/contain no-repeat;animation:v8-popin .5s ease-out both}
+@keyframes v8-popin{0%{transform:scale(.6);opacity:0}40%{transform:scale(1.06);opacity:1}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){
+ .v8-cage.open{animation:none;opacity:1}/* 정지 프레임 cage-open.svg 0.5s 노출 후 JS가 제거 */
+ .v8-cage-badge.tick,.v8-surprised,.v8-pop{animation:none}/* 깜짝 표정 svg 자체가 정지 프레임 */
+}
+/* ---- v8.1 (DESIGN 20.6~20.9) ---- */
+.v8-overlay{position:absolute;inset:0;pointer-events:none;background-position:center;background-size:100% 100%;background-repeat:no-repeat}
+.v8-egg-crack-1{background-image:url(assets-v8-egg-crack-1.svg?v=005081b7)}.v8-egg-crack-2{background-image:url(assets-v8-egg-crack-2.svg?v=bf9cf535)}
+.v8-badge-egg.n1{background-image:url(assets-v8-badge-egg-1.svg?v=da4fe0ad)}.v8-badge-egg.n2{background-image:url(assets-v8-badge-egg-2.svg?v=5687e904)}.v8-badge-egg.n3{background-image:url(assets-v8-badge-egg-3.svg?v=1d77a756)}
+.v8-hatch{background-image:url(assets-v8-hatch-burst.svg?v=5cb25a0f);animation:v8-popin .45s ease-out both}
+.v8-zz{background-image:url(assets-v8-fx-zz.svg?v=9b7390a9);animation:v8-zz 1.6s ease-in-out infinite}
+@keyframes v8-zz{50%{transform:translate(2%,-4%);opacity:.75}}
+.v8-alarm{background-image:url(assets-v8-badge-alarm.svg?v=3b80b6a4)}.v8-alarm.ring{animation:v8-ring .3s ease-in-out 2}
+@keyframes v8-ring{25%{transform:rotate(4deg)}75%{transform:rotate(-4deg)}}
+.v8-wake{background-image:url(assets-v8-fx-wake.svg?v=c230d57b);animation:v8-popin .4s ease-out both}
+.v8-star-bar{position:relative;height:32px;background:url(assets-v8-progress-star-bar.svg?v=338eedb9) 0 0/100% 100% no-repeat}
+.v8-star-bar>i{position:absolute;left:12.5%;top:34%;height:32%;border-radius:6px;background:#FFC83D;box-shadow:inset 0 -2px 0 #E09A12}
+.v8-album-card{width:120px;height:160px;position:relative;background:url(assets-v8-album-card-frame.svg?v=2082c6d4) 0 0/100% 100%}
+.v8-album-card>img{position:absolute;left:9%;top:7%;width:82%}.v8-album-card>b{position:absolute;left:9%;right:9%;top:74%;height:19%;display:flex;align-items:center;justify-content:center;font:900 14px sans-serif;color:#1A1A2E}
+.v8-album-card.locked{background-image:url(assets-v8-album-locked.svg?v=996c4d59)}
+.v8-boss-banner{width:320px;height:96px;background:url(assets-v8-boss-banner.svg?v=fa437752) 0 0/100% 100%;display:flex;align-items:center;justify-content:center;font:900 20px sans-serif;color:#1A1A2E;padding-top:4px;box-sizing:border-box}
+@media (prefers-reduced-motion:reduce){.v8-zz,.v8-alarm.ring,.v8-wake,.v8-hatch{animation:none}}
+/* ---- v8.2 (DESIGN 20.11~20.16) ---- */
+.v8-bomb{background-image:url(assets-v8-badge-bomb.svg?v=b9e0fdda)}
+.v8-bomb>b{position:absolute;left:68%;top:14%;width:20%;height:20%;display:flex;align-items:center;justify-content:center;font:900 calc(var(--bird,56px)*.2)/1 Arial,sans-serif;color:#1A1A2E}
+.v8-bomb.low{animation:v8-wobble .5s ease-in-out infinite}/* N≤3: 살짝 흔들림(빨강·번쩍임 없음) */
+@keyframes v8-wobble{25%{transform:rotate(3deg)}75%{transform:rotate(-3deg)}}
+.v8-defuse{background-image:url(assets-v8-fx-bomb-defuse.svg?v=45d3fad6);animation:v8-popin .45s ease-out both}
+.v8-flyaway{background-image:url(assets-v8-fx-fly-away.svg?v=6ae6e51f);animation:v8-rise .6s ease-out both}
+@keyframes v8-rise{to{transform:translateY(-30%);opacity:0}}
+.tube.perch.thorn{background-image:url(assets-v8-perch-thorn.svg?v=e032734e)}.tube.perch.small.thorn{background-image:url(assets-v8-perch-thorn-small.svg?v=b7b5eac4)}
+.v8-ice{position:absolute;inset:0;background:url(assets-v8-perch-ice-overlay.svg?v=35bf9764) 0 0/100% 100% no-repeat;pointer-events:none;z-index:2}
+.v8-thaw{background-image:url(assets-v8-fx-thaw.svg?v=cc319e0e);animation:v8-popin .5s ease-out both}
+.v8-chain{height:24px;background:url(assets-v8-chain-link.svg?v=1d4407fd) center/auto 100% repeat-x;pointer-events:none}
+.v8-chain.v{width:24px;height:auto;background:url(assets-v8-chain-link-v.svg?v=3b93dade) center top/100% auto repeat-y}
+.v8-sleep{transform-origin:50% 90%;animation:v8-breathe 2.4s ease-in-out infinite}
+@keyframes v8-breathe{50%{transform:scale(1.03,.97) rotate(-3deg)}}
+@media (prefers-reduced-motion:reduce){.v8-bomb.low,.v8-defuse,.v8-flyaway,.v8-thaw,.v8-sleep{animation:none}.v8-sleep{transform:rotate(-3deg)}}

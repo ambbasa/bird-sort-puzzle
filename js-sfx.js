@@ -42,17 +42,32 @@ var SP = window.SP = window.SP || {};
     undo: function () { noise(0, 0.16, 0.25, 3000, 500); },                                                       // rewind "슉"
     clear: function () { [0, 4, 7, 12, 7, 12, 16].forEach(function (s, i) { var t = [0, .12, .24, .36, .6, .72, .84][i]; tone('sine', semi(C5, s), t, i > 3 ? 0.6 : 0.3, 0.2); tone('triangle', semi(C5, s - 12), t, 0.25, 0.08); }); }, // marimba-ish fanfare ~1.5s
     hop: function (i) { var f = semi(C5 * 1.5, [0, 2, 4, 7, 9, 12, 14][(i || 0) % 7] + 12 * Math.floor((i || 0) / 7)); tone('sine', [f * 0.8, f * 1.25], 0, 0.11, 0.12); tone('triangle', f * 2, 0.02, 0.06, 0.03); }, // clear-sequence perch hop "뿅", pentatonic rising per perch
+    // v8.0 synth fallbacks (used until / unless assets-v8-sfx-*.mp3 decode: file://, offline before precache, decode error)
+    'coin-spend': function () { tone('square', 1760, 0, 0.05, 0.08); tone('sine', 2637, 0.05, 0.12, 0.12); },
+    'combo-reward': function () { [0, 7, 12].forEach(function (s, i) { tone('sine', semi(C5 * 2, s), i * 0.06, 0.18, 0.16); }); },
+    'cage-tick': function () { tone('triangle', 1400, 0, 0.06, 0.16); },
+    'cage-open': function () { tone('sine', [700, 1400], 0, 0.16, 0.18); tone('triangle', 2100, 0.1, 0.15, 0.08); },
+    'reveal-pop': function () { tone('sine', [600, 1500], 0, 0.1, 0.2); },
+    stuck: function () { tone('sine', [330, 247], 0, 0.28, 0.2); },
     star: function (i) { tone('sine', semi(C5 * 2, [0, 4, 7][i] || 0), 0, 0.4, 0.2); tone('sine', semi(C5 * 4, [0, 4, 7][i] || 0), 0, 0.25, 0.05); } // "띵" per star
   };
+  // v8.0 (DESIGN 20.3): sample files for the new events; decoded lazily on first gesture, synth fallback while missing
+  var bufs = {}, loading = false;
+  function files() { var V = SP.CONFIG && SP.CONFIG.v8; return (V && V.sfx) || {}; }
+  function loadFiles() { if (loading || !window.fetch || location.protocol === 'file:') return; /* file:// has no fetch -> synth fallback */ var c = ac(); if (!c) return; loading = true; var F = files();
+    Object.keys(F).forEach(function (k) { fetch(F[k]).then(function (r) { if (!r.ok) throw 0; return r.arrayBuffer(); }).then(function (ab) { return new Promise(function (res, rej) { c.decodeAudioData(ab, res, rej); }); })
+      .then(function (b) { bufs[k] = b; }).catch(function () { loading = false; /* retry on a later gesture */ }); }); }
+  function file(name) { var b = bufs[name], c = b && ac(); if (!c) return false; try { var s = c.createBufferSource(), g = c.createGain(); g.gain.value = 0.8; s.buffer = b; s.connect(g); g.connect(master); s.start(); return true; } catch (e) { return false; } }
   SP.sfx = {
-    play: function (name, arg) { played.push(name); if (played.length > 50) played.shift(); if (!muted && sounds[name]) try { sounds[name](arg); } catch (e) {} },
+    play: function (name, arg) { played.push(name); if (played.length > 50) played.shift(); if (muted) return; if (file(name)) return; if (sounds[name]) try { sounds[name](arg); } catch (e) {} },
     isMuted: function () { return muted; },
     setMuted: function (m) { muted = !!m; SP.store.set(KEY, String(muted)); if (!muted) ac(); },
     // L3: suspend the AudioContext while an ad plays or the app is in the background; resume when every reason is cleared
     suspend: function (why) { holds[why || 'x'] = true; if (ctx && ctx.state === 'running') ctx.suspend().catch(function () {}); },
     resume: function (why) { holds[why || 'x'] = false; if (!held() && ctx && ctx.state === 'suspended') ctx.resume().catch(function () {}); },
     state: function () { return { ctx: ctx ? ctx.state : 'none', holds: Object.keys(holds).filter(function (k) { return holds[k]; }) }; },
-    unlock: function () { if (!muted) ac(); },
+    unlock: function () { if (!muted) { ac(); loadFiles(); } },
+    _files: function () { return Object.keys(bufs); },
     _played: played // QA: last played sound names
   };
   SP.platform.whenReady(function () { muted = SP.store.get(KEY) === 'true'; });

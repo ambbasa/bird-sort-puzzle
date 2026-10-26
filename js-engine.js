@@ -9,6 +9,10 @@
 //    so a tube containing a key is never complete and a stage is not solved while any key/lock remains.
 //  - hidden ('?') balls: shown as '?' until they become the top of their tube. The solver knows the real colors
 //    (STAGES.md); fairness is enforced at generation: every '?' must be revealed within the first N moves of the stored solution.
+//  - v8.0 M1 cage (GDD v8 §3): stage.cages = [{tube, from, to, n}] (slot indices bottom=0, contiguous, n 1..3). Caged birds can't
+//    leave, nothing lands on a caged top, a run stops at the cage edge, a caged tube is never complete. Every tube newly completed
+//    by a player move counts the open-counter of every cage down by 1; at 0 the cage disappears (birds become normal). A tube that
+//    becomes complete by a cage opening does not count (no chain). Solved = no cage left. State: s.cage[i] = null | {f, t, n}.
 var SP = (typeof window !== 'undefined') ? (window.SP = window.SP || {}) : (global.SP = global.SP || {});
 (function () {
   var FULL = 4;
@@ -16,17 +20,21 @@ var SP = (typeof window !== 'undefined') ? (window.SP = window.SP || {}) : (glob
   function init(stage) {
     var n = stage.tubes.length, caps = stage.caps || stage.tubes.map(function () { return FULL; });
     var lockOf = new Array(n).fill(null); (stage.locks || []).forEach(function (l) { lockOf[l.tube] = l.key; });
-    return { t: stage.tubes.map(function (x) { return x.slice(); }), cap: caps.slice(), lock: lockOf };
+    var st = { t: stage.tubes.map(function (x) { return x.slice(); }), cap: caps.slice(), lock: lockOf };
+    if (stage.cages && stage.cages.length) { st.cage = new Array(n).fill(null); stage.cages.forEach(function (c) { st.cage[c.tube] = { f: c.from, t: c.to, n: c.n }; }); }
+    return st;
   }
-  function clone(s) { return { t: s.t.map(function (x) { return x.slice(); }), cap: s.cap, lock: s.lock.slice() }; }
-  function isDone(s, i) { var t = s.t[i]; if (s.cap[i] < FULL || t.length !== FULL || isKey(t[0])) return false; for (var k = 1; k < FULL; k++) if (t[k] !== t[0]) return false; return true; }
+  function clone(s) { var c = { t: s.t.map(function (x) { return x.slice(); }), cap: s.cap, lock: s.lock.slice() }; if (s.cage) c.cage = s.cage.map(function (k) { return k ? { f: k.f, t: k.t, n: k.n } : null; }); return c; }
+  function cagedTop(s, i) { var k = s.cage && s.cage[i]; return !!k && k.t >= s.t[i].length - 1; } // the tube's top bird is inside its cage
+  function isDone(s, i) { if (s.cage && s.cage[i]) return false; var t = s.t[i]; if (s.cap[i] < FULL || t.length !== FULL || isKey(t[0])) return false; for (var k = 1; k < FULL; k++) if (t[k] !== t[0]) return false; return true; }
   function isSolved(s) {
-    for (var i = 0; i < s.t.length; i++) { if (s.lock[i] !== null) return false; if (s.t[i].length && !isDone(s, i)) return false; }
+    for (var i = 0; i < s.t.length; i++) { if (s.lock[i] !== null || (s.cage && s.cage[i])) return false; if (s.t[i].length && !isDone(s, i)) return false; }
     return true;
   }
   function canMove(s, a, b) {
     if (a === b || s.lock[a] !== null) return false;
-    var A = s.t[a], B = s.t[b]; if (!A.length || isDone(s, a)) return false;
+    var A = s.t[a], B = s.t[b]; if (!A.length || isDone(s, a) || cagedTop(s, a)) return false;
+    if (B.length && cagedTop(s, b)) return false; // v8 M1: nothing lands on a caged top
     var ball = A[A.length - 1];
     if (s.lock[b] !== null) return isKey(ball) && s.lock[b] === ball; // matching key onto its lock tube
     if (B.length >= s.cap[b]) return false;
@@ -37,20 +45,24 @@ var SP = (typeof window !== 'undefined') ? (window.SP = window.SP || {}) : (glob
   // destination (genre standard); it still counts as ONE move. Keys always move alone.
   function moveCount(s, a, b) {
     var A = s.t[a], ball = A[A.length - 1]; if (isKey(ball)) return 1;
-    var run = 0; for (var i = A.length - 1; i >= 0 && A[i] === ball; i--) run++;
+    var run = 0, lo = s.cage && s.cage[a] ? s.cage[a].t + 1 : 0; for (var i = A.length - 1; i >= lo && A[i] === ball; i--) run++; // v8 M1: run stops at the cage
     return Math.max(1, Math.min(run, s.cap[b] - s.t[b].length));
   }
   function apply(s, a, b, cnt) { // returns new state (does not check legality); cnt: optional cap on the run size (game: '?' birds)
     var k = Math.min(cnt || 99, moveCount(s, a, b)), n = clone(s), ball = n.t[a].pop();
     if (isKey(ball) && n.lock[b] === ball) { n.lock[b] = null; return n; } // key + lock disappear together
     n.t[b].push(ball); for (var i = 1; i < k; i++) n.t[b].push(n.t[a].pop());
+    if (n.cage && isDone(n, b)) tick(n, 1); // v8 M1: a completion by this move counts every cage down
     return n;
   }
+  function tick(n, c) { var open = []; for (var i = 0; i < n.cage.length; i++) { var k = n.cage[i]; if (!k) continue; k.n -= c; if (k.n <= 0) { n.cage[i] = null; open.push(i); } }
+    if (!n.cage.some(Boolean)) delete n.cage; return open; }
+  function completions(s, n) { var c = 0; for (var i = 0; i < n.t.length; i++) if (isDone(n, i) && !isDone(s, i)) c++; return c; } // QA helper
   function moves(s, prune) {
     var out = [], n = s.t.length;
     for (var a = 0; a < n; a++) {
-      var A = s.t[a]; if (!A.length || s.lock[a] !== null || isDone(s, a)) continue;
-      var mono = prune && !isKey(A[0]) && A.every(function (c) { return c === A[0]; });
+      var A = s.t[a]; if (!A.length || s.lock[a] !== null || isDone(s, a) || cagedTop(s, a)) continue;
+      var mono = prune && !(s.cage && s.cage[a]) && !isKey(A[0]) && A.every(function (c) { return c === A[0]; });
       for (var b = 0; b < n; b++) {
         if (!canMove(s, a, b)) continue;
         if (mono && !s.t[b].length && s.cap[b] === s.cap[a] && !isKey(A[A.length - 1])) continue; // provably useless
@@ -63,7 +75,7 @@ var SP = (typeof window !== 'undefined') ? (window.SP = window.SP || {}) : (glob
   function key(s) {
     var groups = {}, fixed = [];
     for (var i = 0; i < s.t.length; i++) {
-      var str = s.t[i].join(',');
+      var str = s.t[i].join(','), cg = s.cage && s.cage[i]; if (cg) str += '~' + cg.f + '-' + cg.t + 'n' + cg.n; // v8: cage is part of the state key (G10)
       if (s.lock[i] !== null) fixed.push(i + ':' + s.lock[i] + ':' + str);
       else (groups[s.cap[i]] = groups[s.cap[i]] || []).push(str);
     }
@@ -120,6 +132,7 @@ var SP = (typeof window !== 'undefined') ? (window.SP = window.SP || {}) : (glob
     return { solvable: false, aborted: false, explored: seen.size };
   }
   function score(s, m) { var A = s.t[m[0]], B = s.t[m[1]], ball = A[A.length - 1];
+    if (s.cage && s.cage.some(Boolean)) { var nn = apply(s, m[0], m[1]); if (isDone(nn, m[1])) return 20; }
     if (s.lock[m[1]] !== null) return 9; var v = B.length ? 4 + B.length : 0; var run = 0; for (var i = A.length - 1; i >= 0 && A[i] === ball; i--) run++; if (run === A.length && !B.length) v -= 5; return v; }
   // Dead-end score (STAGES.md v1.1 primary difficulty metric, scales to 12 colors): N seeded random "casual player" playouts of
   // length = min from the start; a playout is a trap if its end state can no longer reach solved (DFS proof, budget per check).
@@ -154,6 +167,7 @@ var SP = (typeof window !== 'undefined') ? (window.SP = window.SP || {}) : (glob
   }
   function firstMoveOptions(stage) { return moves(init(stage), false).length; }
   function completeAtStart(stage) { var s = init(stage); for (var i = 0; i < s.t.length; i++) if (isDone(s, i)) return true; return false; }
-  SP.engine = { init: init, canMove: canMove, apply: apply, moveCount: moveCount, moves: moves, isSolved: isSolved, isDone: isDone, key: key, solve: solve, replay: replay, firstMoveOptions: firstMoveOptions, completeAtStart: completeAtStart, isKey: isKey, dfs: dfs, deadEndScore: deadEndScore };
+  function ser(s) { return JSON.stringify([s.t, s.cap, s.lock, s.cage || null]); } // v8 G3: state serialization for undo round-trip tests
+  SP.engine = { clone: clone, ser: ser, cagedTop: cagedTop, completions: completions, init: init, canMove: canMove, apply: apply, moveCount: moveCount, moves: moves, isSolved: isSolved, isDone: isDone, key: key, solve: solve, replay: replay, firstMoveOptions: firstMoveOptions, completeAtStart: completeAtStart, isKey: isKey, dfs: dfs, deadEndScore: deadEndScore };
 })();
 if (typeof module !== 'undefined') module.exports = SP.engine;

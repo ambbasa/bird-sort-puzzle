@@ -229,3 +229,20 @@ body #toast.v7-toast.v72-pill{background:rgba(255,253,246,.82);border-width:2px;
 /* v7.2 PM-3: short screens (<640px tall, e.g. PC 1024x594) shrink the clear art so the whole card fits; else scroll inside the card */
 @media (max-height:639px){body #overlay.v5 .card{max-height:calc(100dvh - 16px);overflow-y:auto}body #overlay.v5 .clear-art{width:min(56vw,200px);margin-top:0}body #overlay.v5 .bigstars{transform:scale(.85);margin:-4px 0}}
 img.sp-img-wait{visibility:hidden} /* v7.3: failed image waits for its retry, transparent instead of the broken-image icon (layout unchanged) */
+/* v8.0 layout glue (art + component styles live in assets-v8-v8.css, designer-owned) */
+.v8-chips{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;padding:2px 8px;min-height:0}.v8-chips[hidden]{display:none}
+.v8-chip img{width:16px;height:16px}
+.v8ov .card.v8-sheet{max-width:340px;width:calc(100% - 16px);box-sizing:border-box;background:none;box-shadow:none}
+.v8-sheet-art{display:block;width:100%;max-width:280px;margin:0 auto 4px}
+.v8-sheet-btns{display:flex;flex-direction:column;gap:8px;margin:8px 0}
+.v8-pop-fixed{position:fixed;left:50%;top:22%;margin-left:-80px;z-index:40;pointer-events:none;display:flex;align-items:center;justify-content:flex-end;box-sizing:border-box;padding-right:28px}
+.v8-pop-fixed span{width:66px;font:900 12px/1.15 Arial,sans-serif;color:#1A1A2E;text-align:center}
+#hint.v8-glow{box-shadow:0 0 0 3px #FFC83D,0 0 12px #FFC83D}
+#hint{position:relative}#hint .cnt{position:absolute;right:-4px;top:-4px}
+.map-node .v8-feather{position:absolute;right:-12px;top:-12px;width:22px;height:22px;pointer-events:none}
+#v8tip{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--sa-top,env(safe-area-inset-top,0px)) + 96px);z-index:45;max-width:280px;pointer-events:none}#v8tip[hidden]{display:none}
+.v8-bag{margin:-14px 0 -14px 8px;min-height:44px;padding:0 12px;vertical-align:middle}/* 44px target without growing the coins line (map card must not scroll at 360x560) */
+/* v8.0: sheets (stuck art is tall) must fit 360x640 */
+.v8ov .card.v8-sheet{max-height:calc(100vh - 24px);overflow-y:auto}
+.v8-sheet-art{max-height:min(200px,26vh);width:auto;object-fit:contain}
+body:has(.v8ov.show) #v8tip,body:has(#menu.show) #v8tip{display:none} /* tip bubble never covers a sheet/map */
