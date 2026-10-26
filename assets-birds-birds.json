@@ -43,14 +43,28 @@
       "expressions": {
         "idle": "assets-birds-bird-red-idle.svg",
         "happy": "assets-birds-bird-red-happy.svg",
-        "sad": "assets-birds-bird-red-sad.svg"
+        "sad": "assets-birds-bird-red-sad.svg",
+        "surprised": "assets-v8-bird-red-surprised.svg",
+        "sleepy": "assets-v8-bird-red-sleepy.svg"
       },
       "frames": {
         "up": "assets-birds-bird-red-up.svg",
         "mid": "assets-birds-bird-red-mid.svg",
         "down": "assets-birds-bird-red-down.svg",
         "fold": "assets-birds-bird-red-fold.svg"
-      }
+      },
+      "sideSurprised": [
+        "assets-v8-side-bird-red-surprised-side-1.svg",
+        "assets-v8-side-bird-red-surprised-side-2.svg",
+        "assets-v8-side-bird-red-surprised-side-3.svg",
+        "assets-v8-side-bird-red-surprised-side-4.svg"
+      ],
+      "sideSleepy": [
+        "assets-v8-side-bird-red-sleepy-side-1.svg",
+        "assets-v8-side-bird-red-sleepy-side-2.svg",
+        "assets-v8-side-bird-red-sleepy-side-3.svg",
+        "assets-v8-side-bird-red-sleepy-side-4.svg"
+      ]
     },
     {
       "key": "orange",
@@ -61,14 +75,28 @@
       "expressions": {
         "idle": "assets-birds-bird-orange-idle.svg",
         "happy": "assets-birds-bird-orange-happy.svg",
-        "sad": "assets-birds-bird-orange-sad.svg"
+        "sad": "assets-birds-bird-orange-sad.svg",
+        "surprised": "assets-v8-bird-orange-surprised.svg",
+        "sleepy": "assets-v8-bird-orange-sleepy.svg"
       },
       "frames": {
         "up": "assets-birds-bird-orange-up.svg",
         "mid": "assets-birds-bird-orange-mid.svg",
         "down": "assets-birds-bird-orange-down.svg",
         "fold": "assets-birds-bird-orange-fold.svg"
-      }
+      },
+      "sideSurprised": [
+        "assets-v8-side-bird-orange-surprised-side-1.svg",
+        "assets-v8-side-bird-orange-surprised-side-2.svg",
+        "assets-v8-side-bird-orange-surprised-side-3.svg",
+        "assets-v8-side-bird-orange-surprised-side-4.svg"
+      ],
+      "sideSleepy": [
+        "assets-v8-side-bird-orange-sleepy-side-1.svg",
+        "assets-v8-side-bird-orange-sleepy-side-2.svg",
+        "assets-v8-side-bird-orange-sleepy-side-3.svg",
+        "assets-v8-side-bird-orange-sleepy-side-4.svg"
+      ]
     },
     {
       "key": "yellow",
@@ -79,14 +107,28 @@
       "expressions": {
         "idle": "assets-birds-bird-yellow-idle.svg",
         "happy": "assets-birds-bird-yellow-happy.svg",
-        "sad": "assets-birds-bird-yellow-sad.svg"
+        "sad": "assets-birds-bird-yellow-sad.svg",
+        "surprised": "assets-v8-bird-yellow-surprised.svg",
+        "sleepy": "assets-v8-bird-yellow-sleepy.svg"
       },
       "frames": {
         "up": "assets-birds-bird-yellow-up.svg",
         "mid": "assets-birds-bird-yellow-mid.svg",
         "down": "assets-birds-bird-yellow-down.svg",
         "fold": "assets-birds-bird-yellow-fold.svg"
-      }
+      },
+      "sideSurprised": [
+        "assets-v8-side-bird-yellow-surprised-side-1.svg",
+        "assets-v8-side-bird-yellow-surprised-side-2.svg",
+        "assets-v8-side-bird-yellow-surprised-side-3.svg",
+        "assets-v8-side-bird-yellow-surprised-side-4.svg"
+      ],
+      "sideSleepy": [
+        "assets-v8-side-bird-yellow-sleepy-side-1.svg",
+        "assets-v8-side-bird-yellow-sleepy-side-2.svg",
+        "assets-v8-side-bird-yellow-sleepy-side-3.svg",
+        "assets-v8-side-bird-yellow-sleepy-side-4.svg"
+      ]
     },
     {
       "key": "green",
@@ -97,7 +139,9 @@
       "expressions": {
         "idle": "assets-birds-bird-green-idle.svg",
         "happy": "assets-birds-bird-green-happy.svg",
-        "sad": "assets-birds-bird-green-sad.svg"
+        "sad": "assets-birds-bird-green-sad.svg",
+        "surprised": "assets-v8-bird-green-surprised.svg",
+        "sleepy": "assets-v8-bird-green-sleepy.svg"
       },
       "frames": {
         "up": "assets-birds-bird-green-up.svg",
@@ -105,7 +149,19 @@
         "down": "assets-birds-bird-green-down.svg",
         "fold": "assets-birds-bird-green-fold.svg"
       },
-      "hexV7a": "#1F9A55"
+      "hexV7a": "#1F9A55",
+      "sideSurprised": [
+        "assets-v8-side-bird-green-surprised-side-1.svg",
+        "assets-v8-side-bird-green-surprised-side-2.svg",
+        "assets-v8-side-bird-green-surprised-side-3.svg",
+        "assets-v8-side-bird-green-surprised-side-4.svg"
+      ],
+      "sideSleepy": [
+        "assets-v8-side-bird-green-sleepy-side-1.svg",
+        "assets-v8-side-bird-green-sleepy-side-2.svg",
+        "assets-v8-side-bird-green-sleepy-side-3.svg",
+        "assets-v8-side-bird-green-sleepy-side-4.svg"
+      ]
     },
     {
       "key": "cyan",
@@ -116,14 +172,28 @@
       "expressions": {
         "idle": "assets-birds-bird-cyan-idle.svg",
         "happy": "assets-birds-bird-cyan-happy.svg",
-        "sad": "assets-birds-bird-cyan-sad.svg"
+        "sad": "assets-birds-bird-cyan-sad.svg",
+        "surprised": "assets-v8-bird-cyan-surprised.svg",
+        "sleepy": "assets-v8-bird-cyan-sleepy.svg"
       },
       "frames": {
         "up": "assets-birds-bird-cyan-up.svg",
         "mid": "assets-birds-bird-cyan-mid.svg",
         "down": "assets-birds-bird-cyan-down.svg",
         "fold": "assets-birds-bird-cyan-fold.svg"
-      }
+      },
+      "sideSurprised": [
+        "assets-v8-side-bird-cyan-surprised-side-1.svg",
+        "assets-v8-side-bird-cyan-surprised-side-2.svg",
+        "assets-v8-side-bird-cyan-surprised-side-3.svg",
+        "assets-v8-side-bird-cyan-surprised-side-4.svg"
+      ],
+      "sideSleepy": [
+        "assets-v8-side-bird-cyan-sleepy-side-1.svg",
+        "assets-v8-side-bird-cyan-sleepy-side-2.svg",
+        "assets-v8-side-bird-cyan-sleepy-side-3.svg",
+        "assets-v8-side-bird-cyan-sleepy-side-4.svg"
+      ]
     },
     {
       "key": "blue",
@@ -134,14 +204,28 @@
       "expressions": {
         "idle": "assets-birds-bird-blue-idle.svg",
         "happy": "assets-birds-bird-blue-happy.svg",
-        "sad": "assets-birds-bird-blue-sad.svg"
+        "sad": "assets-birds-bird-blue-sad.svg",
+        "surprised": "assets-v8-bird-blue-surprised.svg",
+        "sleepy": "assets-v8-bird-blue-sleepy.svg"
       },
       "frames": {
         "up": "assets-birds-bird-blue-up.svg",
         "mid": "assets-birds-bird-blue-mid.svg",
         "down": "assets-birds-bird-blue-down.svg",
         "fold": "assets-birds-bird-blue-fold.svg"
-      }
+      },
+      "sideSurprised": [
+        "assets-v8-side-bird-blue-surprised-side-1.svg",
+        "assets-v8-side-bird-blue-surprised-side-2.svg",
+        "assets-v8-side-bird-blue-surprised-side-3.svg",
+        "assets-v8-side-bird-blue-surprised-side-4.svg"
+      ],
+      "sideSleepy": [
+        "assets-v8-side-bird-blue-sleepy-side-1.svg",
+        "assets-v8-side-bird-blue-sleepy-side-2.svg",
+        "assets-v8-side-bird-blue-sleepy-side-3.svg",
+        "assets-v8-side-bird-blue-sleepy-side-4.svg"
+      ]
     },
     {
       "key": "purple",
@@ -152,7 +236,9 @@
       "expressions": {
         "idle": "assets-birds-bird-purple-idle.svg",
         "happy": "assets-birds-bird-purple-happy.svg",
-        "sad": "assets-birds-bird-purple-sad.svg"
+        "sad": "assets-birds-bird-purple-sad.svg",
+        "surprised": "assets-v8-bird-purple-surprised.svg",
+        "sleepy": "assets-v8-bird-purple-sleepy.svg"
       },
       "frames": {
         "up": "assets-birds-bird-purple-up.svg",
@@ -161,7 +247,19 @@
         "fold": "assets-birds-bird-purple-fold.svg"
       },
       "hexV7a": "#8E24AA",
-      "hexV7aPurple": "#842B76"
+      "hexV7aPurple": "#842B76",
+      "sideSurprised": [
+        "assets-v8-side-bird-purple-surprised-side-1.svg",
+        "assets-v8-side-bird-purple-surprised-side-2.svg",
+        "assets-v8-side-bird-purple-surprised-side-3.svg",
+        "assets-v8-side-bird-purple-surprised-side-4.svg"
+      ],
+      "sideSleepy": [
+        "assets-v8-side-bird-purple-sleepy-side-1.svg",
+        "assets-v8-side-bird-purple-sleepy-side-2.svg",
+        "assets-v8-side-bird-purple-sleepy-side-3.svg",
+        "assets-v8-side-bird-purple-sleepy-side-4.svg"
+      ]
     },
     {
       "key": "white",
@@ -172,14 +270,28 @@
       "expressions": {
         "idle": "assets-birds-bird-white-idle.svg",
         "happy": "assets-birds-bird-white-happy.svg",
-        "sad": "assets-birds-bird-white-sad.svg"
+        "sad": "assets-birds-bird-white-sad.svg",
+        "surprised": "assets-v8-bird-white-surprised.svg",
+        "sleepy": "assets-v8-bird-white-sleepy.svg"
       },
       "frames": {
         "up": "assets-birds-bird-white-up.svg",
         "mid": "assets-birds-bird-white-mid.svg",
         "down": "assets-birds-bird-white-down.svg",
         "fold": "assets-birds-bird-white-fold.svg"
-      }
+      },
+      "sideSurprised": [
+        "assets-v8-side-bird-white-surprised-side-1.svg",
+        "assets-v8-side-bird-white-surprised-side-2.svg",
+        "assets-v8-side-bird-white-surprised-side-3.svg",
+        "assets-v8-side-bird-white-surprised-side-4.svg"
+      ],
+      "sideSleepy": [
+        "assets-v8-side-bird-white-sleepy-side-1.svg",
+        "assets-v8-side-bird-white-sleepy-side-2.svg",
+        "assets-v8-side-bird-white-sleepy-side-3.svg",
+        "assets-v8-side-bird-white-sleepy-side-4.svg"
+      ]
     },
     {
       "key": "pink",
@@ -190,14 +302,28 @@
       "expressions": {
         "idle": "assets-birds-bird-pink-idle.svg",
         "happy": "assets-birds-bird-pink-happy.svg",
-        "sad": "assets-birds-bird-pink-sad.svg"
+        "sad": "assets-birds-bird-pink-sad.svg",
+        "surprised": "assets-v8-bird-pink-surprised.svg",
+        "sleepy": "assets-v8-bird-pink-sleepy.svg"
       },
       "frames": {
         "up": "assets-birds-bird-pink-up.svg",
         "mid": "assets-birds-bird-pink-mid.svg",
         "down": "assets-birds-bird-pink-down.svg",
         "fold": "assets-birds-bird-pink-fold.svg"
-      }
+      },
+      "sideSurprised": [
+        "assets-v8-side-bird-pink-surprised-side-1.svg",
+        "assets-v8-side-bird-pink-surprised-side-2.svg",
+        "assets-v8-side-bird-pink-surprised-side-3.svg",
+        "assets-v8-side-bird-pink-surprised-side-4.svg"
+      ],
+      "sideSleepy": [
+        "assets-v8-side-bird-pink-sleepy-side-1.svg",
+        "assets-v8-side-bird-pink-sleepy-side-2.svg",
+        "assets-v8-side-bird-pink-sleepy-side-3.svg",
+        "assets-v8-side-bird-pink-sleepy-side-4.svg"
+      ]
     },
     {
       "key": "brown",
@@ -208,7 +334,9 @@
       "expressions": {
         "idle": "assets-birds-bird-brown-idle.svg",
         "happy": "assets-birds-bird-brown-happy.svg",
-        "sad": "assets-birds-bird-brown-sad.svg"
+        "sad": "assets-birds-bird-brown-sad.svg",
+        "surprised": "assets-v8-bird-brown-surprised.svg",
+        "sleepy": "assets-v8-bird-brown-sleepy.svg"
       },
       "frames": {
         "up": "assets-birds-bird-brown-up.svg",
@@ -216,7 +344,19 @@
         "down": "assets-birds-bird-brown-down.svg",
         "fold": "assets-birds-bird-brown-fold.svg"
       },
-      "hexV7a": "#6C2D18"
+      "hexV7a": "#6C2D18",
+      "sideSurprised": [
+        "assets-v8-side-bird-brown-surprised-side-1.svg",
+        "assets-v8-side-bird-brown-surprised-side-2.svg",
+        "assets-v8-side-bird-brown-surprised-side-3.svg",
+        "assets-v8-side-bird-brown-surprised-side-4.svg"
+      ],
+      "sideSleepy": [
+        "assets-v8-side-bird-brown-sleepy-side-1.svg",
+        "assets-v8-side-bird-brown-sleepy-side-2.svg",
+        "assets-v8-side-bird-brown-sleepy-side-3.svg",
+        "assets-v8-side-bird-brown-sleepy-side-4.svg"
+      ]
     },
     {
       "key": "lime",
@@ -227,7 +367,9 @@
       "expressions": {
         "idle": "assets-birds-bird-lime-idle.svg",
         "happy": "assets-birds-bird-lime-happy.svg",
-        "sad": "assets-birds-bird-lime-sad.svg"
+        "sad": "assets-birds-bird-lime-sad.svg",
+        "surprised": "assets-v8-bird-lime-surprised.svg",
+        "sleepy": "assets-v8-bird-lime-sleepy.svg"
       },
       "frames": {
         "up": "assets-birds-bird-lime-up.svg",
@@ -235,7 +377,19 @@
         "down": "assets-birds-bird-lime-down.svg",
         "fold": "assets-birds-bird-lime-fold.svg"
       },
-      "hexV7a": "#ABE085"
+      "hexV7a": "#ABE085",
+      "sideSurprised": [
+        "assets-v8-side-bird-lime-surprised-side-1.svg",
+        "assets-v8-side-bird-lime-surprised-side-2.svg",
+        "assets-v8-side-bird-lime-surprised-side-3.svg",
+        "assets-v8-side-bird-lime-surprised-side-4.svg"
+      ],
+      "sideSleepy": [
+        "assets-v8-side-bird-lime-sleepy-side-1.svg",
+        "assets-v8-side-bird-lime-sleepy-side-2.svg",
+        "assets-v8-side-bird-lime-sleepy-side-3.svg",
+        "assets-v8-side-bird-lime-sleepy-side-4.svg"
+      ]
     },
     {
       "key": "indigo",
@@ -246,7 +400,9 @@
       "expressions": {
         "idle": "assets-birds-bird-indigo-idle.svg",
         "happy": "assets-birds-bird-indigo-happy.svg",
-        "sad": "assets-birds-bird-indigo-sad.svg"
+        "sad": "assets-birds-bird-indigo-sad.svg",
+        "surprised": "assets-v8-bird-indigo-surprised.svg",
+        "sleepy": "assets-v8-bird-indigo-sleepy.svg"
       },
       "frames": {
         "up": "assets-birds-bird-indigo-up.svg",
@@ -254,7 +410,19 @@
         "down": "assets-birds-bird-indigo-down.svg",
         "fold": "assets-birds-bird-indigo-fold.svg"
       },
-      "hexV7a": "#1D1DBD"
+      "hexV7a": "#1D1DBD",
+      "sideSurprised": [
+        "assets-v8-side-bird-indigo-surprised-side-1.svg",
+        "assets-v8-side-bird-indigo-surprised-side-2.svg",
+        "assets-v8-side-bird-indigo-surprised-side-3.svg",
+        "assets-v8-side-bird-indigo-surprised-side-4.svg"
+      ],
+      "sideSleepy": [
+        "assets-v8-side-bird-indigo-sleepy-side-1.svg",
+        "assets-v8-side-bird-indigo-sleepy-side-2.svg",
+        "assets-v8-side-bird-indigo-sleepy-side-3.svg",
+        "assets-v8-side-bird-indigo-sleepy-side-4.svg"
+      ]
     }
   ],
   "hidden": {
@@ -558,6 +726,20 @@
       "symbolBacking": "white disc r=26*scale, #1A1A2E 1.6px",
       "appliesTo": "12 colors + hidden + key-a/b/c, front 7 + side 4",
       "doc": "DESIGN.md 19.8"
+    },
+    "v8": {
+      "expressions": [
+        "surprised",
+        "sleepy"
+      ],
+      "doc": "DESIGN.md 20.2",
+      "extra": [
+        "assets-v8-bird-hidden-surprised.svg",
+        "assets-v8-bird-key-a-surprised.svg",
+        "assets-v8-bird-key-b-surprised.svg",
+        "assets-v8-bird-key-c-surprised.svg",
+        "assets-v8-bird-hidden-sleepy.svg"
+      ]
     }
   }
 }
