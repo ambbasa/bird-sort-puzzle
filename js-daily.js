@@ -7,7 +7,7 @@ var SP = (typeof window !== "undefined") ? (window.SP = window.SP || {}) : (glob
   var REWARDS = [10, 10, 15, 15, 20, 25, 50]; // day 1..7 of the streak cycle (coins), then the cycle repeats
   var POOL_FROM = 13, POOL_TO = 60, MIN_LO = 12, MIN_HI = 19;
   function pad(n) { return (n < 10 ? '0' : '') + n; }
-  function dateKey(d) { d = d || new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  var dateKey = SP.day.key; // v8.1.2: single local-date key (js-config.js)
   function shift(key, days) { var p = key.split('-').map(Number), d = new Date(p[0], p[1] - 1, p[2] + days, 12); return dateKey(d); }
   function hash(s) { var h = 2166136261; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
   function rng(seed) { return function () { seed = (seed + 0x6D2B79F5) | 0; var t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }

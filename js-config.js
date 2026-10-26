@@ -42,7 +42,7 @@ SP.CONFIG = {
   restStages: [9, 19, 29],
   maxStage: 30, // MVP hand-tuned range (legacy builder/verify)
   // v8 (docs-GDD.md 'v8 기획', docs-v8-dev-tasks.md): stage flags. Off = that stage's gimmick stages fall back to the previous stages set.
-  features: { v80: true, v81: false, v82: false },
+  features: { v80: true, v81: true, v82: false },
   // v8 economy: every price / cap in one place (GDD v8 §7 숫자 요약)
   economy: { undo3: 30, undo3Gives: 3, perch: 50, hint: 20, perchMaxPerStage: 2, freeHintsPerStage: 1, freeHintUnlimitedTo: 10, freePerchPerDay: 3,
     comboCoins: { 2: 5, 3: 5, 4: 10 }, comboCap: 30, comboUndoAt: 3, comboTokenAt: 4, tokenMax: 3, coinMax: 99999, noUndo3Bonus: 5 },
@@ -52,7 +52,7 @@ SP.CONFIG = {
     sfx: { 'coin-spend': 'assets-v8-sfx-coin-spend.mp3', 'combo-reward': 'assets-v8-sfx-combo-reward.mp3', 'cage-tick': 'assets-v8-sfx-cage-tick.mp3', 'cage-open': 'assets-v8-sfx-cage-open.mp3', 'reveal-pop': 'assets-v8-sfx-reveal-pop.mp3', stuck: 'assets-v8-sfx-stuck.mp3' },
     debut: [22, 31, 61, 101, 121], stuckToastAfter: 3 },
   // v8.1 (GDD v8 §4 + planner decisions 2026-10-26). Only used when features.v81 is on.
-  economy81: { chestEvery: 20, chestCycle: [{ coins: 30 }, { hint: 2 }, { coins: 50 }, { token: 1 }, { coins: 100 }], chestMaxAtOnce: 5,
+  economy81: { chestEvery: 20, chestCycle: [{ coins: 30 }, { hint: 2 }, { coins: 50 }, { token: 1 }, { coins: 100 }], chestMaxAtOnce: 5, chestMaxUpgrade: 5,
     albumEvery: 6, albumReward: 50, bossBonus: 50, bossStages: [100, 200], streakUndoAt: 2, streakTokenAt: 4, streakHintAt: 6, hintMax: 9 },
   v81: { egg: 'assets-v8-egg-{color}.svg?v=25f13f34', sleepy: 'assets-v8-bird-{key}-sleepy.svg?v=25f13f34', sleepySide: 'assets-v8-side-bird-{key}-sleepy-side-{n}.svg?v=25f13f34', alarmLg: 'assets-v8-badge-lg-badge-alarm.svg?v=46004089',
     eggBadgeLg: 'assets-v8-badge-lg-badge-egg-{n}.svg?v=25f13f34', chestClosed: 'assets-v8-chest-closed.svg?v=fb531d60', chestOpen: 'assets-v8-chest-open.svg?v=12bd8948', bossNode: 'assets-v8-map-node-boss.svg?v=721267cb',
@@ -64,17 +64,15 @@ SP.CONFIG = {
 };
 //@qa-start (v8.1 review switch: web/dev only — the toss build strips it, so toss follows features.v81 alone)
 SP.CONFIG.v81Toggle = true;
-SP.CONFIG.qaPractice = typeof location !== 'undefined' && /[?&]qa=bsp8(?:&|$)/.test(location.search); // v8.1.1: QA practice never writes the v81 flag
 //@qa-end
-// v8.1 flag switch for QA / planner review (web/dev builds; toss: stripped): index.html?v81=1 turns v8.1 on and remembers it on this device
-// (localStorage 'settings.ff.v81'), ?v81=0 turns it off again. Shipping default stays features.v81 = false.
-(function () { var C = SP.CONFIG || SP; var F = C.features; if (!F || C.v81Toggle !== true) return; try { // v81Toggle is set only in the //@qa block above
-  var q = typeof location !== 'undefined' && /[?&]v81=([01])/.exec(location.search), ls = typeof localStorage !== 'undefined' ? localStorage : null;
-  var qa = C.qaPractice === true; // v8.1.1: QA practice (set in the //@qa block) applies ?v81 for the session only
-  if (q && ls && !qa) { if (q[1] === '1') ls.setItem('settings.ff.v81', '1'); else ls.removeItem('settings.ff.v81'); }
-  if (q && qa) F.v81 = q[1] === '1'; else if (ls && ls.getItem('settings.ff.v81') === '1') F.v81 = true; else if (q) F.v81 = q[1] === '1';
-} catch (e) {}
-  if (F.v81 && C.v8 && C.v81) for (var k in C.v81.sfx) C.v8.sfx[k] = C.v81.sfx[k]; })();
+//@qa-start (v8.1.3: web/flat only — the toss build strips this whole switch; tools/build-release.js fails if any of it survives)
+// v8.1.3: v8.1 ships ON (features.v81 = true). index.html?v81=0 turns it off for this page session only (planner / QA comparison):
+// nothing is written, and a stored legacy 'settings.ff.v81' value is ignored — the shipped default always wins.
+(function () { var F = SP.CONFIG && SP.CONFIG.features; if (!F || SP.CONFIG.v81Toggle !== true) return; try {
+  var q = typeof location !== 'undefined' && /[?&]v81=([01])/.exec(location.search); if (q) F.v81 = q[1] === '1';
+} catch (e) {} })();
+//@qa-end
+(function () { var C = SP.CONFIG; if (C.features.v81 && C.v8 && C.v81) for (var k in C.v81.sfx) C.v8.sfx[k] = C.v81.sfx[k]; })(); // v8.1 sfx overrides
 //@qa-start (v8.0.1: web/flat only — tools/build-release.js strips this block from the toss build)
 // Hidden QA practice mode for planner / QA: index.html?qa=bsp8&stage=N opens stage N directly. The save is read-only in this mode:
 // every localStorage write is dropped for the whole page life (stars, coins, progress, free counts, red dot, v8paid … untouched).
@@ -82,4 +80,18 @@ SP.CONFIG.qaPractice = typeof location !== 'undefined' && /[?&]qa=bsp8(?:&|$)/.t
   var m = /[?&]qa=bsp8(?:&|$)/.test(location.search) && /[?&]stage=(\d+)/.exec(location.search); if (!m) return;
   SP.QA = { stage: +m[1] }; var noop = function () {}; try { Storage.prototype.setItem = noop; Storage.prototype.removeItem = noop; Storage.prototype.clear = noop; } catch (e) {} })();
 //@qa-end
+// v8.1.2: the ONE day key for everything date-based (daily challenge, streak, free perch/hint reset, red dot, map seen):
+// device-local calendar date 'YYYY-MM-DD' (rolls over at local midnight). Never toISOString / UTC.
+SP.day = (function () {
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function key(d) { d = d || new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  // legacy -> key: 'YYYY-M-D' (unpadded) or a full ISO/UTC timestamp ('2026-10-25T15:30:00.000Z' -> that instant's local date) or ms number
+  function norm(v) {
+    if (typeof v === 'number' && isFinite(v) && v > 0) return key(new Date(v));
+    if (typeof v !== 'string' || !v) return v;
+    var m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(v); if (m) return m[1] + '-' + pad(+m[2]) + '-' + pad(+m[3]);
+    if (/^\d{4}-\d{2}-\d{2}T/.test(v)) { var d = new Date(v); if (!isNaN(d)) return key(d); }
+    return v; }
+  return { key: key, norm: norm };
+})();
 if (typeof module !== 'undefined') module.exports = SP;

@@ -22,6 +22,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   //@qa-end
   var F81 = F80 && !!C.features.v81, E81 = C.economy81, V81 = C.v81, M81 = SP.v81; // v8.1 (GDD v8 §4): off = exactly the v8.0 game
   if (F80 && save.v !== 8) { var raw0 = SP.store.get(KEY); if (raw0 && !SP.store.get(KEY + '.bak')) SP.store.set(KEY + '.bak', raw0); save = V8.migrateV8(save); } // v8 G4: original kept in sortpuzzle.v1.bak
+  if (V8 && V8.normDays) V8.normDays(save); // v8.1.2: legacy day keys -> local date (in memory; saved with the next normal persist)
   // ART-AUDIT A05: a save with current/unlocked > LAST (e.g. 201), NaN, negative or non-numeric froze the boot -> clamp to 1..LAST
   var clampN = function (v) { v = Math.floor(+v); return isFinite(v) && v >= 1 ? Math.min(v, LAST) : 1; };
   var overflow = +save.current > LAST || +save.unlocked > LAST;
@@ -265,6 +266,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
           if (F81 && !E.isKey(c) && C.palette[c]) xBird(w, im, i, j, c);
           var cg = S.cage && S.cage[i], co = fx.cageOpen && fx.cageOpen.filter(function (o) { return o.i === i; })[0]; // v8 M1 cage overlay per caged slot (DESIGN 20.1)
           if (cg && j >= cg.f && j <= cg.t) { var cv = document.createElement('div'); cv.className = 'v8-cage'; w.appendChild(cv); w.classList.add('caged');
+            if (j === cg.t) { var lid = document.createElement('div'); lid.className = 'v8-cage-lid'; w.appendChild(lid); w.classList.add('caged-top'); } /* v8.1.2: cage-front.svg top rail as the lid of the caged run, kept above a free bird on top */
             if (j === cg.t) { var cb2 = document.createElement('div'); cb2.className = 'v8-cage-badge n' + Math.min(3, cg.n) + (fx.cageTick && fx.cageTick.indexOf(i) >= 0 ? ' tick' : ''); if (symbolsLarge) cb2.style.backgroundImage = 'url("' + V8A.cageBadgeLg.replace('{n}', Math.min(3, cg.n)) + '")'; w.appendChild(cb2); } }
           else if (co && j >= co.f && j <= co.t) { var ov2 = document.createElement('div'); ov2.className = 'v8-cage open'; w.appendChild(ov2); setTimeout(function () { ov2.remove(); }, reduced ? 500 : 650); }
           if (E.isKey(c)) { im.className += ' key-ready'; if (!S.mask[i][j] && !symbolsLarge) w.appendChild(pairSym(GA.pair[c].symbol, 'keysym')); }
@@ -521,6 +523,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     var ch = M81.chestAccrue(save, E81); if (ch) h += ' · 별 상자 +' + ch + ' (지도에서 열어요)';
     flameHud(); SP._meta = { clean: clean, streak: n, album: al, chests: ch, coins: coins }; return { coins: coins, html: h }; }
   function metaMenu() { var co = $('coins'); co.insertAdjacentHTML('beforeend', ' <button class="btn v8-bag" id="v8albumBtn">도감</button>'); $('v8albumBtn').onclick = albumOpen;
+    if (save.m81sheet && !QAP) { var u = save.m81sheet; delete save.m81sheet; persist(); upgradeSheet(u); SP._upgradeShown = (SP._upgradeShown || 0) + 1; }
     var got = []; if (!QAP) { M81.albumSync(save, debuts(), E81, EC); M81.chestAccrue(save, E81); got = M81.chestOpen(save, E81, EC); persist(); } // v8.1.1: QA practice opens / grants nothing
     var pr = M81.chestProgress(save, E81), row = $('v8chestrow'); if (!row) { row = document.createElement('div'); row.id = 'v8chestrow'; row.className = 'v8-chestrow'; co.insertAdjacentElement('afterend', row); }
     row.innerHTML = '<img src="' + V81.chestClosed + '" alt="" width="36" height="36"><div class="v8-chestinfo"><b>별 상자까지 ' + pr.left + '개</b><div class="v8-star-bar" aria-hidden="true"><i style="width:' + (75 * pr.have / pr.need).toFixed(1) + '%"></i></div><small>' + pr.have + ' / ' + pr.need + '</small></div>';
@@ -530,6 +533,13 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
       $('coins').firstChild && (co.innerHTML = co.innerHTML.replace(/^[\s\S]*?(?= <button)/, IC('coin') + ' ' + Math.min(save.coins, EC.coinMax).toLocaleString('ko-KR'))); $('v8bag').onclick = bagSheet; $('v8albumBtn').onclick = albumOpen;
       sheet('별 상자 ' + got.length + '개를 열었어요', V81.chestOpen, [{ k: 'got', label: parts.join(' · '), disabled: true, go: function () {} }]);
       if (save.chests.pending) toast('남은 상자 ' + save.chests.pending + '개는 다음에 열려요'); SP._chestGot = got; } }
+  // v8.1.3: the single upgrade sheet (chests + album together, shown once; data kept in save.m81sheet until shown)
+  function upgradeSheet(u) { var t = { coins: 0, hint: 0, token: 0 }; (u.chests || []).forEach(function (r) { for (var x in r) t[x] += r[x]; });
+    var rows = [], parts = []; if (t.coins) parts.push('코인 +' + t.coins); if (t.hint) parts.push('힌트 +' + t.hint); if (t.token) parts.push('횃대 토큰 +' + t.token);
+    if (u.chests.length) rows.push({ k: 'chest', label: '별 상자 ' + u.chests.length + '개: ' + parts.join(' · '), disabled: true, go: function () {} });
+    if (u.cards || u.albumCoins) rows.push({ k: 'album', label: '도감 카드 ' + u.cards + '장 해금' + (u.albumCoins ? ' · 도감 보상 코인 +' + u.albumCoins : ''), disabled: true, go: function () {} });
+    var pr = M81.chestProgress(save, E81); rows.push({ k: 'next', label: '지금까지 모은 별은 정산됐어요 · 다음 상자까지 별 ' + pr.left + '개', disabled: true, go: function () {} });
+    sfx.play('chest-open'); sheet('새 기능 업데이트 선물', V81.chestOpen, rows); SP._upgrade = u; }
   function albumOpen() { var o = $('v8album'); if (!o) { o = document.createElement('div'); o.id = 'v8album'; o.className = 'ov v8ov'; document.body.appendChild(o); }
     var ids = M81.albumIds(C.palette), A = save.album, have = ids.filter(function (i) { return A[i]; }).length, D = debuts();
     var cards = ids.map(function (id) { var own = !!A[id], P = id[0] === 'c' ? C.palette[+id.slice(1)] : null, nm = P ? BIRD_KO[P.key][0] : ALBUM_GIM[id][0], im = P ? BF.expr(+id.slice(1), 'idle') : ALBUM_GIM[id][1];
@@ -788,6 +798,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     var qb = document.createElement('div'); qb.id = 'qabadge'; qb.textContent = 'QA 연습'; qb.setAttribute('aria-label', 'QA 연습 모드, 저장 안 함');
     qb.style.cssText = 'position:fixed;left:4px;bottom:4px;z-index:9999;font:700 10px/1 sans-serif;padding:3px 5px;border-radius:6px;background:#1A1A2Ecc;color:#fff;pointer-events:none'; document.body.appendChild(qb); }
   //@qa-end
+  if (F81 && !QAP && !save.m81) { var up81 = M81.upgrade81(save, debuts(), E81, EC); if (up81) save.m81sheet = up81; persist(); } // v8.1.3: one-time upgrade settlement (sheet on first map open)
   SP.ads.showBanner(); load(start); if (bootToMap) try { menu(); } catch (e) {}
   var sp = $('splash'); if (sp) { sp.classList.add('out'); setTimeout(function () { sp.remove(); }, 300); } // L6: first screen ready
   SP._bootMs = Math.round(performance.now()); SP._inputLocked = function () { return S.locked && !S.won; };

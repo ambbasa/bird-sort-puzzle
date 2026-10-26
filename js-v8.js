@@ -18,7 +18,7 @@ var SP = (typeof window !== 'undefined') ? (window.SP = window.SP || {}) : (glob
     s.v = Math.max(8, num(s.v, 0));
     return s;
   }
-  function dayKey(d) { d = d || new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function dayKey(d) { return SP.day.key(d); } // v8.1.2: single local-date key (js-config.js)
   // R2 free perch: 3 per device day, only when no rewarded ad is available and coins are short
   function freePerchLeft(save, E, key) { var fp = save.freePerch; if (!fp || fp.date !== key) return E.freePerchPerDay; return fp.left; }
   function useFreePerch(save, E, key) { var l = freePerchLeft(save, E, key); if (l <= 0) return false; save.freePerch = { date: key, left: l - 1 }; return true; }
@@ -60,8 +60,27 @@ var SP = (typeof window !== 'undefined') ? (window.SP = window.SP || {}) : (glob
   // start-of-stage bonus for the current streak: >=2 undo +1, ==4 perch token +1, >=6 hint +1 (inventory caps kept)
   function streakBonus(n, E81) { return { undo: n >= E81.streakUndoAt ? 1 : 0, token: n === E81.streakTokenAt ? 1 : 0, hint: n >= E81.streakHintAt ? 1 : 0 }; }
   function flameLevel(n) { return n >= 6 ? 3 : n >= 4 ? 2 : n >= 2 ? 1 : 0; }
-  SP.v81 = { starTotal: starTotal, chestAccrue: chestAccrue, chestReward: chestReward, chestOpen: chestOpen, chestProgress: chestProgress, albumDebuts: albumDebuts, albumIds: albumIds, albumSync: albumSync,
+  // v8.1.3 one-time upgrade settlement (save.m81 flag). An existing player who turns on v8.1 gets ONE combined reward:
+  //  - star chests: due = floor(stars / chestEvery) - opened (pending included); opens min(due, chestMaxUpgrade=5) now, the rest of the
+  //    already-earned stars count as settled (opened = earned) -> the next chest comes at the next multiple of chestEvery.
+  //  - album: every card whose debut stage is cleared is unlocked (state only, no per-card popups); milestone coins (albumEvery) are paid once.
+  //  - boss bonus: not paid retroactively; cleared boss stages are marked paid (v8paid.bossN) so it never pays later either.
+  // Never lowers stars / coins / progress / inventory. Returns null when already done.
+  function upgrade81(save, debuts, E81, EC) { if (save.m81) return null;
+    var ch = save.chests, earned = Math.floor(starTotal(save) / E81.chestEvery), due = Math.max(0, earned - ch.opened), n = Math.min(due, E81.chestMaxUpgrade || 5);
+    ch.pending = n; var got = chestOpen(save, E81, EC, n); ch.pending = 0; ch.opened = Math.max(ch.opened, earned);
+    var c0 = Object.keys(save.album).filter(function (k) { return k[0] !== '_'; }).length, al = albumSync(save, debuts, E81, EC);
+    save.v8paid = save.v8paid || {}; (E81.bossStages || []).forEach(function (b) { if ((save.stars[b] || 0) > 0) save.v8paid['boss' + b] = 1; });
+    save.m81 = 1; var r = { chests: got, skipped: due - got.length, cards: al.got.length, cardsBefore: c0, albumCoins: al.coins, stars: starTotal(save) };
+    return got.length || al.got.length || al.coins ? r : null; }
+  SP.v81 = { upgrade81: upgrade81, starTotal: starTotal, chestAccrue: chestAccrue, chestReward: chestReward, chestOpen: chestOpen, chestProgress: chestProgress, albumDebuts: albumDebuts, albumIds: albumIds, albumSync: albumSync,
     streakWin: streakWin, streakReset: streakReset, streakBonus: streakBonus, flameLevel: flameLevel };
-  SP.v8 = { migrateV8: migrateV8, dayKey: dayKey, freePerchLeft: freePerchLeft, useFreePerch: useFreePerch, spend: spend, addCoins: addCoins, comboCoins: comboCoins };
+  // v8.1.2: carry over day keys stored in older formats (unpadded / ISO-UTC) -> local 'YYYY-MM-DD'. Only rewrites the key strings:
+  // streak / best / left / stars are never lowered; two daily-star keys that collapse to one day keep the higher value.
+  function normDays(s) { var N = SP.day.norm, ch = false, set = function (o, k) { if (o && o[k] != null) { var v = N(o[k]); if (v !== o[k]) { o[k] = v; ch = true; } } };
+    set(s.daily, 'last'); set(s.seen, 'daily'); set(s.freePerch, 'date');
+    var ds = s.daily && s.daily.stars; if (ds && typeof ds === 'object') Object.keys(ds).forEach(function (k) { var v = N(k); if (v !== k) { ds[v] = Math.max(ds[v] || 0, ds[k] || 0); delete ds[k]; ch = true; } });
+    return ch; }
+  SP.v8 = { normDays: normDays, migrateV8: migrateV8, dayKey: dayKey, freePerchLeft: freePerchLeft, useFreePerch: useFreePerch, spend: spend, addCoins: addCoins, comboCoins: comboCoins };
 })();
 if (typeof module !== 'undefined') { module.exports = SP.v8; module.exports.v81 = SP.v81; }
