@@ -51,6 +51,30 @@ SP.CONFIG = {
     coinBtn: 'assets-v8-icon-coin-btn.svg?v=0c045867', adBadge: 'assets-v8-badge-ad.svg?v=9965e9c7', token: 'assets-v8-token-perch.svg?v=2bbac79c', stuckArt: 'assets-v8-sheet-stuck.svg?v=37a59aa1', chipHidden: 'assets-v8-chip-hidden-icon.svg?v=d94d413e',
     sfx: { 'coin-spend': 'assets-v8-sfx-coin-spend.mp3', 'combo-reward': 'assets-v8-sfx-combo-reward.mp3', 'cage-tick': 'assets-v8-sfx-cage-tick.mp3', 'cage-open': 'assets-v8-sfx-cage-open.mp3', 'reveal-pop': 'assets-v8-sfx-reveal-pop.mp3', stuck: 'assets-v8-sfx-stuck.mp3' },
     debut: [22, 31, 61, 101, 121], stuckToastAfter: 3 },
+  // v8.1 (GDD v8 §4 + planner decisions 2026-10-26). Only used when features.v81 is on.
+  economy81: { chestEvery: 20, chestCycle: [{ coins: 30 }, { hint: 2 }, { coins: 50 }, { token: 1 }, { coins: 100 }], chestMaxAtOnce: 5,
+    albumEvery: 6, albumReward: 50, bossBonus: 50, bossStages: [100, 200], streakUndoAt: 2, streakTokenAt: 4, streakHintAt: 6, hintMax: 9 },
+  v81: { egg: 'assets-v8-egg-{color}.svg?v=580eb50d', sleepy: 'assets-v8-bird-{key}-sleepy.svg?v=580eb50d', sleepySide: 'assets-v8-side-bird-{key}-sleepy-side-{n}.svg?v=580eb50d', alarmLg: 'assets-v8-badge-lg-badge-alarm.svg?v=46004089',
+    eggBadgeLg: 'assets-v8-badge-lg-badge-egg-{n}.svg?v=580eb50d', chestClosed: 'assets-v8-chest-closed.svg?v=fb531d60', chestOpen: 'assets-v8-chest-open.svg?v=12bd8948', bossNode: 'assets-v8-map-node-boss.svg?v=721267cb',
+    flame: 'assets-v8-streak-flame-{n}.svg?v=580eb50d', hatchMs: 450, wakeMs: 400, magpieName: '까미',
+    sfx: { 'egg-crack': 'assets-v8-sfx-egg-crack.mp3', hatch: 'assets-v8-sfx-hatch.mp3', 'alarm-ring': 'assets-v8-sfx-alarm-ring.mp3', wake: 'assets-v8-sfx-wake.mp3',
+      'chest-open': 'assets-v8-sfx-chest-open.mp3', 'boss-clear': 'assets-v8-sfx-boss-clear.mp3', 'streak-up': 'assets-v8-sfx-streak-up.mp3' },
+    debut: [81, 100, 141, 161, 200] },
   lastStage: 200 // playable stages in js-stages.js (31+ from tools/gen-stages.js, STAGES.md v1.1)
 };
+// v8.1 flag switch for QA / planner review (all builds): index.html?v81=1 turns v8.1 on and remembers it on this device
+// (localStorage 'settings.ff.v81'), ?v81=0 turns it off again. Shipping default stays features.v81 = false.
+(function () { var C = SP.CONFIG || SP; var F = C.features; if (!F || C.v81Toggle !== true) return; try { // v8.0.1 hotfix: switch parked (v81Toggle unset) until v8.1 is complete
+  var q = typeof location !== 'undefined' && /[?&]v81=([01])/.exec(location.search), ls = typeof localStorage !== 'undefined' ? localStorage : null;
+  if (q && ls) { if (q[1] === '1') ls.setItem('settings.ff.v81', '1'); else ls.removeItem('settings.ff.v81'); }
+  if (ls && ls.getItem('settings.ff.v81') === '1') F.v81 = true; else if (q) F.v81 = q[1] === '1';
+} catch (e) {}
+  if (F.v81 && C.v8 && C.v81) for (var k in C.v81.sfx) C.v8.sfx[k] = C.v81.sfx[k]; })();
+//@qa-start (v8.0.1: web/flat only — tools/build-release.js strips this block from the toss build)
+// Hidden QA practice mode for planner / QA: index.html?qa=bsp8&stage=N opens stage N directly. The save is read-only in this mode:
+// every localStorage write is dropped for the whole page life (stars, coins, progress, free counts, red dot, v8paid … untouched).
+(function () { if (typeof location === 'undefined' || typeof window === 'undefined' || window.SP_BUILD === 'toss') return;
+  var m = /[?&]qa=bsp8(?:&|$)/.test(location.search) && /[?&]stage=(\d+)/.exec(location.search); if (!m) return;
+  SP.QA = { stage: +m[1] }; var noop = function () {}; try { Storage.prototype.setItem = noop; Storage.prototype.removeItem = noop; Storage.prototype.clear = noop; } catch (e) {} })();
+//@qa-end
 if (typeof module !== 'undefined') module.exports = SP;

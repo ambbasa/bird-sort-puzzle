@@ -13,6 +13,12 @@
 //    leave, nothing lands on a caged top, a run stops at the cage edge, a caged tube is never complete. Every tube newly completed
 //    by a player move counts the open-counter of every cage down by 1; at 0 the cage disappears (birds become normal). A tube that
 //    becomes complete by a cage opening does not count (no chain). Solved = no cage left. State: s.cage[i] = null | {f, t, n}.
+//  - v8.1 M3 egg: stage.eggs = [{tube, at, n}] (slot holds the egg's real colour). An egg can't leave, a run stops at it, a bird
+//    may land on an egg top only if it is the egg's colour, an egg tube is never complete. Every completion by a player move counts
+//    eggs down like cages; at 0 the egg hatches into a normal bird (a completion made by hatching does not count: no chain).
+//  - v8.1 M4 sleep: stage.sleep = [[tube, at], ...], stage.alarm = colour (alarmAt = [tube, at] is the badge bird for the UI).
+//    A sleeping bird can't leave and stops a run; birds may land on it. As soon as any tube of the alarm colour is complete,
+//    every sleeper wakes. State: s.egg = [{i,j,n}], s.slp = [[i,j]], s.alarm, s.al = [i,j] (badge position, not part of key()).
 var SP = (typeof window !== 'undefined') ? (window.SP = window.SP || {}) : (global.SP = global.SP || {});
 (function () {
   var FULL = 4;
@@ -22,18 +28,27 @@ var SP = (typeof window !== 'undefined') ? (window.SP = window.SP || {}) : (glob
     var lockOf = new Array(n).fill(null); (stage.locks || []).forEach(function (l) { lockOf[l.tube] = l.key; });
     var st = { t: stage.tubes.map(function (x) { return x.slice(); }), cap: caps.slice(), lock: lockOf };
     if (stage.cages && stage.cages.length) { st.cage = new Array(n).fill(null); stage.cages.forEach(function (c) { st.cage[c.tube] = { f: c.from, t: c.to, n: c.n }; }); }
+    if (stage.eggs && stage.eggs.length) st.egg = stage.eggs.map(function (e) { return { i: e.tube, j: e.at, n: e.n }; });
+    if (stage.sleep && stage.sleep.length) { st.slp = stage.sleep.map(function (z) { return [z[0], z[1]]; }); st.alarm = stage.alarm; st.al = stage.alarmAt ? stage.alarmAt.slice() : null; }
     return st;
   }
-  function clone(s) { var c = { t: s.t.map(function (x) { return x.slice(); }), cap: s.cap, lock: s.lock.slice() }; if (s.cage) c.cage = s.cage.map(function (k) { return k ? { f: k.f, t: k.t, n: k.n } : null; }); return c; }
+  function clone(s) { var c = { t: s.t.map(function (x) { return x.slice(); }), cap: s.cap, lock: s.lock.slice() }; if (s.cage) c.cage = s.cage.map(function (k) { return k ? { f: k.f, t: k.t, n: k.n } : null; });
+    if (s.egg) c.egg = s.egg.map(function (e) { return { i: e.i, j: e.j, n: e.n }; }); if (s.slp) { c.slp = s.slp.map(function (z) { return z.slice(); }); c.alarm = s.alarm; } if (s.al) c.al = s.al.slice(); return c; }
+  function eggAt(s, i, j) { if (s.egg) for (var q = 0; q < s.egg.length; q++) if (s.egg[q].i === i && s.egg[q].j === j) return s.egg[q]; return null; }
+  function slpAt(s, i, j) { if (s.slp) for (var q = 0; q < s.slp.length; q++) if (s.slp[q][0] === i && s.slp[q][1] === j) return true; return false; }
+  function low(s, i) { var lo = s.cage && s.cage[i] ? s.cage[i].t + 1 : 0, q; // lowest movable slot of tube i (everything below is fixed)
+    if (s.egg) for (q = 0; q < s.egg.length; q++) if (s.egg[q].i === i && s.egg[q].j + 1 > lo) lo = s.egg[q].j + 1;
+    if (s.slp) for (q = 0; q < s.slp.length; q++) if (s.slp[q][0] === i && s.slp[q][1] + 1 > lo) lo = s.slp[q][1] + 1; return lo; }
+  function fixedTop(s, i) { return (!!s.cage || !!s.egg || !!s.slp) && s.t[i].length > 0 && low(s, i) >= s.t[i].length; } // top bird is caged/egg/asleep
   function cagedTop(s, i) { var k = s.cage && s.cage[i]; return !!k && k.t >= s.t[i].length - 1; } // the tube's top bird is inside its cage
-  function isDone(s, i) { if (s.cage && s.cage[i]) return false; var t = s.t[i]; if (s.cap[i] < FULL || t.length !== FULL || isKey(t[0])) return false; for (var k = 1; k < FULL; k++) if (t[k] !== t[0]) return false; return true; }
+  function isDone(s, i) { if (s.cage && s.cage[i]) return false; if (s.egg) for (var q = 0; q < s.egg.length; q++) if (s.egg[q].i === i) return false; var t = s.t[i]; if (s.cap[i] < FULL || t.length !== FULL || isKey(t[0])) return false; for (var k = 1; k < FULL; k++) if (t[k] !== t[0]) return false; return true; }
   function isSolved(s) {
     for (var i = 0; i < s.t.length; i++) { if (s.lock[i] !== null || (s.cage && s.cage[i])) return false; if (s.t[i].length && !isDone(s, i)) return false; }
     return true;
   }
   function canMove(s, a, b) {
     if (a === b || s.lock[a] !== null) return false;
-    var A = s.t[a], B = s.t[b]; if (!A.length || isDone(s, a) || cagedTop(s, a)) return false;
+    var A = s.t[a], B = s.t[b]; if (!A.length || isDone(s, a) || fixedTop(s, a)) return false;
     if (B.length && cagedTop(s, b)) return false; // v8 M1: nothing lands on a caged top
     var ball = A[A.length - 1];
     if (s.lock[b] !== null) return isKey(ball) && s.lock[b] === ball; // matching key onto its lock tube
@@ -45,24 +60,29 @@ var SP = (typeof window !== 'undefined') ? (window.SP = window.SP || {}) : (glob
   // destination (genre standard); it still counts as ONE move. Keys always move alone.
   function moveCount(s, a, b) {
     var A = s.t[a], ball = A[A.length - 1]; if (isKey(ball)) return 1;
-    var run = 0, lo = s.cage && s.cage[a] ? s.cage[a].t + 1 : 0; for (var i = A.length - 1; i >= lo && A[i] === ball; i--) run++; // v8 M1: run stops at the cage
+    var run = 0, lo = low(s, a); for (var i = A.length - 1; i >= lo && A[i] === ball; i--) run++; // v8 M1: run stops at the cage
     return Math.max(1, Math.min(run, s.cap[b] - s.t[b].length));
   }
   function apply(s, a, b, cnt) { // returns new state (does not check legality); cnt: optional cap on the run size (game: '?' birds)
     var k = Math.min(cnt || 99, moveCount(s, a, b)), n = clone(s), ball = n.t[a].pop();
     if (isKey(ball) && n.lock[b] === ball) { n.lock[b] = null; return n; } // key + lock disappear together
+    var LA = s.t[a].length, LB = s.t[b].length;
     n.t[b].push(ball); for (var i = 1; i < k; i++) n.t[b].push(n.t[a].pop());
-    if (n.cage && isDone(n, b)) tick(n, 1); // v8 M1: a completion by this move counts every cage down
+    if (n.al && n.al[0] === a && n.al[1] >= LA - k) n.al = [b, LB + (LA - 1 - n.al[1])]; // alarm badge rides with its bird
+    if ((n.cage || n.egg) && isDone(n, b)) { if (n.cage) tick(n, 1); if (n.egg) hatch(n, 1); } // v8 M1/M3: a completion by this move counts cages and eggs down
+    if (n.slp) wake(n);
     return n;
   }
   function tick(n, c) { var open = []; for (var i = 0; i < n.cage.length; i++) { var k = n.cage[i]; if (!k) continue; k.n -= c; if (k.n <= 0) { n.cage[i] = null; open.push(i); } }
     if (!n.cage.some(Boolean)) delete n.cage; return open; }
+  function hatch(n, c) { var out = []; n.egg = n.egg.filter(function (e) { e.n -= c; if (e.n <= 0) { out.push(e); return false; } return true; }); if (!n.egg.length) delete n.egg; return out; }
+  function wake(n) { for (var i = 0; i < n.t.length; i++) if (n.t[i][0] === n.alarm && isDone(n, i)) { delete n.slp; delete n.alarm; return true; } return false; }
   function completions(s, n) { var c = 0; for (var i = 0; i < n.t.length; i++) if (isDone(n, i) && !isDone(s, i)) c++; return c; } // QA helper
   function moves(s, prune) {
     var out = [], n = s.t.length;
     for (var a = 0; a < n; a++) {
-      var A = s.t[a]; if (!A.length || s.lock[a] !== null || isDone(s, a) || cagedTop(s, a)) continue;
-      var mono = prune && !(s.cage && s.cage[a]) && !isKey(A[0]) && A.every(function (c) { return c === A[0]; });
+      var A = s.t[a]; if (!A.length || s.lock[a] !== null || isDone(s, a) || fixedTop(s, a)) continue;
+      var mono = prune && !(s.cage && s.cage[a]) && !(low(s, a) > 0) && !isKey(A[0]) && A.every(function (c) { return c === A[0]; });
       for (var b = 0; b < n; b++) {
         if (!canMove(s, a, b)) continue;
         if (mono && !s.t[b].length && s.cap[b] === s.cap[a] && !isKey(A[A.length - 1])) continue; // provably useless
@@ -76,6 +96,8 @@ var SP = (typeof window !== 'undefined') ? (window.SP = window.SP || {}) : (glob
     var groups = {}, fixed = [];
     for (var i = 0; i < s.t.length; i++) {
       var str = s.t[i].join(','), cg = s.cage && s.cage[i]; if (cg) str += '~' + cg.f + '-' + cg.t + 'n' + cg.n; // v8: cage is part of the state key (G10)
+      if (s.egg) for (var q = 0; q < s.egg.length; q++) if (s.egg[q].i === i) str += '^' + s.egg[q].j + 'n' + s.egg[q].n; // v8.1: eggs / sleepers too
+      if (s.slp) for (q = 0; q < s.slp.length; q++) if (s.slp[q][0] === i) str += 'z' + s.slp[q][1];
       if (s.lock[i] !== null) fixed.push(i + ':' + s.lock[i] + ':' + str);
       else (groups[s.cap[i]] = groups[s.cap[i]] || []).push(str);
     }
@@ -117,6 +139,14 @@ var SP = (typeof window !== 'undefined') ? (window.SP = window.SP || {}) : (glob
     return res;
   }
   // DFS (not optimal): finds *a* solution quickly; used by in-game hints on big boards and by the dead-end score.
+  // v8.0.1: resumable DFS for the in-game dead-end check. job.step(n) explores up to n more states and returns 'solvable',
+  // 'unsolvable' (whole reachable space exhausted = proof) or 'running'; the caller slices it over idle time (never blocks a frame).
+  function dfsJob(stage, cap) { cap = cap || 3e6; var s0 = stage.t ? stage : init(stage), seen = new Set([key(s0)]), stack = [{ s: s0, ms: null, i: 0 }], res = isSolved(s0) ? 'solvable' : 'running';
+    return { explored: function () { return seen.size; }, step: function (n) { if (res !== 'running') return res; var end = seen.size + n;
+      while (stack.length) { var top = stack[stack.length - 1]; if (!top.ms) top.ms = moves(top.s, true).sort(function (x, y) { return score(top.s, y) - score(top.s, x); });
+        if (top.i >= top.ms.length) { stack.pop(); continue; } var m = top.ms[top.i++], nx = apply(top.s, m[0], m[1]), k = key(nx); if (seen.has(k)) continue; seen.add(k);
+        if (isSolved(nx)) return (res = 'solvable'); stack.push({ s: nx, ms: null, i: 0 }); if (seen.size >= cap) return (res = 'gaveup'); if (seen.size >= end) return 'running'; }
+      return (res = 'unsolvable'); } }; }
   function dfs(stage, limit) {
     limit = limit || 2e5; var s0 = stage.t ? stage : init(stage), seen = new Set([key(s0)]), stack = [{ s: s0, ms: null, i: 0 }], path = [];
     if (isSolved(s0)) return { solvable: true, path: [], explored: 1 };
@@ -132,7 +162,7 @@ var SP = (typeof window !== 'undefined') ? (window.SP = window.SP || {}) : (glob
     return { solvable: false, aborted: false, explored: seen.size };
   }
   function score(s, m) { var A = s.t[m[0]], B = s.t[m[1]], ball = A[A.length - 1];
-    if (s.cage && s.cage.some(Boolean)) { var nn = apply(s, m[0], m[1]); if (isDone(nn, m[1])) return 20; }
+    if ((s.cage && s.cage.some(Boolean)) || s.egg || s.slp) { var nn = apply(s, m[0], m[1]); if (isDone(nn, m[1])) return 20; }
     if (s.lock[m[1]] !== null) return 9; var v = B.length ? 4 + B.length : 0; var run = 0; for (var i = A.length - 1; i >= 0 && A[i] === ball; i--) run++; if (run === A.length && !B.length) v -= 5; return v; }
   // Dead-end score (STAGES.md v1.1 primary difficulty metric, scales to 12 colors): N seeded random "casual player" playouts of
   // length = min from the start; a playout is a trap if its end state can no longer reach solved (DFS proof, budget per check).
@@ -167,7 +197,7 @@ var SP = (typeof window !== 'undefined') ? (window.SP = window.SP || {}) : (glob
   }
   function firstMoveOptions(stage) { return moves(init(stage), false).length; }
   function completeAtStart(stage) { var s = init(stage); for (var i = 0; i < s.t.length; i++) if (isDone(s, i)) return true; return false; }
-  function ser(s) { return JSON.stringify([s.t, s.cap, s.lock, s.cage || null]); } // v8 G3: state serialization for undo round-trip tests
-  SP.engine = { clone: clone, ser: ser, cagedTop: cagedTop, completions: completions, init: init, canMove: canMove, apply: apply, moveCount: moveCount, moves: moves, isSolved: isSolved, isDone: isDone, key: key, solve: solve, replay: replay, firstMoveOptions: firstMoveOptions, completeAtStart: completeAtStart, isKey: isKey, dfs: dfs, deadEndScore: deadEndScore };
+  function ser(s) { var a = [s.t, s.cap, s.lock, s.cage || null]; if (s.egg || s.slp || s.al) a.push(s.egg || null, s.slp || null, s.alarm === undefined ? null : s.alarm, s.al || null); return JSON.stringify(a); } // v8 G3: state serialization for undo round-trip tests
+  SP.engine = { dfsJob: dfsJob, clone: clone, fixedTop: fixedTop, low: low, eggAt: eggAt, slpAt: slpAt, ser: ser, cagedTop: cagedTop, completions: completions, init: init, canMove: canMove, apply: apply, moveCount: moveCount, moves: moves, isSolved: isSolved, isDone: isDone, key: key, solve: solve, replay: replay, firstMoveOptions: firstMoveOptions, completeAtStart: completeAtStart, isKey: isKey, dfs: dfs, deadEndScore: deadEndScore };
 })();
 if (typeof module !== 'undefined') module.exports = SP.engine;

@@ -246,3 +246,14 @@ img.sp-img-wait{visibility:hidden} /* v7.3: failed image waits for its retry, tr
 .v8ov .card.v8-sheet{max-height:calc(100vh - 24px);overflow-y:auto}
 .v8-sheet-art{max-height:min(200px,26vh);width:auto;object-fit:contain}
 body:has(.v8ov.show) #v8tip,body:has(#menu.show) #v8tip{display:none} /* tip bubble never covers a sheet/map */
+/* v8.1 chained lock (DESIGN 20.10): chain between the two lock icons; width/height = centre distance (set by game.js), links repeat at the designer size */
+#board{position:relative}
+.v8-chain{position:absolute;height:16px;background:url(assets-v8-chain-link.svg?v=1d4407fd) 0 0/60px 16px repeat-x;transform-origin:0 50%;pointer-events:none;z-index:3}
+.v8-chain.v{width:16px;height:auto;background:url(assets-v8-chain-link-v.svg?v=3b93dade) 0 0/16px 24px repeat-y;transform-origin:50% 0}
+.ballwrap.v8-egg img.bird{filter:none}
+.v8-badge-egg.tick{animation:v8-tick .25s ease-out}
+@media (prefers-reduced-motion:reduce){.v8-badge-egg.tick{animation:none}}
+/* v8.0.1 hotfix 1: v8 sheets draw the designer's cream sheet (v8.css .v8-sheet border-image fill) on a transparent card (line 235),
+   but '.ov .card' / 'body[class*=theme-] .ov .card{color:var(--text)}' (light text for the dark cards) still applied -> white on cream.
+   Dark ink #1A1A2E on cream #FFF3D6-ish = ~15:1. */
+body .v8ov .card.v8-sheet,body[class*="theme-"] .v8ov .card.v8-sheet,body .v8ov .card.v8-sheet .title{color:#1A1A2E}
