@@ -228,3 +228,4 @@ body #toast.v7-toast.v72-pill{background:rgba(255,253,246,.82);border-width:2px;
 #toast.v7-toast--perch.v72-pill::before{width:20px;height:20px}
 /* v7.2 PM-3: short screens (<640px tall, e.g. PC 1024x594) shrink the clear art so the whole card fits; else scroll inside the card */
 @media (max-height:639px){body #overlay.v5 .card{max-height:calc(100dvh - 16px);overflow-y:auto}body #overlay.v5 .clear-art{width:min(56vw,200px);margin-top:0}body #overlay.v5 .bigstars{transform:scale(.85);margin:-4px 0}}
+img.sp-img-wait{visibility:hidden} /* v7.3: failed image waits for its retry, transparent instead of the broken-image icon (layout unchanged) */

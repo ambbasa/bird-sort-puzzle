@@ -22,16 +22,19 @@
     if (mode === 'dummy') { ready[kind] = !DUMMY_FAIL; return changed(); }
     if (mode === 'none') { ready[kind] = kind === 'rewarded'; return changed(); }
     var id = IDS[kind]; if (mode !== 'toss' || placeholder(id)) return; // no real ID yet -> stays unavailable (buttons disabled)
-    var off = T.loadFullScreenAd({
+    if (SP.net && !SP.net.online()) return window.addEventListener('online', function on() { window.removeEventListener('online', on); load(kind); }); // v7.3: reload when back online
+    var off; try { off = T.loadFullScreenAd({
       options: { adGroupId: id },
       onEvent: function (e) { if (e.type === 'loaded') { ready[kind] = true; tries[kind] = 0; changed(); try { off && off(); } catch (x) {} } },
       onError: function (err) { console.warn('[ads] load ' + kind + ' failed', err); try { off && off(); } catch (x) {} ready[kind] = false; changed(); retry(kind); }
-    });
+    }); } catch (e) { console.warn('[ads] load threw', e); ready[kind] = false; changed(); retry(kind); }
   }
   function retry(kind) { var d = RETRY[tries[kind]++]; if (d) setTimeout(function () { load(kind); }, d); } // bounded retries (checklist: control retry count/interval)
   // Full-screen show. cb(rewardGranted:boolean) for rewarded, cb() for interstitial.
   function show(kind, label, cb) {
     if (busy || !ready[kind]) return cb && cb(false);
+    // v7.3: real-ad builds (toss/dummy) offline -> no ad, NO reward, notice only. Web 'none' grants directly (planner decision, no network involved).
+    if (mode !== 'none' && SP.net && !SP.net.online()) { if (SP.net.toast) SP.net.toast('연결이 불안정해요'); return cb && cb(false); }
     busy = true; ready[kind] = false; audio(false); changed();
     var earned = false, ended = false;
     function end() {
@@ -41,7 +44,7 @@
     }
     if (mode === 'none') { earned = true; return end(); }
     if (mode === 'dummy') return dummy(kind, label, function (ok) { earned = ok; end(); });
-    var off = T.showFullScreenAd({
+    var off; try { off = T.showFullScreenAd({
       options: { adGroupId: IDS[kind] },
       onEvent: function (e) {
         if (e.type === 'impression') { st.impressions++; persist(); }
@@ -49,7 +52,7 @@
         else if (e.type === 'dismissed' || e.type === 'failedToShow') { try { off && off(); } catch (x) {} end(); }
       },
       onError: function (err) { console.warn('[ads] show ' + kind, err); try { off && off(); } catch (x) {} end(); }
-    });
+    }); } catch (e) { console.warn('[ads] show threw', e); end(); }
   }
   function dummy(kind, label, done) { // visible placeholder; closing a rewarded ad before the countdown ends = no reward
     var seconds = kind === 'rewarded' ? SP.ads.rewardedSeconds : SP.ads.interstitialSeconds;
@@ -75,10 +78,10 @@
     var id = IDS.banner, TA = T && T.TossAds;
     try { if (!TA || placeholder(id) || !TA.initialize.isSupported() || !TA.attachBanner.isSupported()) return hide(); } catch (e) { return hide(); }
     b.classList.remove('off'); b.classList.add('v5-adslot'); b.textContent = ''; // DESIGN 17.3 (A04): framed slot only when a real banner ID exists
-    TA.initialize({ callbacks: {
+    try { TA.initialize({ callbacks: {
       onInitialized: function () { TA.attachBanner(id, b, { theme: 'dark', variant: 'expanded', callbacks: { onAdFailedToRender: function (p) { console.warn('[ads] banner', p && p.error); hide(); }, onNoFill: hide } }); },
       onInitializationFailed: function (e) { console.warn('[ads] banner init', e); hide(); }
-    } });
+    } }); } catch (e) { hide(); } // v7.3: never throw offline
   }
   SP.ads = {
     rewardedSeconds: 5, interstitialSeconds: 3, mode: function () { return mode; },

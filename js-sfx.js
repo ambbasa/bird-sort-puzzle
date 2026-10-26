@@ -9,7 +9,7 @@ var SP = window.SP = window.SP || {};
     if (!AC) return null;
     if (!ctx) { try { ctx = new AC(); master = ctx.createGain(); master.gain.value = 0.5; master.connect(ctx.destination); } catch (e) { ctx = null; return null; } }
     if (held()) return null; // suspended for background/ad: play nothing
-    if (ctx.state === 'suspended') ctx.resume();
+    if (ctx.state === 'suspended') try { ctx.resume().catch(function () {}); } catch (e) {}
     return ctx;
   }
   function semi(f, n) { return f * Math.pow(2, n / 12); }
@@ -41,6 +41,7 @@ var SP = window.SP = window.SP || {};
     click: function () { tone('square', [1800, 900], 0, 0.05, 0.12); tone('sine', 2600, 0.03, 0.12, 0.1); }, // DESIGN 13.3 key-consume metal '찰칵'
     undo: function () { noise(0, 0.16, 0.25, 3000, 500); },                                                       // rewind "슉"
     clear: function () { [0, 4, 7, 12, 7, 12, 16].forEach(function (s, i) { var t = [0, .12, .24, .36, .6, .72, .84][i]; tone('sine', semi(C5, s), t, i > 3 ? 0.6 : 0.3, 0.2); tone('triangle', semi(C5, s - 12), t, 0.25, 0.08); }); }, // marimba-ish fanfare ~1.5s
+    hop: function (i) { var f = semi(C5 * 1.5, [0, 2, 4, 7, 9, 12, 14][(i || 0) % 7] + 12 * Math.floor((i || 0) / 7)); tone('sine', [f * 0.8, f * 1.25], 0, 0.11, 0.12); tone('triangle', f * 2, 0.02, 0.06, 0.03); }, // clear-sequence perch hop "뿅", pentatonic rising per perch
     star: function (i) { tone('sine', semi(C5 * 2, [0, 4, 7][i] || 0), 0, 0.4, 0.2); tone('sine', semi(C5 * 4, [0, 4, 7][i] || 0), 0, 0.25, 0.05); } // "띵" per star
   };
   SP.sfx = {

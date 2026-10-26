@@ -19,7 +19,7 @@ var SP = window.SP = window.SP || {};
   };
   function flush() {
     var ks = Object.keys(dirty); dirty = {};
-    ks.forEach(function (k) { T.Storage.setItem(prefix + k, cache[k]).catch(function () { /* localStorage copy remains as fallback */ }); });
+    ks.forEach(function (k) { try { Promise.resolve(T.Storage.setItem(prefix + k, cache[k])).catch(function () { /* localStorage copy remains as fallback */ }); } catch (e) { /* v7.3: offline bridge error never stops the game */ } });
   }
   function finish() {
     isReady = true; var q = queue; queue = [];
