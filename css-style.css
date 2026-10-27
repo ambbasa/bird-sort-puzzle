@@ -267,6 +267,7 @@ body .v8ov .card.v8-sheet,body[class*="theme-"] .v8ov .card.v8-sheet,body .v8ov 
 .v8-album-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;justify-items:center;width:100%;box-sizing:border-box}
 .v8-album-grid .v8-album-card{width:100%;max-width:96px;height:auto;aspect-ratio:3/4;border:0;padding:0;cursor:pointer;background-color:transparent}
 .v8-album-grid .v8-album-card>b{font-size:12px}
+.v8-album-grid.v82 .v8-album-card.locked>b{background:#CDD1DA;border-radius:8.2%/26.7%} /* v8.2c: cover the art's '???' (v82 only) */
 .v8-album-face{display:flex;justify-content:center;gap:6px;margin:8px 0}.v8-album-face img{width:52px;height:52px}.v8-album-face[hidden]{display:none}
 .v8-boss-intro{position:fixed;left:50%;top:22%;transform:translateX(-50%);z-index:300;pointer-events:none;max-width:92vw;animation:v8bossIn .5s ease-out}
 .v8-boss-intro[hidden]{display:none}
@@ -295,3 +296,27 @@ header.hud:has(> .v8-flame){position:relative}
 #menu #v8chestrow{flex:none}
 #menu #mapwrap{min-height:0}
 @media (max-height:700px){.v8-chestrow{margin-top:4px;padding:2px 8px}.v8-chestrow img{width:28px;height:28px}.v8-chestrow .v8-star-bar{height:16px}}
+/* ---- v8.2 (HIDDEN flag): 까미 button, swap mode, ice count, guide (H1), feather event, crown. Art is the designer's (assets-v8, v8.css). ---- */
+.bottom.v82{gap:10px}.bottom.v82 .btn{width:76px}
+.v82-magpie{position:relative}.v82-magpie img{width:24px;height:24px;display:block}
+.v82-magpie.on{outline:3px solid #2B7F95;outline-offset:2px}
+#board.v82-swapping .tube{cursor:crosshair}#board.v82-swapping .tube:not(.complete):not(.locked) .ballwrap:last-child{outline:2px dashed rgba(43,127,149,.9);outline-offset:1px;border-radius:50%}
+.v82-swapped{animation:v82-swap .32s ease-out}@keyframes v82-swap{40%{transform:translateY(-14%) scale(1.06)}}
+.v82-ice-n{position:absolute;right:4px;top:4px;min-width:18px;height:18px;border-radius:9px;background:#fff;color:#1A1A2E;font:800 12px/18px Arial,sans-serif;text-align:center;box-shadow:0 0 0 2px #1A1A2E}
+.v8-ice.v82-tick .v82-ice-n{animation:v82-pulse .4s ease-out}@keyframes v82-pulse{50%{transform:scale(1.3)}}
+.v8-bomb.v82-gone{opacity:.35}
+.map-node .v82-crown{position:absolute;left:-12px;top:-14px;width:22px;height:22px;pointer-events:none}
+.v82-guide{max-height:86vh;display:flex;flex-direction:column}.v82-guide-list{overflow:auto;display:flex;flex-direction:column;gap:8px;margin:8px 0;text-align:left}
+.v82-guide-card{display:flex;gap:10px;align-items:flex-start;padding:8px;border-radius:12px;background:rgba(255,255,255,.08)}
+.v82-guide-card.here{box-shadow:0 0 0 2px #FFD54F}.v82-guide-card.locked{opacity:.6}.v82-guide-card.locked .v82-guide-art img{filter:grayscale(1) brightness(.6)}
+.v82-guide-art{flex:none;width:52px;height:52px;display:flex;align-items:center;justify-content:center}
+.v82-guide-card.locked .v82-guide-art{background:#5E6270;border-radius:10px}.v82-guide-card.locked{cursor:pointer} /* grey placeholder before the art decodes (no white flash) */.v82-guide-art img{max-width:52px;max-height:52px}
+.v82-guide-txt b{font-size:15px}.v82-guide-txt p{margin:3px 0;font-size:13px;line-height:1.4}.v82-guide-txt p.how{opacity:.85}.v82-guide-txt small{font-size:11px;opacity:.75}
+.v82-new{font-style:normal;font-size:11px;color:#fff;background:#FF5252;border-radius:8px;padding:1px 6px;margin-left:4px}.v82-here{font-style:normal;font-size:11px;color:#1A1A2E;background:#FFD54F;border-radius:8px;padding:1px 6px;margin-left:4px}
+.v82-guide-btn{position:relative}.v82-guide-btn.dot::after{content:"";position:absolute;top:2px;right:2px;width:10px;height:10px;border-radius:50%;background:#FF5252}
+.v82-chal{margin:0 0 0 6px}.v82-chal.on{background:#FFD54F;color:#1A1A2E}
+.v82-loop-bomb,.v82-loop-magpie,.v82-loop-egg{animation:v82-bob 2.4s ease-in-out infinite}.v82-loop-ice,.v82-loop-thorn{animation:v82-glint 3s ease-in-out infinite}
+@keyframes v82-bob{50%{transform:translateY(-4px) rotate(-3deg)}}@keyframes v82-glint{50%{filter:brightness(1.25)}}
+@media (prefers-reduced-motion:reduce){.v82-swapped,.v82-loop-bomb,.v82-loop-magpie,.v82-loop-egg,.v82-loop-ice,.v82-loop-thorn,.v8-ice.v82-tick .v82-ice-n{animation:none}}
+html.reduced-motion .v82-swapped,html.reduced-motion [class*="v82-loop-"]{animation:none}
+.v82-feather .v8-chestinfo b{font-size:13px}.v82-feather small{font-size:11px}

@@ -20,7 +20,8 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   //@qa-start
   QAP = !!SP.QA;
   //@qa-end
-  var F81 = F80 && !!C.features.v81, E81 = C.economy81, V81 = C.v81, M81 = SP.v81; // v8.1 (GDD v8 §4): off = exactly the v8.0 game
+  var F81 = F80 && !!C.features.v81, E81 = C.economy81, V81 = C.v81, M81 = SP.v81;
+  var F82 = F81 && !!C.features.v82, FB = F81 && !!C.features.eggBrood, V82 = C.v82, E82 = C.economy82; // v8.2 (HIDDEN): off = exactly the v8.1.4 game // v8.1 (GDD v8 §4): off = exactly the v8.0 game
   if (F80 && save.v !== 8) { var raw0 = SP.store.get(KEY); if (raw0 && !SP.store.get(KEY + '.bak')) SP.store.set(KEY + '.bak', raw0); save = V8.migrateV8(save); } // v8 G4: original kept in sortpuzzle.v1.bak
   if (V8 && V8.normDays) V8.normDays(save); // v8.1.2: legacy day keys -> local date (in memory; saved with the next normal persist)
   // ART-AUDIT A05: a save with current/unlocked > LAST (e.g. 201), NaN, negative or non-numeric froze the boot -> clamp to 1..LAST
@@ -42,7 +43,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   function dailyLabel(k) { var p = k.split('-'); return +p[1] + '월 ' + +p[2] + '일'; }
   function sn() { return S.g.source || S.n; } // star thresholds / bands follow the daily puzzle's source stage
   var HAPTIC = { invalid: 10, complete: 15, combo: [15, 40, 25], clear: [30, 60, 40] }; // DESIGN §5.6: vibration rides on the same events as sfx (works while muted)
-  var rawSfx = SP.sfx || { play: function () {} }, S, fx = {}, sfx = { play: function (n, a) { if (HAPTIC[n]) vibrate(HAPTIC[n]); rawSfx.play(n, a); } };
+  var rawSfx = SP.sfx || { play: function () {} }, S, fx = {}, sfx = { play: function (n, a) { if (HAPTIC[n]) vibrate(HAPTIC[n], n); rawSfx.play(n, a); } };
   SP._haptics = []; // QA: log of vibrate() calls that actually fired
   // DESIGN §6 move: ball flies along a parabola (220–340ms), then drop-bounce. Landing sounds/glow wait for touchdown.
   var pend = null, flights = []; SP._flights = 0;
@@ -117,19 +118,25 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   }
   function whenLanded(cb) { if (!flights.length) { SP._lastLandAt = performance.now(); return cb(); } landWaiters.push(cb); } // clear waits for the last bird to touch down
   // Gimmick state (js-engine.js rules): S.caps (small tubes), S.lock (per tube key id or null), S.mask (per tube: true = '?' ball)
-  function est() { var o = { t: S.tubes, cap: S.caps, lock: S.lock }; if (S.cage) o.cage = S.cage; if (S.egg) o.egg = S.egg; if (S.slp) { o.slp = S.slp; o.alarm = S.alarm; } if (S.al) o.al = S.al; return o; }
-  function setX(ns) { S.egg = ns.egg || null; S.slp = ns.slp || null; S.alarm = ns.slp ? ns.alarm : null; S.al = ns.al || null; } // v8.1 M3/M4 extras (eggs, sleepers, alarm badge)
-  function xsnap() { var c = E.clone(est()); return { egg: c.egg || null, slp: c.slp || null, alarm: c.slp ? c.alarm : null, al: c.al || null }; } // v8 M1: cage[i] = {f,t,n} | null
+  // v8.2 a11y (planner 14:37): eggs are not birds — listed separately as '알(색, N번 남음)'; sleeping/bomb birds carry their state (v82 only; flag OFF keeps v8.1.4 labels)
+  function ariaBirds82(i, t) { var st = est(), eggs = [], birds = [];
+    t.forEach(function (c, j) { var eg = E.eggAt(st, i, j), nm = S.mask[i][j] ? '숨은 새' : ballSrc(c).alt.split(', ')[0];
+      if (eg) { eggs.push('알(' + (S.mask[i][j] ? '?' : birdName(C.palette[c].key)) + ', ' + eg.n + '번 남음)'); return; }
+      if (E.slpAt && E.slpAt(st, i, j)) nm += '(잠듦)'; if (S.bomb && S.bomb.i === i && S.bomb.j === j) nm += '(폭탄 ' + S.bomb.n + ')'; birds.push(nm); });
+    return ', 새 ' + birds.length + '마리' + (birds.length ? ' (' + birds.join(', ') + ')' : '') + (eggs.length ? ', ' + eggs.join(', ') : ''); }
+  function est() { var o = { t: S.tubes, cap: S.caps, lock: S.lock }; if (S.cage) o.cage = S.cage; if (S.egg) o.egg = S.egg; if (S.slp) { o.slp = S.slp; o.alarm = S.alarm; } if (S.al) o.al = S.al; if (S.brood) o.brood = 1; if (S.th) o.th = S.th; if (S.ice) o.ice = S.ice; if (S.bomb) o.bomb = S.bomb; if (S.boom) o.boom = 1; return o; } // v8.2 fields only exist when the stage has them
+  function setX(ns) { S.egg = ns.egg || null; S.slp = ns.slp || null; S.alarm = ns.slp ? ns.alarm : null; S.al = ns.al || null; S.brood = ns.brood ? 1 : 0; S.th = ns.th && ns.th.length ? ns.th : null; S.ice = ns.ice && ns.ice.length ? ns.ice : null; S.bomb = ns.bomb || null; S.boom = ns.boom ? 1 : 0; } // v8.1 M3/M4 extras (eggs, sleepers, alarm badge)
+  function xsnap() { var c = E.clone(est()); return { egg: c.egg || null, slp: c.slp || null, alarm: c.slp ? c.alarm : null, al: c.al || null, brood: c.brood || 0, th: c.th || null, ice: c.ice || null, bomb: c.bomb || null, boom: c.boom || 0 }; } // v8 M1: cage[i] = {f,t,n} | null
   function done(i) { return E.isDone(est(), i); }
   function snap() { return { tubes: S.tubes.map(function (t) { return t.slice(); }), caps: S.caps.slice(), lock: S.lock.slice(), mask: S.mask.map(function (m) { return m.slice(); }), cage: S.cage ? S.cage.map(function (k) { return k ? { f: k.f, t: k.t, n: k.n } : null; }) : null, x: xsnap() }; } // v8 G3: cage counters in the undo snapshot
-  function stageOf() { return { tubes: S.tubes, caps: S.caps, locks: S.lock.map(function (k, i) { return k ? { tube: i, key: k } : null; }).filter(Boolean), cages: S.cage ? S.cage.map(function (k, i) { return k ? { tube: i, from: k.f, to: k.t, n: k.n } : null; }).filter(Boolean) : null, eggs: S.egg ? S.egg.map(function (e) { return { tube: e.i, at: e.j, n: e.n }; }) : null, sleep: S.slp, alarm: S.alarm, alarmAt: S.al }; }
+  function stageOf() { return { tubes: S.tubes, caps: S.caps, locks: S.lock.map(function (k, i) { return k ? { tube: i, key: k } : null; }).filter(Boolean), cages: S.cage ? S.cage.map(function (k, i) { return k ? { tube: i, from: k.f, to: k.t, n: k.n } : null; }).filter(Boolean) : null, eggs: S.egg ? S.egg.map(function (e) { return { tube: e.i, at: e.j, n: e.n }; }) : null, sleep: S.slp, alarm: S.alarm, alarmAt: S.al, brood: S.brood || undefined, thorn: S.th || undefined, ice: S.ice ? S.ice.map(function (z) { return { tube: z.i, n: z.n }; }) : undefined, bomb: S.bomb ? { tube: S.bomb.i, at: S.bomb.j, n: S.bomb.n } : undefined }; }
   function revealTops() { var r = []; S.mask.forEach(function (m, i) { if (m.length && m[m.length - 1]) { m[m.length - 1] = false; r.push(i); } }); return r; }
   function perches(a) { return a.perches != null ? a.perches : a.addedTube ? 1 : 0; } // v8: number of added perches this attempt (v7 saves: addedTube boolean)
   function load(n) {
     if (F81 && S && !S.won && !S.daily && S.moves > 0 && n !== S.n && !(S.a && S.a.sandbox)) { M81.streakReset(save); } // P4: leaving a stage half-played breaks the streak
     cancelFlights();
     var sb = false;
-    var dk = n === DAILY ? today() : null, g = dk ? DD.build(SP.STAGES, dk, C.palette.length) : SP.STAGES[n];
+    var dk = n === DAILY ? today() : null, g = dk ? DD.build(SP.STAGES, dk, C.palette.length, F82 ? THO() : undefined) : SP.STAGES[n];
     if (dk && (!save.attempt.daily || save.attempt.daily.key !== dk)) save.attempt.daily = { key: dk, undoLeft: C.freeUndos, addedTube: false }; // fresh consumables each day
     var a = dk ? save.attempt.daily : sb ? (S && S.n === n && S.a.sandbox ? S.a : { undoLeft: C.freeUndos, addedTube: false, sandbox: true }) : (save.attempt[n] || (save.attempt[n] = { undoLeft: C.freeUndos, addedTube: false }));
     var tubes = g.tubes.map(function (t) { return t.slice(); });
@@ -139,7 +146,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     var cage = null; if (g.cages && g.cages.length) { cage = tubes.map(function () { return null; }); g.cages.forEach(function (c) { cage[c.tube] = { f: c.from, t: c.to, n: c.n }; }); } // v8 M1
     var np = perches(a); for (var ap = 0; ap < np; ap++) { tubes.push([]); caps.push(4); lock.push(null); mask.push([]); if (cage) cage.push(null); } // purchased tube(s) survive restart (v8: up to C.economy.perchMaxPerStage)
     S = { n: n, daily: dk, g: g, a: a, tubes: tubes, caps: caps, lock: lock, mask: mask, cage: cage, egg: null, slp: null, alarm: null, al: null, hist: [], sel: -1, path: 0, moves: 0, lastDone: -99, combo: 0, chain: 0, banked: 0, won: false, locked: false, hint: null, undos: 0, unsolvRun: 0 };
-    if (F81) setX(E.init(g)); S.init0 = JSON.stringify([g.tubes, g.caps || null, (g.locks || []).length, (g.hidden || []).length]); /* v7.1 PM-6: the stage's pristine layout */
+    if (F81) setX(E.init(g)); if (F82) load82(n, g, dk); S.init0 = JSON.stringify([g.tubes, g.caps || null, (g.locks || []).length, (g.hidden || []).length]); /* v7.1 PM-6: the stage's pristine layout */
     applyTheme(dk ? 1 + 100 * (g.seed % C.themes.length) : n, sb || !!dk); // daily: theme rotates by date, no unlock toast
     if (!sb) { if (!dk) save.current = n; persist(); } fx = {}; render(); if (F80) stageTips(); if (F81 && !sb && !dk) metaStart(n, g); try { artStage(g, n); } catch (e) { console.error('artStage', e); } // art warm-up must never break a stage
   }
@@ -244,13 +251,14 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
       var r = document.createElement('div'); r.className = 'row'; b.appendChild(r);
       for (var k = 0; k < cnt; k++, idx++) (function (i) {
         var t = S.tubes[i], d = document.createElement('div'), isd = done(i), small = S.caps[i] < 4, lk = S.lock[i];
-        d.className = 'tube perch' + (isd ? ' complete' : '') + (fx.fresh === i && !fl ? ' fresh' : '') + (fx.shake === i ? ' shake' : '') + (small ? ' small' : '') + (small && fx.full === i ? ' full' : '') + (lk ? ' locked' : '') + (fx.unlock && fx.unlock.tube === i ? ' locked' : '');
+        d.className = 'tube perch' + (isd ? ' complete' : '') + (fx.fresh === i && !fl ? ' fresh' : '') + (fx.shake === i ? ' shake' : '') + (small ? ' small' : '') + (small && fx.full === i ? ' full' : '') + (lk ? ' locked' : '') + (fx.unlock && fx.unlock.tube === i ? ' locked' : '') + (F82 && S.th && S.th.indexOf(i) >= 0 ? ' thorn' : '');
         if (isd) { var bd = document.createElement('img'); bd.className = 'badge'; bd.src = C.assets.badge; bd.alt = ''; d.appendChild(bd); }
         if (small) { var cb = document.createElement('img'); cb.className = 'capbadge'; cb.src = GA.smallTube.badge; cb.alt = '용량 3'; d.appendChild(cb); } // DESIGN 13.4: no complete glow/check on small tubes
         var lockKey = lk || (fx.unlock && fx.unlock.tube === i ? fx.unlock.key : null);
         if (lockKey) { var pr = GA.pair[lockKey], ov = document.createElement('img'); ov.className = 'lock-overlay'; ov.src = small ? BF.perch.perchSmallLocked : BF.perch.perchLocked; ov.alt = ''; d.appendChild(ov);
           var lo = document.createElement('img'); lo.className = 'lock'; lo.src = lk ? pr.lock : pr.lock; lo.alt = '자물쇠 ' + symKo(pr.symbol); d.appendChild(lo);
         }
+        if (F82) iceFx(d, i);
         var st = document.createElement('div'); st.className = 'stack';
         t.forEach(function (c, j) {
           var w = document.createElement('span'); w.className = 'ballwrap ball';
@@ -263,7 +271,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
           if (revealing) { var sur = F80 ? surprisedSrc(c) : null; // v8 M2a: '깜짝' face 0.4s on reveal, then idle (reduced motion: face swap only)
             if (reduced) { im.src = sur || real.src; im.alt = real.alt; if (sur) setTimeout(function () { im.src = real.src; }, V8A.revealMs); }
             else { im.className += ' hidden-reveal'; setTimeout(function () { im.src = sur || real.src; im.alt = real.alt; if (sur) { im.classList.add('v8-surprised'); setTimeout(function () { im.src = real.src; im.classList.remove('v8-surprised'); }, V8A.revealMs); } }, 210); } } // DESIGN 13.1: swap at 210ms
-          if (F81 && !E.isKey(c) && C.palette[c]) xBird(w, im, i, j, c);
+          if (F81 && !E.isKey(c) && C.palette[c]) xBird(w, im, i, j, c); if (F82) bombFx(w, i, j);
           var cg = S.cage && S.cage[i], co = fx.cageOpen && fx.cageOpen.filter(function (o) { return o.i === i; })[0]; // v8 M1 cage overlay per caged slot (DESIGN 20.1)
           if (cg && j >= cg.f && j <= cg.t) { var cv = document.createElement('div'); cv.className = 'v8-cage'; w.appendChild(cv); w.classList.add('caged');
             if (j === cg.t) { var lid = document.createElement('div'); lid.className = 'v8-cage-lid'; w.appendChild(lid); w.classList.add('caged-top'); } /* v8.1.2: cage-front.svg top rail as the lid of the caged run, kept above a free bird on top */
@@ -281,7 +289,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
         d.addEventListener('pointerdown', function (e) { e.preventDefault(); tap(i); });
         // QA F6: screen reader label + keyboard (Tab focus, Enter/Space = select / move)
         d.tabIndex = 0; d.setAttribute('role', 'button');
-        d.setAttribute('aria-label', '횃대 ' + (i + 1) + ', 새 ' + t.length + '마리' + (t.length ? ' (' + t.map(function (c, j) { return S.mask[i][j] ? '숨은 새' : ballSrc(c).alt.split(', ')[0]; }).join(', ') + ')' : '') + (isd ? ', 완성' : '') + (lk ? ', 잠김' : '') + (S.cage && S.cage[i] ? ', 새장 ' + S.cage[i].n : '') + (i === S.sel ? ', 선택됨' : ''));
+        d.setAttribute('aria-label', '횃대 ' + (i + 1) + (F82 ? ariaBirds82(i, t) : ', 새 ' + t.length + '마리' + (t.length ? ' (' + t.map(function (c, j) { return S.mask[i][j] ? '숨은 새' : ballSrc(c).alt.split(', ')[0]; }).join(', ') + ')' : '')) + (isd ? ', 완성' : '') + (lk ? ', 잠김' : '') + (S.cage && S.cage[i] ? ', 새장 ' + S.cage[i].n : '') + (F82 && S.th && S.th.indexOf(i) >= 0 ? ', 가시 둥지(출발만)' : '') + (F82 && S.ice && E.iceAt(est(), i) ? ', 얼음 ' + E.iceAt(est(), i).n : '') + (i === S.sel ? ', 선택됨' : ''));
         d.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); tap(i); } });
         r.appendChild(d);
       })(idx);
@@ -315,6 +323,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     if (F80) { var pl = EC.perchMaxPerStage - perches(S.a); $('undocnt').textContent = S.a.undoLeft > 0 ? S.a.undoLeft : '+'; ac.textContent = pl; $('undo').disabled = S.locked; $('undo').classList.toggle('v8-idle', !S.hist.length && S.a.undoLeft > 0); $('add').disabled = S.locked || pl <= 0; $('add').title = '';
       $('add').setAttribute('aria-label', '횃대 추가, 남은 횟수 ' + pl); $('undo').setAttribute('aria-label', '되돌리기, ' + (S.a.undoLeft > 0 ? '남은 횟수 ' + S.a.undoLeft : '코인이나 광고로 받기'));
       var hf = hintFree(), hc = $('hintcnt'); if (!hc) { hc = document.createElement('span'); hc.className = 'cnt'; hc.id = 'hintcnt'; $('hint').appendChild(hc); } hc.textContent = hf ? (!S.daily && S.n <= EC.freeHintUnlimitedTo ? '∞' : '1') : (F81 && save.inventory.hint > 0 ? save.inventory.hint : '+'); $('hint').setAttribute('aria-label', '힌트' + (hf ? ', 무료' : F81 && save.inventory.hint > 0 ? ', 보유 ' + save.inventory.hint + '개' : ', 코인이나 광고로 받기')); }
+    if (F82) btns82();
   }
   // a11y: Korean bird names (DESIGN 14.14.1 캐릭터 표) + colour; symbols in Korean (no English 'red circle')
   var BIRD_KO = { red: ['루비', '빨간'], orange: ['망고', '주황'], yellow: ['레모', '노란'], green: ['새싹', '초록'], cyan: ['파도', '하늘색'], blue: ['탑', '파란'], purple: ['보라', '보라색'], white: ['구름', '하얀'], pink: ['복숭', '분홍'], brown: ['도토리', '갈색'], lime: ['라임', '연두'], indigo: ['별밤', '남색'] };
@@ -372,6 +381,8 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   function clearTaps() { if (S) S.tbuf = []; }
   function tap(i) {
     if (S.cheer) return S.cheer.skip(); // tap during the clear celebration -> straight to the card
+    if (F82 && S.swapMode && !S.locked && !SP.ads.isBusy()) return swapTap(i);
+    if (F82 && S.boom && !S.locked && !S.won) return boomFail();
     if (S.locked || SP.ads.isBusy()) { if (S.locked && !S.won && !S.solvedLock && !document.querySelector('.ov.show')) { S.tbuf = S.tbuf || []; if (S.tbuf.length < 2) S.tbuf.push(i); SP._tbuf = S.tbuf.slice(); } return; } // v8.1.1: up to 2 taps buffered during a locked animation
     var pickable = function (k) { return S.tubes[k].length && !done(k) && !S.lock[k] && !(F81 ? E.fixedTop(est(), k) : E.cagedTop(est(), k)); }; // v8 M1: caged top birds can't be picked
     if (S.sel < 0) { if (pickable(i)) { S.sel = i; warmSide(S.tubes[i][S.tubes[i].length - 1]); sfx.play('select'); } else { fx.shake = i; sfx.play('invalid'); } }
@@ -386,14 +397,15 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
       var h = snap(); h.chain = S.chain; h.banked = S.banked; h.combo = S.combo; h.lastDone = S.lastDone; h.path = S.path; S.hist.push(h); pend = []; // R2 + gimmick state snapshot
       var sol = S.g.solution; S.path = S.path >= 0 && sol && sol[S.path] && sol[S.path][0] === from && sol[S.path][1] === i ? S.path + 1 : -1;
       var ball = S.tubes[from][S.tubes[from].length - 1], unlock = E.isKey(ball) && S.lock[i] === ball;
-      var cg0 = S.cage, ns = E.apply(est(), from, i, kk); S.tubes = ns.t; S.lock = ns.lock; S.cage = ns.cage || null; if (cg0) cageFx(cg0, S.cage); if (F81) { var x0 = { egg: S.egg, slp: S.slp, al: S.al }; setX(ns); xFx(x0); } for (var q2 = 0; q2 < kk; q2++) { S.mask[from].pop(); if (!unlock) S.mask[i].push(false); }
+      var bc0 = F82 && S.bomb ? S.tubes[S.bomb.i][S.bomb.j] : null, cg0 = S.cage, ns = E.apply(est(), from, i, kk); S.tubes = ns.t; S.lock = ns.lock; S.cage = ns.cage || null; if (cg0) cageFx(cg0, S.cage); if (F81) { var x0 = { egg: S.egg, slp: S.slp, al: S.al, ice: S.ice, bomb: S.bomb, bc: bc0 }; setX(ns); xFx(x0); if (F82) x82Fx(x0, ns); } for (var q2 = 0; q2 < kk; q2++) { S.mask[from].pop(); if (!unlock) S.mask[i].push(false); }
       S.moves++; S.sel = -1; S.hint = null;
       var rv = revealTops(); if (rv.length) { fx.reveal = rv; snd(F80 ? 'reveal-pop' : 'select'); } /* v8.1.1: M2a reveal-pop was never played */ // hidden ball revealed the moment it becomes the top ball
       var solved = E.isSolved(est()), isd = !unlock && done(i);
       if (unlock) { fx.unlock = { tube: i, key: ball, solved: solved }; fx.keyFrom = sb ? (airRect || sb.getBoundingClientRect()) : null; fx.keySrc = ballSrc(ball).src; S.locked = true; S.consuming = true; if (solved) S.solvedLock = true; } // undo: key move + unlock = 1 move (one hist entry)
       else { fx.drop = i; if (!isd) snd('drop', S.tubes[i].length - 1); if (S.caps[i] < 4 && S.tubes[i].length >= S.caps[i]) fx.full = i; }
       if (!isd && S.chain > 0) { S.banked += S.chain; S.chain = 0; } // chain broken by a normal move -> banked (paid on clear)
-      if (isd) onTubeDone(i, solved);
+      if (isd) { if (F82 && ns.hatchDone && ns.hatchDone.indexOf(i) >= 0) hatchDone(i, solved); else onTubeDone(i, solved); }
+      if (F82 && S.boom) { render(); return boomFail(); }
       fx.fly = { from: !unlock && sb ? (airRect || sb.getBoundingClientRect()) : null, froms: unlock ? [] : froms, n: unlock ? 1 : kk, to: i, sounds: pend }; pend = null; SP._lastRun = kk;
       if (unlock) { fx.fly.sounds.forEach(function (a) { sfx.play(a[0], a[1]); }); fx.fly = null; render(); return; }
       if (solved) { S.locked = true; S.solvedLock = true; S.tbuf = []; S.sel = -1; render(); return whenLanded(function () { setTimeout(cheer, CLEAR_DELAY); }); } // H1: lock all input during clear sequence (perch hop wave -> card)
@@ -416,7 +428,9 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   function xBird(w, im, i, j, c) { var P = C.palette[c], st = est(), eg = E.eggAt(st, i, j), at = function (L) { return (L || []).some(function (z) { return z[0] === i && z[1] === j; }); };
     if (eg) { im.src = V81.egg.replace('{color}', P.key); im.alt = '알 (' + birdName(P.key) + ', ' + eg.n + '번 남음)'; w.classList.add('v8-egg');
       if (eg.n === 1) ov(w, 'v8-egg-crack-1'); var bd = ov(w, 'v8-badge-egg n' + Math.min(3, eg.n) + (fx.eggTick && fx.eggTick.indexOf(i + ':' + j) >= 0 ? ' tick' : ''));
-      if (symbolsLarge) bd.style.backgroundImage = 'url("' + V81.eggBadgeLg.replace('{n}', Math.min(3, eg.n)) + '")'; }
+      if (symbolsLarge) bd.style.backgroundImage = 'url("' + V81.eggBadgeLg.replace('{n}', Math.min(3, eg.n)) + '")';
+      if (FB && st.brood) { var e0 = (S.g.eggs || []).filter(function (e) { return e.tube === i && e.at === j; })[0], warm = S.tubes[i][j + 1] === c && !(S.mask[i] && S.mask[i][j + 1]);
+        if (warm || (e0 && eg.n < e0.n)) { var hb0 = document.createElement('div'); hb0.className = 'v8-brood ' + (warm ? 'warm' : 'paused'); w.appendChild(hb0); } } } // v8.2 DESIGN 20.17 brood heart
     else if (at(fx.hatch)) { var idle = im.src; if (reduced) return; im.src = V81.egg.replace('{color}', P.key); var c2 = ov(w, 'v8-egg-crack-2'), hb = ov(w, 'v8-hatch');
       setTimeout(function () { im.src = idle; c2.remove(); hb.remove(); }, V81.hatchMs); }
     if (E.slpAt(st, i, j)) { im.src = V81.sleepy.replace('{key}', P.key); im.classList.add('v8-sleep'); im.alt += ' (잠든 새)'; ov(w, 'v8-zz'); }
@@ -430,6 +444,116 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
       if (v) { d.style.height = len + 'px'; d.style.left = ax + 'px'; d.style.top = ay + 'px'; d.style.transform = 'translateX(-50%) rotate(' + (Math.atan2(dy, dx) * 180 / Math.PI - 90) + 'deg)'; }
       else { d.style.width = len + 'px'; d.style.left = ax + 'px'; d.style.top = ay + 'px'; d.style.transform = 'translateY(-50%) rotate(' + (Math.atan2(dy, dx) * 180 / Math.PI) + 'deg)'; }
       b.appendChild(d); }); }
+  // ---------------- v8.2 (HIDDEN, GDD v8 §5 M6-M9 · P5 · P6 · M3' · H1). Only reached when F82 (web QA switch; toss: features.v82). ----------------
+  function iceFx(d, i) { var z = S.ice && E.iceAt(est(), i);
+    if (z) { var o = document.createElement('div'); o.className = 'v8-ice' + (fx.iceTick && fx.iceTick.indexOf(i) >= 0 ? ' v82-tick' : ''); o.setAttribute('aria-hidden', 'true'); var b = document.createElement('b'); b.className = 'v82-ice-n'; b.textContent = z.n; o.appendChild(b); d.appendChild(o); }
+    else if (fx.thaw && fx.thaw.indexOf(i) >= 0) { var t = document.createElement('div'); t.className = 'v8-overlay v8-thaw'; d.appendChild(t); setTimeout(function () { t.remove(); }, reduced ? 300 : 600); } }
+  function bombFx(w, i, j) { var at = function (p) { return p && p[0] === i && p[1] === j; };
+    if (S.bomb && S.bomb.i === i && S.bomb.j === j) { var n = S.bomb.n, o = document.createElement('div'); o.className = 'v8-overlay v8-bomb' + (n <= 3 ? ' low' : '') + (S.boom ? ' v82-gone' : ''); o.innerHTML = '<b>' + n + '</b>'; w.appendChild(o); w.classList.add('v82-bombbird');
+      var im = w.querySelector('img.bird'); if (im) im.alt += ' (폭탄 새, ' + n + '번 남음)'; if (S.boom && fx.flyaway) ov(w, 'v8-flyaway', reduced ? 0 : 600); }
+    if (at(fx.defuse)) ov(w, 'v8-defuse', reduced ? 300 : 500);
+    if (fx.swap && fx.swap[0] === i && (fx.swap[1] === j || fx.swap[1] + 1 === j) && !reduced) { w.classList.add('v82-swapped'); // DESIGN 20.17: birds arrive with the designer arcs
+      var up = j === fx.swap[1] + 1, bi = w.querySelector('img'); // DESIGN 20.17b: DOM already swapped; each bird flies from its old slot to transform:none, --swap-d = measured slot spacing
+      if (bi) bi.style.visibility = 'hidden';
+      requestAnimationFrame(function () { var o = up ? w.previousElementSibling : w.nextElementSibling, d = o ? Math.abs(o.getBoundingClientRect().top - w.getBoundingClientRect().top) : w.offsetHeight;
+        if (bi) { bi.style.setProperty('--swap-d', d + 'px'); bi.style.visibility = ''; bi.classList.add(up ? 'v8-swap-up' : 'v8-swap-down'); }
+        if (up) { var sw = document.createElement('div'); sw.className = 'v8-magpie-swap'; w.appendChild(sw); var h = w.getBoundingClientRect().height, sh = sw.getBoundingClientRect().height; sw.style.top = (h / 2 + d / 2 - sh / 2) + 'px'; setTimeout(function () { sw.remove(); }, 520); } }); } }
+  function x82Fx(a, ns) { var th = [], tk = [];
+    (a.ice || []).forEach(function (z) { var nz = (S.ice || []).filter(function (y) { return y.i === z.i; })[0]; if (!nz) th.push(z.i); else if (nz.n < z.n) tk.push(z.i); });
+    if (th.length) fx.thaw = th; if (tk.length) fx.iceTick = tk; if (th.length || tk.length) snd('ice-crack');
+    if (a.bomb && ns.defused) { var c = a.bc; for (var y = 0; y < S.tubes.length; y++) if (S.tubes[y][0] === c && done(y)) { fx.defuse = [y, S.tubes[y].length - 1]; break; } snd('defuse'); SP._defused = (SP._defused || 0) + 1; }
+    else if (S.boom) fx.flyaway = 1; else if (S.bomb && S.bomb.n <= 3) snd('bomb-tick'); }
+  function hatchDone(i, solving) { fx.fresh = i; if (!solving) { flyAway(i); snd('complete'); } else S.chain = 0; SP._hatchDone = (SP._hatchDone || 0) + 1; } // M3': a flock completed by hatching never counts toward the combo
+  function boomFail() { S.sel = -1; S.swapMode = false; if (S._boomT) return; sfx.play('fail-soft'); S._boomT = setTimeout(function () { S._boomT = 0; if (!S.boom || S.won) return; var o = [];
+      o.push({ k: 'undo', label: '되돌리기', go: function () { closeSheet(); undo(); } });
+      if (adShow()) o.push(adOpt('ad', 'moves5', '광고 보고 이동 +' + E82.movesGive, bombMore));
+      o.push(coinOpt('coin', E82.moves5, '이동 +' + E82.movesGive, bombMore));
+      o.push({ k: 'restart', label: '다시하기', go: function () { closeSheet(); doRestart(); } });
+      sheet('폭탄 새가 날아가 버렸어요', V82.sheetArt, o); SP._boomShown = (SP._boomShown || 0) + 1; }, reduced ? 200 : V82.failMs); }
+  function bombMore() { if (!S.boom || !S.bomb) return; S.bomb.n = E82.movesGive; S.boom = 0; render(); toast('폭탄 새 이동 +' + E82.movesGive); }
+  function magBtn() { var f = document.querySelector('footer.bottom'), b = $('v82magpie'); if (b || !f) return b;
+    f.classList.add('v82'); b = document.createElement('button'); b.className = 'btn v82-magpie'; b.id = 'v82magpie'; b.innerHTML = '<img src="' + V82.magpie + '" alt="" aria-hidden="true"><span>까미</span><span class="cnt" id="v82magcnt"></span>'; f.appendChild(b);
+    onTap(b, magTap); return b; }
+  function magTap() { if (!S || S.locked || S.won || SP.ads.isBusy()) return; if (S.boom) return boomFail();
+    if (S.swapMode) { S.swapMode = false; render(); return; }
+    if ((save.inventory.magpie || 0) > 0) { S.swapMode = true; S.sel = -1; render(); tip('magpie82', '까미: 횃대를 누르면 맨 위 두 새를 바꿔요'); toast('바꿀 횃대를 눌러요'); return; }
+    sheet('까미를 데려올까요?', V82.magpie, [coinOpt('coin', E82.magpie, '까미 1회', function () { save.inventory.magpie = (save.inventory.magpie || 0) + 1; S.swapMode = true; S.sel = -1; render(); toast('바꿀 횃대를 눌러요'); })]); }
+  function swapAt(i) { var st = est(), t = S.tubes[i]; for (var j = t.length - 2; j >= 0; j--) if (E.canSwap(st, i, j) && !S.mask[i][j] && !S.mask[i][j + 1]) return j; return -1; }
+  function swapTap(i) { var j = swapAt(i); if (j < 0) { fx.shake = i; sfx.play('invalid'); toast('까미가 바꿀 수 있는 새가 없어요'); render(); return; }
+    var h = snap(); h.chain = S.chain; h.banked = S.banked; h.combo = S.combo; h.lastDone = S.lastDone; h.path = S.path; S.hist.push(h);
+    var bc = S.bomb ? S.tubes[S.bomb.i][S.bomb.j] : null, cg0 = S.cage, ns = E.swap(est(), i, j); S.tubes = ns.t; S.lock = ns.lock; S.cage = ns.cage || null; if (cg0) cageFx(cg0, S.cage);
+    var x0 = { egg: S.egg, slp: S.slp, al: S.al, ice: S.ice, bomb: S.bomb, bc: bc }; setX(ns); xFx(x0); x82Fx(x0, ns);
+    save.inventory.magpie = Math.max(0, (save.inventory.magpie || 0) - 1); if (!QAP && !save.album.magpie) { save.album.magpie = 1; M81.albumSync(save, debuts(), E81, EC); } persist(); S.moves++; S.swapMode = false; S.hint = null; S.path = -1; S.sel = -1; fx.swap = [i, j]; sfx.play('swap'); SP._swaps = (SP._swaps || 0) + 1;
+    var solved = E.isSolved(est()), isd = done(i);
+    if (!isd && S.chain > 0) { S.banked += S.chain; S.chain = 0; }
+    if (isd) { if (ns.hatchDone && ns.hatchDone.indexOf(i) >= 0) hatchDone(i, solved); else onTubeDone(i, solved); }
+    if (S.boom) { render(); return boomFail(); }
+    if (solved) { S.locked = true; S.solvedLock = true; S.tbuf = []; render(); return whenLanded(function () { setTimeout(cheer, CLEAR_DELAY); }); }
+    render(); afterMove(); }
+  function btns82() { var b = magBtn(); if (!b || !S) return; var n = save.inventory.magpie || 0; $('v82magcnt').textContent = n > 0 ? n : '+'; b.disabled = S.locked || S.won;
+    b.classList.toggle('on', !!S.swapMode); b.setAttribute('aria-pressed', S.swapMode ? 'true' : 'false'); b.setAttribute('aria-label', '까미 바꾸기, ' + (n > 0 ? '보유 ' + n : '코인 ' + E82.magpie + '으로 받기'));
+    $('board').classList.toggle('v82-swapping', !!S.swapMode);
+    if (S.chal) { $('moves').textContent += ' · 도전 ' + S.chal + '수'; if (S.moves > S.chal && !S.chalOver && !S.won) { S.chalOver = 1; toast('도전 이동을 넘었어요 · 그대로 계속해도 돼요'); } } }
+  function load82(n, g, dk) { S.swapMode = false; S.chal = chal82 && !dk && save.stars[n] > 0 ? Math.ceil(g.min * E82.challengeK - 1e-9) : 0; S.chalOver = 0; magBtn(); }
+  function THO() { return { cleared: function (k) { return (save.stars[k] || 0) > 0; } }; } // v8.2 D1 weekday theme gate (cleared stage)
+  function meta82Start(n, g) { if (g.daily && g.theme === 'lock') tip('daily82lock', '수요일은 자물쇠 도전! 열쇠 위의 새부터 치워 보세요'); if (g.daily && g.theme === 'hidden') tip('daily82hidden', '화요일은 숨은 새 도전! 맨 위로 나오면 색이 보여요'); if (g.thorn && g.thorn.length) tip('thorn82', '가시 둥지에는 새를 올릴 수 없어요. 비우면 보통 횃대가 돼요');
+    if (g.bomb) tip('bomb82', '폭탄 새 무리를 ' + g.bomb.n + '번 움직이기 안에 완성해요');
+    if (g.ice && g.ice.length) tip('ice82', '얼음 둥지는 무리를 ' + g.ice[0].n + '번 완성하면 녹아요'); }
+  // P5 weekly feather event (Mon 00:00 - Sun 23:59 device date) + P6 challenge crown
+  function week82(d) { d = d || new Date(); var m = new Date(d.getFullYear(), d.getMonth(), d.getDate() - (d.getDay() + 6) % 7), p = function (x) { return (x < 10 ? '0' : '') + x; }; return m.getFullYear() + '-' + p(m.getMonth() + 1) + '-' + p(m.getDate()); }
+  function feather82() { var w = week82(), e = save.feather82; if (!e || e.wk !== w) e = save.feather82 = { wk: w, n: 0, got: [] }; return e; }
+  function meta82Win(st) { var h = '', coins = 0, e = feather82(), add = st === 3 ? 2 : 1, T = E82.featherTiers; e.n += add; h += ' · 깃털 +' + add;
+    T.forEach(function (t, q) { if (e.n >= t && e.got.indexOf(t) < 0) { e.got.push(t); coins += E82.featherCoins[q]; h += ' · 깃털 ' + t + '개 보상 +' + E82.featherCoins[q]; } });
+    if (S.chal && S.moves <= S.chal) { save.crown82 = save.crown82 || {}; if (!save.crown82[S.n]) { save.crown82[S.n] = 1; coins += E82.crownCoins; h += ' · 도전 성공 왕관 +' + E82.crownCoins; } else h += ' · 도전 성공'; }
+    if (coins) V8.addCoins(save, coins, EC); SP._meta82 = { feather: e, crown: save.crown82 || {}, coins: coins }; return { coins: coins, html: h }; }
+  var chal82 = false;
+  function menu82(co) { guidePreload82(); if (!$('v82guideBtn')) { co.insertAdjacentHTML('beforeend', ' <button class="btn v8-bag v82-guide-btn' + (guideNew() ? ' dot' : '') + '" id="v82guideBtn">기믹 안내</button>'); $('v82guideBtn').onclick = function () { guideOpen(false); }; }
+    var e = feather82(), T = E82.featherTiers, nx = T.filter(function (t) { return e.n < t; })[0], row = $('v82feather'), anchor = $('v8chestrow') || co;
+    if (!row) { row = document.createElement('div'); row.id = 'v82feather'; row.className = 'v8-chestrow v82-feather'; anchor.insertAdjacentElement('afterend', row); }
+    var have = Math.min(e.n, T[T.length - 1]), need = nx || T[T.length - 1];
+    row.innerHTML = '<img src="' + V82.featherEvent + '" alt="" width="36" height="36"><div class="v8-chestinfo"><b>깃털 이벤트 ' + e.n + '개' + (nx ? ' · ' + nx + '개에 코인 ' + E82.featherCoins[T.indexOf(nx)] : ' · 이번 주 완료') + '</b><div class="v8-star-bar" aria-hidden="true"><i style="width:' + (75 * Math.min(1, have / need)).toFixed(1) + '%"></i></div><small>일요일 23:59까지 · 클리어당 깃털 1(★3은 2)</small></div>'
+      + '<button class="btn v8-bag v82-chal' + (chal82 ? ' on' : '') + '" id="v82chal" aria-pressed="' + chal82 + '">도전 모드 ' + (chal82 ? '켜짐' : '꺼짐') + '</button>';
+    row.setAttribute('aria-label', '깃털 이벤트 ' + e.n + '개');
+    $('v82chal').onclick = function () { chal82 = !chal82; menu82(co); toast(chal82 ? '도전 모드: 클리어한 판을 최소 수 × 1.3 안에 깨면 왕관' : '도전 모드를 껐어요'); }; }
+  function set82() { if ($('v82guideSet')) return; var c = $('closeSet'); if (!c) return; var b = document.createElement('button'); b.className = 'btn wide'; b.id = 'v82guideSet'; b.textContent = '기믹 안내'; c.parentNode.insertBefore(b, c);
+    b.onclick = function () { $('setov').classList.remove('show'); guideOpen(true); }; }
+  // H1 gimmick guide (planner decision 2026-10-27)
+  function g82n(g, k, d) { var L = g && g[k]; return L && L.length ? L[0].n || d : d; }
+  // DESIGN 20.17 guide loops (120x120 SVG shown at 72px); static card art under reduced motion and for cards without a loop (key, boss, small)
+  var LOOP82 = { hidden: 'surprised', chain: 'lock-chain', cage: 'cage', egg: 'egg', sleep: 'sleep', thorn: 'thorn', bomb: 'bomb', ice: 'ice', magpie: 'magpie', key: 'key', boss: 'boss', small: 'small' };
+  var GUIDE = [
+    { id: 'hidden', nm: '숨은 새', art: 'assets-v8-bird-hidden-surprised.svg?v=dcf5c5be', has: function (g) { return (g.hidden || []).length; }, rule: function () { return '? 새는 바로 위가 비면 정체가 드러나요.'; }, how: '?가 있는 횃대의 위쪽 새부터 옮겨 정체를 확인해요.' },
+    { id: 'key', nm: '열쇠·자물쇠', art: 'assets-v8-bird-key-a-surprised.svg?v=28a72eb2', has: function (g) { return (g.locks || []).length; }, rule: function () { return '열쇠 새를 같은 모양 자물쇠 횃대로 옮기면 열려요.'; }, how: '열쇠 새 위를 먼저 비워 두고, 열린 횃대를 빈 자리로 써요.' },
+    { id: 'chain', nm: '연쇄 자물쇠', art: 'assets-v8-chain-link.svg?v=1d4407fd', has: function (g) { return !!g.chain; }, rule: function () { return '자물쇠 안에 또 열쇠가 있어요. 앞 자물쇠를 열어야 다음 열쇠가 나와요.'; }, how: '사슬로 이어진 순서대로 하나씩 열어요.' },
+    { id: 'boss', nm: '보스판', art: 'assets-v8-map-node-boss.svg?v=721267cb', has: function (g) { return !!g.boss; }, rule: function () { return '여러 기믹이 한 판에 함께 나와요. 처음 깨면 보너스 코인을 받아요.'; }, how: '어떤 기믹이 먼저 풀려야 하는지부터 살펴요.' },
+    { id: 'small', nm: '작은 둥지', art: GA.smallTube.badge, has: function (g) { return g.caps && g.caps.some(function (c) { return c < 4; }); }, rule: function () { return '작은 둥지에는 새가 3마리까지만 앉아요.'; }, how: '새를 잠깐 비켜 두는 자리로 써요.' },
+    { id: 'cage', nm: '새장', art: 'assets-v8-cage-front.svg?v=4b4aae46', has: function (g) { return (g.cages || []).length; }, rule: function (g) { return '새장은 무리를 ' + g82n(g, 'cages', 1) + '번 완성하면 열려요.'; }, how: '새장 밖의 무리부터 완성해요. 새장 속 새는 열릴 때까지 꺼낼 수 없어요.' },
+    { id: 'egg', nm: '알(품기)', art: 'assets-v8-egg-base.svg?v=188c1e8a', has: function (g) { return (g.eggs || []).length; }, rule: function (g) { return FB ? '알은 같은 색 새가 위에 앉아 ' + g82n(g, 'eggs', 2) + '번 움직이면 깨어나요.' : '알은 무리를 ' + g82n(g, 'eggs', 2) + '번 완성하면 깨어나요.'; },
+      how: FB ? '같은 색 새를 알 위에 앉혀 두고 다른 새를 움직여요. 앉히는 이동은 세지 않고, 비키면 멈췄다가 다시 앉으면 이어서 세요. 되돌리기는 숫자도 되돌려요.' : '다른 무리를 먼저 완성해요.' },
+    { id: 'sleep', nm: '잠자는 새·알람', art: 'assets-v8-bird-indigo-sleepy.svg?v=07b0f725', has: function (g) { return (g.sleep || []).length; }, rule: function () { return '잠든 새는 움직일 수 없어요. 시계 든 알람 새의 무리를 완성하면 다들 깨어나요.'; }, how: '알람 새 색부터 모아요.' },
+    { id: 'thorn', nm: '가시 둥지', art: V82.thorn, has: function (g) { return (g.thorn || []).length; }, rule: function () { return '가시 둥지에서는 새가 떠나기만 해요. 새를 올릴 수 없고, 비면 보통 횃대가 돼요.'; }, how: '가시 둥지의 새를 먼저 다른 횃대로 옮겨 비워요.' },
+    { id: 'bomb', nm: '폭탄 새', art: V82.bomb, has: function (g) { return !!g.bomb; }, rule: function () { return '숫자가 0이 되기 전에 폭탄 새의 무리를 완성하면 해제돼요. 움직일 때마다 1씩 줄어요.'; }, how: '폭탄 새 색부터 모아요. 0이 되면 되돌리기 · 이동 +' + E82.movesGive + ' · 다시하기 중에서 골라요.' },
+    { id: 'ice', nm: '얼음 둥지', art: V82.ice, has: function (g) { return (g.ice || []).length; }, rule: function (g) { return '얼음 둥지의 새는 꺼낼 수 없어요. 그 횃대가 완성되거나 다른 무리를 ' + g82n(g, 'ice', 2) + '번 완성하면 녹아요.'; }, how: '다른 무리를 먼저 완성하거나, 같은 색 새를 얼음 둥지 위에 올려 완성해요.' },
+    { id: 'magpie', nm: '까미', art: V82.magpieBird, has: function () { return true; }, rule: function () { return '까미는 한 횃대에서 맞붙은 두 새를 맞바꿔요. 1번 움직인 걸로 세요.'; }, how: '아래 까미 버튼을 누르고 횃대를 누르면 위쪽 두 새를 바꿔요. 새장·알·잠든 새·폭탄 새·얼음 둥지는 바꿀 수 없어요. 코인 ' + E82.magpie + '.' }];
+  var guideFirst = null;
+  function guideFirsts() { if (guideFirst) return guideFirst; guideFirst = {}; GUIDE.forEach(function (c) { for (var k = 1; k <= LAST; k++) { var g = SP.STAGES[k]; if (g && c.has(g)) { guideFirst[c.id] = k; break; } } }); return guideFirst; }
+  function guideNew() { var F = guideFirsts(), seen = (save.guide82 || {}); return GUIDE.some(function (c) { return F[c.id] && F[c.id] <= save.unlocked && !seen[c.id]; }); }
+  function guideArt82() { return GUIDE.map(function (c) { return LOOP82[c.id] && !reduced ? 'assets-v8-guide-loop-' + LOOP82[c.id] + '.svg?v=a2aba921' : c.art; }); }
+  var guidePre82 = null; function guidePreload82() { if (guidePre82) return; guidePre82 = guideArt82().map(function (u) { var im = new Image(); im.decoding = 'async'; im.src = u; return im; }); } // planner 14:37: no late white flash on first open
+  function guideOpen(inStage) { guidePreload82(); var o = $('v82guide'); if (!o) { o = document.createElement('div'); o.id = 'v82guide'; o.className = 'ov v8ov'; document.body.appendChild(o); }
+    var F = guideFirsts(), seen = save.guide82 || {}, g = inStage && S && !S.daily ? S.g : null, list = GUIDE.slice();
+    if (g) list.sort(function (a, b) { return (b.has(g) ? 1 : 0) - (a.has(g) ? 1 : 0); }); // current stage's gimmicks first
+    var cards = list.map(function (c) { var f = F[c.id], open = f && f <= save.unlocked, here = g && c.has(g), fg = here ? g : f ? SP.STAGES[f] : null, nw = open && !seen[c.id];
+      return '<div class="v82-guide-card' + (open ? '' : ' locked') + (here ? ' here' : '') + '" data-id="' + c.id + '" role="listitem" aria-label="' + c.nm + (open ? '' : ', 잠김, ' + f + '판에서 만나요') + (nw ? ', 새로 열림' : '') + '">'
+        + '<div class="v82-guide-art">' + (LOOP82[c.id] && !reduced ? '<img class="v8-guide-loop v82-loop-' + c.id + '" src="assets-v8-guide-loop-' + LOOP82[c.id] + '.svg" alt="">' : '<img class="v82-loop-' + c.id + '" src="' + c.art + '" alt="">') + '</div><div class="v82-guide-txt"><b>' + c.nm + (nw ? ' <i class="v82-new" aria-hidden="true">새로 열림</i>' : '') + (here ? ' <i class="v82-here">이번 판</i>' : '') + '</b>'
+        + (open ? '<p>' + c.rule(fg || {}) + '</p><p class="how">풀이: ' + c.how + '</p><small>처음 나오는 판: ' + (c.id === 'magpie' ? '언제든 (부스터)' : f + '판') + '</small>' : '<p>' + (f ? f + '판에서 만나요' : '곧 만나요') + '</p>') + '</div></div>'; }).join('');
+    o.innerHTML = '<div class="card v8-sheet v82-guide" role="dialog" aria-label="기믹 안내"><div class="title">기믹 안내</div><div class="v82-guide-list" role="list">' + cards + '</div><button class="btn wide" id="v82guideClose">닫기</button></div>';
+    $('v82guideClose').onclick = function () { o.classList.remove('show'); }; o.classList.add('show');
+    o.querySelectorAll('.v82-guide-card.locked').forEach(function (el) { el.setAttribute('tabindex', '0'); el.onclick = function () { var f = F[el.dataset.id]; toast(f ? f + '판에서 만나요' : '곧 만나요'); }; }); // planner 14:37: locked card tap -> toast (first stage under the current flag set)
+    var ch = false; save.guide82 = save.guide82 || {}; GUIDE.forEach(function (c) { if (F[c.id] && F[c.id] <= save.unlocked && !save.guide82[c.id]) { save.guide82[c.id] = 1; ch = true; } }); if (ch) persist();
+    var gb = $('v82guideBtn'); if (gb) gb.classList.remove('dot'); SP._guide = list.map(function (c) { return { id: c.id, open: !!(F[c.id] && F[c.id] <= save.unlocked), first: F[c.id] || null, here: !!(g && c.has(g)) }; }); }
+  SP._x82 = function () { return { th: S.th, ice: S.ice, bomb: S.bomb, boom: S.boom, brood: S.brood, egg: S.egg, swapMode: !!S.swapMode, chal: S.chal, magpie: save.inventory.magpie, feather: save.feather82 || null, crown: save.crown82 || null, guide: save.guide82 || null, combo: S.combo, moves: S.moves }; }; // QA hook
+  SP._x82week = week82;
   SP._x81 = function () { return { egg: S.egg, slp: S.slp, alarm: S.alarm, al: S.al, chain: S.g.chain || null, boss: !!S.g.boss }; }; // QA hook
   var CHIP_KEY = 'settings.v8chips';
   function chips() { var el = $('v8chips'); if (!el) { el = document.createElement('div'); el.id = 'v8chips'; el.className = 'v8-chips'; el.setAttribute('aria-live', 'polite'); document.querySelector('header.hud').insertAdjacentElement('afterend', el); }
@@ -499,7 +623,12 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   // ---------------- v8.1 meta (GDD v8 §4 P1 별 상자 · P2 도감 · P3 보스 · P4 연승). Only reached when F81. ----------------
   var ALBUM_GIM = { hidden: ['숨은 새', 'assets-v8-bird-hidden-surprised.svg?v=dcf5c5be'], key: ['열쇠 새', 'assets-v8-bird-key-a-surprised.svg?v=28a72eb2'], cage: ['새장 새', 'assets-v8-cage-front.svg?v=4b4aae46'],
     egg: ['알', 'assets-v8-egg-base.svg?v=188c1e8a'], sleep: ['잠꾸러기', 'assets-v8-bird-indigo-sleepy.svg?v=07b0f725'], alarm: ['알람 새', 'assets-v8-badge-alarm.svg?v=3b80b6a4'] }, debuts81 = null;
-  function debuts() { return debuts81 || (debuts81 = M81.albumDebuts(SP.STAGES, C.palette, LAST)); }
+  function debuts() { if (debuts81) return debuts81; debuts81 = M81.albumDebuts(SP.STAGES, C.palette, LAST);
+    if (F82) for (var q = 1; q <= LAST; q++) if (SP.STAGES[q] && SP.STAGES[q].bomb) { debuts81.bomb = q; break; } return debuts81; } // v8.2: bomb card (debut stage cleared)
+  // v8.2 album cards (only with C.features.v82): bomb (debut stage), magpie (first 까미 use). Art = placeholder until the designer
+  // delivers; hook classes v82-album-art + v82-album-bomb / v82-album-magpie on the <img> (card art 96x96, same frame as others).
+  if (F82) { ALBUM_GIM.bomb = ['폭탄 새', V82.bomb]; ALBUM_GIM.magpie = ['까미', V82.magpieBird]; }
+  function albumIds82() { var a = M81.albumIds(C.palette); return F82 ? a.concat(['bomb', 'magpie']) : a; }
   function flameHud() { var el = $('v8flame'), n = save.streak.n, L = M81.flameLevel(n);
     if (!el) { el = document.createElement('div'); el.id = 'v8flame'; el.className = 'v8-flame'; el.setAttribute('role', 'status'); document.querySelector('header.hud').appendChild(el); }
     el.hidden = !L || !!S.daily; el.innerHTML = L ? '<img src="' + V81.flame.replace('{n}', L) + '" alt="" width="20" height="20">' + n + '연승' : ''; el.setAttribute('aria-label', n + '연승 중'); }
@@ -513,9 +642,10 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     var bb = $('v8bossbanner'); if (g.boss) { if (!bb) { bb = document.createElement('div'); bb.id = 'v8bossbanner'; bb.className = 'v8-boss-banner v8-boss-intro'; bb.setAttribute('role', 'status'); document.body.appendChild(bb); }
       bb.textContent = '보스 스테이지 ' + n; bb.hidden = true; clearTimeout(bb._h); var tries = 0; // v8.1.1: show 1.5 s once the board is really on screen (map / splash / sheets closed), never blocks input
       (function go() { var cover = document.querySelector('#menu.show, #splash, .ov.show'); if (cover && tries++ < 60) { bb._h = setTimeout(go, 100); return; } if (S.n !== n) return; bb.classList.remove('v8-boss-intro'); void bb.offsetWidth; bb.classList.add('v8-boss-intro'); bb.hidden = false; SP._bossShownAt = performance.now(); bb._h = setTimeout(function () { bb.hidden = true; }, 1500); })(); } else if (bb) { clearTimeout(bb._h); bb.hidden = true; }
-    if ((g.eggs || []).length) tip('egg', '알은 무리를 ' + Math.max.apply(null, g.eggs.map(function (e) { return e.n; })) + '번 완성하면 깨어나요');
+    if ((g.eggs || []).length && S.brood) tip('egg82', '알 위에 같은 색 새를 앉혀 두면 ' + Math.max.apply(null, g.eggs.map(function (e) { return e.n; })) + '번 움직인 뒤 깨어나요');
+    else if ((g.eggs || []).length) tip('egg', '알은 무리를 ' + Math.max.apply(null, g.eggs.map(function (e) { return e.n; })) + '번 완성하면 깨어나요');
     if ((g.sleep || []).length) tip('sleep', '시계 든 새의 무리를 완성하면 다들 깨어나요');
-    if (g.chain) tip('chain', '자물쇠 안에 또 열쇠가 있어요'); }
+    if (g.chain) tip('chain', '자물쇠 안에 또 열쇠가 있어요'); if (F82) meta82Start(n, g); }
   function metaWin(st, prev) { var a = S.a, clean = !S.undos && !a.hintsUsed && !perches(a) && !a.addedTube, h = '', coins = 0;
     var n0 = save.streak.n, n = M81.streakWin(save, clean); if (n >= 2 && n > n0) { sfx.play('streak-up'); h += ' · ' + IC('fire') + ' ' + n + '연승'; }
     save.v8paid = save.v8paid || {}; if (S.g.boss && !save.v8paid['boss' + S.n]) { save.v8paid['boss' + S.n] = 1; V8.addCoins(save, E81.bossBonus, EC); coins += E81.bossBonus; h += ' · 보스 +' + E81.bossBonus; setTimeout(function () { sfx.play('boss-clear'); }, 900); }
@@ -532,7 +662,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
       var parts = []; if (t.coins) parts.push('코인 +' + t.coins); if (t.hint) parts.push('힌트 +' + t.hint); if (t.token) parts.push('횃대 토큰 +' + t.token);
       $('coins').firstChild && (co.innerHTML = co.innerHTML.replace(/^[\s\S]*?(?= <button)/, IC('coin') + ' ' + Math.min(save.coins, EC.coinMax).toLocaleString('ko-KR'))); $('v8bag').onclick = bagSheet; $('v8albumBtn').onclick = albumOpen;
       sheet('별 상자 ' + got.length + '개를 열었어요', V81.chestOpen, [{ k: 'got', label: parts.join(' · '), disabled: true, go: function () {} }]);
-      if (save.chests.pending) toast('남은 상자 ' + save.chests.pending + '개는 다음에 열려요'); SP._chestGot = got; } }
+      if (save.chests.pending) toast('남은 상자 ' + save.chests.pending + '개는 다음에 열려요'); SP._chestGot = got; } if (F82) menu82(co); }
   // v8.1.3: the single upgrade sheet (chests + album together, shown once; data kept in save.m81sheet until shown)
   function upgradeSheet(u) { var t = { coins: 0, hint: 0, token: 0 }; (u.chests || []).forEach(function (r) { for (var x in r) t[x] += r[x]; });
     var rows = [], parts = []; if (t.coins) parts.push('코인 +' + t.coins); if (t.hint) parts.push('힌트 +' + t.hint); if (t.token) parts.push('횃대 토큰 +' + t.token);
@@ -541,19 +671,21 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     var pr = M81.chestProgress(save, E81); rows.push({ k: 'next', label: '지금까지 모은 별은 정산됐어요 · 다음 상자까지 별 ' + pr.left + '개', disabled: true, go: function () {} });
     sfx.play('chest-open'); sheet('새 기능 업데이트 선물', V81.chestOpen, rows); SP._upgrade = u; }
   function albumOpen() { var o = $('v8album'); if (!o) { o = document.createElement('div'); o.id = 'v8album'; o.className = 'ov v8ov'; document.body.appendChild(o); }
-    var ids = M81.albumIds(C.palette), A = save.album, have = ids.filter(function (i) { return A[i]; }).length, D = debuts();
+    var ids = albumIds82(), A = save.album, have = ids.filter(function (i) { return A[i]; }).length, D = debuts();
     var cards = ids.map(function (id) { var own = !!A[id], P = id[0] === 'c' ? C.palette[+id.slice(1)] : null, nm = P ? BIRD_KO[P.key][0] : ALBUM_GIM[id][0], im = P ? BF.expr(+id.slice(1), 'idle') : ALBUM_GIM[id][1];
-      return '<button class="v8-album-card' + (own ? '' : ' locked') + '" data-id="' + id + '" aria-label="' + (own ? nm : '잠긴 카드, ' + (D[id] || '?') + '스테이지 클리어 시 획득') + '">' + (own ? '<img src="' + im + '" alt="">' : '') + '<b>' + (own ? nm : (D[id] || '?') + '판') + '</b></button>'; }).join('');
-    o.innerHTML = '<div class="card v8-sheet v8-album" role="dialog" aria-label="새 도감"><div class="title">새 도감 ' + have + '/' + ids.length + '</div><div class="v8-album-sub">6장마다 코인 ' + E81.albumReward + '</div><div class="v8-album-grid">' + cards + '</div><div class="v8-album-face" id="v8face" hidden></div><button class="btn wide" id="v8albumClose">닫기</button></div>';
+      var full = own && (id === 'bomb' || id === 'magpie'); // DESIGN 20.17: complete card art (frame + name) as the background
+      if (full) return '<button class="v8-album-card ' + id + '" data-id="' + id + '" aria-label="' + nm + '"></button>';
+      return '<button class="v8-album-card' + (own ? '' : ' locked') + '" data-id="' + id + '" aria-label="' + (own ? nm : id === 'magpie' ? '잠긴 카드, 까미를 한 번 쓰면 획득' : '잠긴 카드, ' + (D[id] || '?') + '스테이지 클리어 시 획득') + '">' + (own ? '<img src="' + im + '" alt=""' + (id === 'bomb' || id === 'magpie' ? ' class="v82-album-art v82-album-' + id + '"' : '') + '>' : '') + '<b>' + (own ? nm : id === 'magpie' ? '까미 써 보기' : (D[id] || '?') + '판') + '</b></button>'; }).join('');
+    o.innerHTML = '<div class="card v8-sheet v8-album" role="dialog" aria-label="새 도감"><div class="title">새 도감 ' + have + '/' + ids.length + '</div><div class="v8-album-sub">6장마다 코인 ' + E81.albumReward + '</div><div class="v8-album-grid' + (F82 ? ' v82' : '') + '">' + cards + '</div><div class="v8-album-face" id="v8face" hidden></div><button class="btn wide" id="v8albumClose">닫기</button></div>';
     o.querySelectorAll('.v8-album-card').forEach(function (b) { b.onclick = function () { var id = b.dataset.id, f = $('v8face'); if (!A[id] || id[0] !== 'c') { f.hidden = true; return; } var c = +id.slice(1), P = C.palette[c];
       f.innerHTML = ['idle', 'happy', 'sad'].map(function (x) { return '<img src="' + BF.expr(c, x) + '" alt="">'; }).join('') + '<img src="assets-v8-bird-' + P.key + '-sleepy.svg" alt="">'; f.hidden = false; }; });
     $('v8albumClose').onclick = function () { o.classList.remove('show'); }; o.classList.add('show'); }
   SP._meta81 = function () { return { streak: save.streak, chests: save.chests, album: save.album, inv: save.inventory, debuts: debuts() }; };
   SP._v8 = function () { return { save: save, S: S, adAvail: adAvail() }; }; // QA hook
-  function vibrate(ms) { if (!hapticsOn) return; SP._haptics.push(ms); if (navigator.vibrate) try { navigator.vibrate(ms); } catch (e) {} }
+  function vibrate(ms, ev) { if (!hapticsOn) return; SP._haptics.push(ms); if (SP.platform && SP.platform.haptic && SP.platform.haptic(ev || 'toggle')) return; /* Toss host haptic (iOS too) */ if (navigator.vibrate) try { navigator.vibrate(ms); } catch (e) {} }
   // Remaining solution completes a tube on every move until solved => automatic end-of-stage cascade.
   function isCascade() {
-    if (S.lock.some(Boolean) || S.egg || S.slp) return false;
+    if (S.lock.some(Boolean) || S.egg || S.slp || S.bomb || S.ice) return false;
     var left = S.tubes.filter(function (t, i) { return t.length && !done(i); });
     var colors = {}; left.forEach(function (t) { t.forEach(function (c) { colors[c] = 1; }); });
     var need = Object.keys(colors).length; if (!need || need > 3) return false;
@@ -630,7 +762,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     if (S.n <= save.unlocked) save.unlocked = Math.max(save.unlocked, Math.min(S.n + 1, LAST)); // L3: debug-jumped stages don't unlock
     if (S.n < LAST) save.current = S.n + 1; // L2
     save.attempt[S.n] = { undoLeft: C.freeUndos, addedTube: false, perches: 0 }; // GDD v0.2: clear resets this stage's consumables (restart does not)
-    var mx = F81 ? metaWin(st, prev) : null; if (mx) got += mx.coins;
+    var mx = F81 ? metaWin(st, prev) : null; if (mx) got += mx.coins; if (F82 && mx) { var m2 = meta82Win(st); mx.coins += m2.coins; got += m2.coins; mx.html += m2.html; }
     persist(); render();
     $('bigstars').innerHTML = starsHtml(st); $('result').textContent = '이동 ' + S.moves + ' / 최소 ' + S.g.min; starTip();
     $('coinsGot').innerHTML = IC('coin') + ' 코인 +' + (got + combo) + ' (보유 ' + save.coins + ')' + (combo ? ' · 콤보 +' + combo : '') + (fe ? ' · 깃털 배지 +' + fe : '') + (mx ? mx.html : ''); // v7 B6
@@ -656,7 +788,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     var el = $('dailycard'); if (!el) return; if (!DD) { el.style.display = 'none'; return; }
     var k = today(), d = save.daily, done = DD.doneToday(d, k), cur = DD.streakNow(d, k), at = done ? (cur - 1) % 7 : cur % 7, h = '';
     DD.REWARDS.forEach(function (c, i) { h += '<div class="dday' + (i < at || (done && i === at) ? ' got' : '') + (i === at ? ' today' : '') + '"><b>' + (i + 1) + '일</b><span>' + (i < at || (done && i === at) ? '✓' : (i === 6 ? IC('gift') : IC('coin')) + c) + '</span></div>'; });
-    el.innerHTML = '<div class="drow"><div class="dtitle">' + CAL(k) + ' 오늘의 도전 <small>' + dailyLabel(k) + '</small></div><div class="dstreak" title="최고 ' + (d.best || 0) + '일">' + IC('fire') + ' ' + cur + '일 연속</div></div>'
+    el.innerHTML = '<div class="drow"><div class="dtitle">' + CAL(k) + ' 오늘의 도전 <small>' + dailyLabel(k) + (F82 && DD.theme && DD.theme(k, THO()) ? ' · <span class="dtheme">' + DD.theme(k, THO()).label + '</span>' : '') + '</small></div><div class="dstreak" title="최고 ' + (d.best || 0) + '일">' + IC('fire') + ' ' + cur + '일 연속</div></div>'
       + '<div class="dtrack">' + h + '</div><button class="btn ' + (done ? '' : 'primary ') + 'wide" id="dailyBtn">' + (done ? '다시 하기 (보상 없음) · <span id="dailyCd"></span> 후 새 도전' : '도전하기 ▶') + '</button>';
     $('dailyBtn').onclick = function () { $('menu').classList.remove('show'); clearInterval(cdT); load(DAILY); };
     clearInterval(cdT); if (done) { var tick = function () { var s = Math.ceil(DD.msToMidnight() / 1000), c = $('dailyCd'); if (!c || !$('menu').classList.contains('show')) return clearInterval(cdT); if (today() !== k) return dailyCard();
@@ -718,6 +850,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
        var w = document.createElement('div'); w.className = 'map-stars'; for (var i = 0; i < 3; i++) { var t = document.createElement('i'); t.className = 'map-star v7-star' + (i < (save.stars[n] || 0) ? ' on' : '') + (!reduced && n in starPop && i >= starPop[n] && i < (save.stars[n] || 0) ? ' pop' : ''); /* v7 B7: v7ui star-clear on/off art via .v7-star */ w.appendChild(t); } e.appendChild(w); }
     if (F81 && SP.STAGES[n] && SP.STAGES[n].boss) { e.classList.add('v8-boss-node'); var bi = document.createElement('img'); bi.className = 'v8-boss-ico'; bi.src = V81.bossNode; bi.alt = ''; e.appendChild(bi); e.setAttribute('aria-label', e.getAttribute('aria-label') + ', 보스 스테이지'); }
     if (F80 && save.badges.feather[n]) { var fb = document.createElement('img'); fb.className = 'v8-feather'; fb.src = V8A.feather; fb.alt = '노 되돌리기 배지'; e.appendChild(fb); }
+    if (F82 && save.crown82 && save.crown82[n]) { var cr = document.createElement('img'); cr.className = 'v82-crown'; cr.src = V82.crown; cr.alt = '도전 성공 왕관'; e.appendChild(cr); }
     if (n in starPop) setTimeout(function () { delete starPop[n]; }, 0);
     e.onclick = function () { $('menu').classList.remove('show'); load(n); }; return e;
   }
@@ -756,7 +889,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     el.addEventListener('touchend', function (e) { if (e.cancelable) e.preventDefault(); }); // no synthetic ghost click on whatever the toggle just revealed/hid (map 닫기 bug)
     el.addEventListener('click', function (e) { if (Date.now() - skip < 600) return; fn(e); }); }
   // QA F4: gear = settings panel only; '스테이지' = map + daily
-  function settingsOpen() { syncSym(); $('setov').classList.add('show'); }
+  function settingsOpen() { syncSym(); if (F82) set82(); $('setov').classList.add('show'); }
   onTap($('settings'), settingsOpen); onTap($('stagesBtn'), menu); onTap($('closeMenu'), function () { $('menu').classList.remove('show'); clearInterval(cdT); });
   $('closeSet').onclick = function () { $('setov').classList.remove('show'); };
   // QA F3: ending popup after the last stage
@@ -764,7 +897,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   $('endDaily').onclick = function () { endClose(); load(DAILY); };
   $('endMap').onclick = function () { endClose(); menu(); };
   function syncSym() { $('bigsym').checked = symbolsLarge; $('sound').checked = !(SP.sfx && SP.sfx.isMuted()); $('haptics').checked = hapticsOn; $('rmotion').checked = reduced; $('rmotion').disabled = osReduced; $('rmnote').hidden = !osReduced; }
-  $('haptics').onchange = function () { hapticsOn = this.checked; SP.store.set(HAP_KEY, hapticsOn ? 'on' : 'off'); if (hapticsOn) vibrate(15); };
+  $('haptics').onchange = function () { hapticsOn = this.checked; SP.store.set(HAP_KEY, hapticsOn ? 'on' : 'off'); if (hapticsOn) vibrate(15, 'toggle'); };
   $('rmotion').onchange = function () { if (osReduced) return; reduced = this.checked; SP.store.set(RM_KEY, String(reduced)); applyReduced(); if (S) render(); };
   $('sound').onchange = function () { if (SP.sfx) { SP.sfx.setMuted(!this.checked); if (this.checked) sfx.play('select'); } }; // DESIGN §5.6 settings: sound on/off (persisted)
   $('bigsym').onchange = function () { symbolsLarge = this.checked; SP.store.set(A11Y_KEY, String(symbolsLarge)); document.documentElement.classList.toggle('symbols-large', symbolsLarge); render(); };

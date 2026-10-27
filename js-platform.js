@@ -50,6 +50,20 @@ var SP = window.SP = window.SP || {};
   function back() { for (var i = backFns.length - 1; i >= 0; i--) if (backFns[i]() !== false) return; }
   if (T && T.graniteEvent) { try { T.graniteEvent.addEventListener('backEvent', { onEvent: back, onError: function (e) { console.warn('[platform] backEvent', e); } }); } catch (e) {} }
   else window.addEventListener('keydown', function (e) { if (e.key === 'Escape') back(); });
+  // 2026-10-27: Toss native haptics (iOS has no navigator.vibrate). SDK Device.triggerHaptic (3.x), legacy generateHapticFeedback as fallback.
+  // Returns true when the host took the haptic, so the game skips navigator.vibrate (no double buzz on Android).
+  var HAPTIC_TYPE = { invalid: 'error', complete: 'tickMedium', combo: 'success', clear: 'confetti', toggle: 'tap' };
+  function hapticFn() {
+    if (!T) return null;
+    if (T.Device && typeof T.Device.triggerHaptic === 'function') return T.Device.triggerHaptic;
+    if (typeof T.generateHapticFeedback === 'function') return T.generateHapticFeedback;
+    return null;
+  }
+  function haptic(ev) {
+    var fn = hapticFn(), type = HAPTIC_TYPE[ev];
+    if (!fn || !type) return false;
+    try { var r = fn({ type: type }); if (r && r.catch) r.catch(function () {}); SP.platform._haptics.push(type); return true; } catch (e) { return false; }
+  }
   SP.store = store;
   SP.platform = {
     isToss: !!T, sdk: T,
@@ -57,6 +71,7 @@ var SP = window.SP = window.SP || {};
     storageMode: function () { return mode; },
     onBack: function (fn) { backFns.push(fn); },
     back: back, // QA hook: simulate a system back press
+    haptic: haptic, _haptics: [], // native haptic by game event name; false = no host haptic (use navigator.vibrate)
     close: function () {
       if (T && T.Screen) return T.Screen.close().catch(function (e) { console.warn('[platform] close', e); });
       console.log('[platform] close requested (dev build: no host to close)'); SP.platform._closed = true; return Promise.resolve();

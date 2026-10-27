@@ -25,15 +25,26 @@ var SP = (typeof window !== "undefined") ? (window.SP = window.SP || {}) : (glob
   function pick(key) { var P = SP.DAILY_POOL && SP.DAILY_POOL.length; if (!P) return -1; var A = 37 % P || 1, B = hash('sortpuzzle-daily-pool') % P;
     return (((A * dayNum(key) + B) % P) + P) % P; }
   // build(stages, key, nColors) -> stage object (same shape as SP.STAGES[n]) + { daily: key, source }
-  function build(stages, key, nColors) {
-    var r = rng(hash('sortpuzzle-daily:' + key)), pi = pick(key), g, src;
-    if (pi >= 0) { g = SP.DAILY_POOL[pi]; src = 'pool:' + pi; }
+  // v8.2 (GDD D1, hidden flag): weekday theme pools (js-daily-themes.js). Only when the caller passes opts (game.js does so
+  // only with C.features.v82) and the player has cleared the theme's first stage (opts.cleared(gate)); otherwise the default
+  // daily. Theme index uses the week number w (same weekday = consecutive w): (A*w + B) mod P, P prime -> no repeat within P weeks.
+  function theme(key, opts) { if (!opts || !SP.DAILY_THEMES) return null; var p = key.split('-').map(Number), dow = new Date(p[0], p[1] - 1, p[2], 12).getDay(), t = SP.DAILY_THEMES[dow];
+    if (!t || !t.pool.length || !(opts.cleared && opts.cleared(t.gate))) return null; var P = t.pool.length, w = Math.floor((dayNum(key) + 3) / 7), A = 11 % P || 1, B = hash('sortpuzzle-theme:' + t.theme) % P;
+    return { theme: t.theme, label: t.label, pool: t.pool, idx: (((A * w + B) % P) + P) % P }; }
+  function build(stages, key, nColors, opts) {
+    var r = rng(hash('sortpuzzle-daily:' + key)), pi = pick(key), g, src, th = theme(key, opts);
+    if (th) { g = th.pool[th.idx]; src = th.theme + ':' + th.idx; }
+    else if (pi >= 0) { g = SP.DAILY_POOL[pi]; src = 'pool:' + pi; }
     else { var p = pool(stages); if (!p.length) return null; src = p[Math.floor(r() * p.length)]; g = stages[src]; }
     var order = shuffle(g.tubes.map(function (_, i) { return i; }), r), inv = []; order.forEach(function (old, i) { inv[old] = i; }); // new tube i = old tube order[i]
     var cmap = shuffle(Array.from({ length: nColors || 12 }, function (_, i) { return i; }), r);
     var tubes = order.map(function (old) { return g.tubes[old].map(function (c) { return typeof c === 'number' ? cmap[c] : c; }); });
-    return { daily: key, source: src, seed: hash(key), colors: g.colors, empty: g.empty, rest: false, tutorial: false, min: g.min, deadEnds: g.deadEnds || 0,
+    var o = { daily: key, source: src, seed: hash(key), colors: g.colors, empty: g.empty, rest: false, tutorial: false, min: g.min, deadEnds: g.deadEnds || 0,
       tubes: tubes, gimmicks: [], solution: g.solution.map(function (m) { return [inv[m[0]], inv[m[1]]]; }) };
+    if (th) { o.theme = th.theme; o.themeLabel = th.label; o.gimmicks = (g.gimmicks || []).slice();
+      if (g.locks) o.locks = g.locks.map(function (l) { return { tube: inv[l.tube], key: l.key }; });
+      if (g.hidden) o.hidden = g.hidden.map(function (h) { return [inv[h[0]], h[1]]; }); }
+    return o;
   }
   // Streak state lives in the main save (save.daily) so it uses the same (SDK) storage path: { last, streak, best, stars{key:n} }
   function streakNow(d, today) { if (!d || !d.last) return 0; return d.last === today || d.last === shift(today, -1) ? d.streak || 0 : 0; }
@@ -48,6 +59,6 @@ var SP = (typeof window !== "undefined") ? (window.SP = window.SP || {}) : (glob
     var day = ((d.streak - 1) % 7) + 1; return { first: true, streak: d.streak, reward: REWARDS[day - 1], day: day };
   }
   function msToMidnight(now) { now = now || new Date(); var m = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1); return m - now; }
-  SP.daily = { REWARDS: REWARDS, dateKey: dateKey, shift: shift, pool: pool, build: build, pick: pick, streakNow: streakNow, doneToday: doneToday, complete: complete, msToMidnight: msToMidnight };
+  SP.daily = { REWARDS: REWARDS, dateKey: dateKey, shift: shift, pool: pool, build: build, theme: theme, pick: pick, streakNow: streakNow, doneToday: doneToday, complete: complete, msToMidnight: msToMidnight };
   if (typeof module !== 'undefined') module.exports = SP.daily;
 })();

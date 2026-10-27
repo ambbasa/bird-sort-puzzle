@@ -30,24 +30,34 @@ var SP = (typeof window !== 'undefined') ? (window.SP = window.SP || {}) : (glob
     if (stage.cages && stage.cages.length) { st.cage = new Array(n).fill(null); stage.cages.forEach(function (c) { st.cage[c.tube] = { f: c.from, t: c.to, n: c.n }; }); }
     if (stage.eggs && stage.eggs.length) st.egg = stage.eggs.map(function (e) { return { i: e.tube, j: e.at, n: e.n }; });
     if (stage.sleep && stage.sleep.length) { st.slp = stage.sleep.map(function (z) { return [z[0], z[1]]; }); st.alarm = stage.alarm; st.al = stage.alarmAt ? stage.alarmAt.slice() : null; }
+    if (st.egg && stage.brood) st.brood = 1; // v8.2 M3' brooding eggs (C.features.eggBrood)
+    if (stage.thorn && stage.thorn.length) st.th = stage.thorn.slice().sort(function (a, b) { return a - b; }); // v8.2 M7 thorn nests (tube ids)
+    if (stage.ice && stage.ice.length) st.ice = stage.ice.map(function (z) { return { i: z.tube, n: z.n || 2 }; }); // v8.2 M8 frozen perches
+    if (stage.bomb) st.bomb = { i: stage.bomb.tube, j: stage.bomb.at, n: stage.bomb.n }; // v8.2 M6 bomb bird (colour = the bird at i,j)
     return st;
   }
   function clone(s) { var c = { t: s.t.map(function (x) { return x.slice(); }), cap: s.cap, lock: s.lock.slice() }; if (s.cage) c.cage = s.cage.map(function (k) { return k ? { f: k.f, t: k.t, n: k.n } : null; });
-    if (s.egg) c.egg = s.egg.map(function (e) { return { i: e.i, j: e.j, n: e.n }; }); if (s.slp) { c.slp = s.slp.map(function (z) { return z.slice(); }); c.alarm = s.alarm; } if (s.al) c.al = s.al.slice(); return c; }
+    if (s.egg) c.egg = s.egg.map(function (e) { return { i: e.i, j: e.j, n: e.n }; }); if (s.slp) { c.slp = s.slp.map(function (z) { return z.slice(); }); c.alarm = s.alarm; } if (s.al) c.al = s.al.slice();
+    if (s.brood) c.brood = 1; if (s.th) c.th = s.th.slice(); if (s.ice) c.ice = s.ice.map(function (z) { return { i: z.i, n: z.n }; }); if (s.bomb) c.bomb = { i: s.bomb.i, j: s.bomb.j, n: s.bomb.n }; if (s.boom) c.boom = 1; return c; }
+  function thornAt(s, i) { return !!s.th && s.th.indexOf(i) >= 0; }
+  function iceAt(s, i) { if (s.ice) for (var q = 0; q < s.ice.length; q++) if (s.ice[q].i === i) return s.ice[q]; return null; }
+  function bombAt(s, i, j) { return !!s.bomb && s.bomb.i === i && s.bomb.j === j; }
   function eggAt(s, i, j) { if (s.egg) for (var q = 0; q < s.egg.length; q++) if (s.egg[q].i === i && s.egg[q].j === j) return s.egg[q]; return null; }
   function slpAt(s, i, j) { if (s.slp) for (var q = 0; q < s.slp.length; q++) if (s.slp[q][0] === i && s.slp[q][1] === j) return true; return false; }
   function low(s, i) { var lo = s.cage && s.cage[i] ? s.cage[i].t + 1 : 0, q; // lowest movable slot of tube i (everything below is fixed)
     if (s.egg) for (q = 0; q < s.egg.length; q++) if (s.egg[q].i === i && s.egg[q].j + 1 > lo) lo = s.egg[q].j + 1;
     if (s.slp) for (q = 0; q < s.slp.length; q++) if (s.slp[q][0] === i && s.slp[q][1] + 1 > lo) lo = s.slp[q][1] + 1; return lo; }
-  function fixedTop(s, i) { return (!!s.cage || !!s.egg || !!s.slp) && s.t[i].length > 0 && low(s, i) >= s.t[i].length; } // top bird is caged/egg/asleep
+  function fixedTop(s, i) { if (s.ice && iceAt(s, i) && s.t[i].length) return true; return (!!s.cage || !!s.egg || !!s.slp) && s.t[i].length > 0 && low(s, i) >= s.t[i].length; } // top bird is caged/egg/asleep
   function cagedTop(s, i) { var k = s.cage && s.cage[i]; return !!k && k.t >= s.t[i].length - 1; } // the tube's top bird is inside its cage
   function isDone(s, i) { if (s.cage && s.cage[i]) return false; if (s.egg) for (var q = 0; q < s.egg.length; q++) if (s.egg[q].i === i) return false; var t = s.t[i]; if (s.cap[i] < FULL || t.length !== FULL || isKey(t[0])) return false; for (var k = 1; k < FULL; k++) if (t[k] !== t[0]) return false; return true; }
-  function isSolved(s) {
+  function isSolved(s) { if (s.boom) return false;
     for (var i = 0; i < s.t.length; i++) { if (s.lock[i] !== null || (s.cage && s.cage[i])) return false; if (s.t[i].length && !isDone(s, i)) return false; }
     return true;
   }
   function canMove(s, a, b) {
-    if (a === b || s.lock[a] !== null) return false;
+    if (a === b || s.lock[a] !== null || s.boom) return false;
+    if (s.th && thornAt(s, b)) return false; // v8.2 M7: nothing lands on a thorn nest
+    if (s.ice && iceAt(s, a)) return false; // v8.2 M8: a frozen perch can't be left
     var A = s.t[a], B = s.t[b]; if (!A.length || isDone(s, a) || fixedTop(s, a)) return false;
     if (B.length && cagedTop(s, b)) return false; // v8 M1: nothing lands on a caged top
     var ball = A[A.length - 1];
@@ -65,14 +75,39 @@ var SP = (typeof window !== 'undefined') ? (window.SP = window.SP || {}) : (glob
   }
   function apply(s, a, b, cnt) { // returns new state (does not check legality); cnt: optional cap on the run size (game: '?' birds)
     var k = Math.min(cnt || 99, moveCount(s, a, b)), n = clone(s), ball = n.t[a].pop();
-    if (isKey(ball) && n.lock[b] === ball) { n.lock[b] = null; return n; } // key + lock disappear together
+    if (isKey(ball) && n.lock[b] === ball) { n.lock[b] = null; if (n.brood || n.th || n.ice || n.bomb) post(s, n, a, b, 99, 1); return n; } // key + lock disappear together
     var LA = s.t[a].length, LB = s.t[b].length;
     n.t[b].push(ball); for (var i = 1; i < k; i++) n.t[b].push(n.t[a].pop());
     if (n.al && n.al[0] === a && n.al[1] >= LA - k) n.al = [b, LB + (LA - 1 - n.al[1])]; // alarm badge rides with its bird
-    if ((n.cage || n.egg) && isDone(n, b)) { if (n.cage) tick(n, 1); if (n.egg) hatch(n, 1); } // v8 M1/M3: a completion by this move counts cages and eggs down
+    if ((n.cage || n.egg) && isDone(n, b)) { if (n.cage) tick(n, 1); if (n.egg && !n.brood) hatch(n, 1); } // v8 M1/M3: a completion by this move counts cages and eggs down
     if (n.slp) wake(n);
+    if (n.brood || n.th || n.ice || n.bomb) post(s, n, a, b, LB, k);
     return n;
   }
+  // v8.2 after-move rules (only states that carry v8.2 fields reach here; v8.1 states are untouched).
+  // seat: [tube, firstNewSlot] = slots >= firstNewSlot of tube were just filled by this move (they are not 'brooding' yet).
+  function post(s, n, a, b, LB, k, swapAt) {
+    var done = (n.ice || n.bomb) ? isDone(n, b) && !isDone(s, b) : false;
+    if (n.brood && n.egg) { var out = [];
+      n.egg = n.egg.filter(function (e) { var up = n.t[e.i][e.j + 1], c = n.t[e.i][e.j], fresh = swapAt ? (swapAt[0] === e.i && (swapAt[1] === e.j + 1 || swapAt[1] + 1 === e.j + 1)) : (b === e.i && LB <= e.j + 1);
+        if (up === c && !fresh) { e.n -= 1; if (e.n <= 0) { out.push(e); return false; } } return true; });
+      if (!n.egg.length) { delete n.egg; delete n.brood; }
+      out.forEach(function (e) { if (isDone(n, e.i)) (n.hatchDone = n.hatchDone || []).push(e.i); }); } // flocks completed by hatching: never a combo (GDD M3')
+    if (n.th) { n.th = n.th.filter(function (i) { return n.t[i].length > 0; }); if (!n.th.length) delete n.th; }
+    if (n.ice) { n.ice = n.ice.filter(function (z) { if (isDone(n, z.i)) return false; if (done) z.n -= 1; return z.n > 0; }); if (!n.ice.length) delete n.ice; }
+    if (n.bomb) { var bb = n.bomb, LA = s.t[a].length;
+      if (!swapAt) { if (bb.i === a && bb.j >= LA - k) { bb.i = b; bb.j = LB + (LA - 1 - bb.j); } } // the bomb bird rides with its run (like the alarm badge)
+      else if (swapAt[0] === bb.i && (bb.j === swapAt[1] || bb.j === swapAt[1] + 1)) bb.j = bb.j === swapAt[1] ? swapAt[1] + 1 : swapAt[1];
+      var col = n.t[bb.i][bb.j], ok = false; for (var y = 0; y < n.t.length; y++) if (n.t[y][0] === col && isDone(n, y)) ok = true;
+      if (ok) { delete n.bomb; n.defused = 1; } else { bb.n -= 1; if (bb.n <= 0) { bb.n = 0; n.boom = 1; } } }
+  }
+  // v8.2 M9 '까미' swap booster: swaps the two adjacent birds at slots j and j+1 of tube i (one move). Not used by the solver.
+  function canSwap(s, i, j) { var t = s.t[i]; if (!t || j < 0 || j + 1 >= t.length || s.lock[i] !== null || s.boom) return false; if (t[j] === t[j + 1] || isKey(t[j]) || isKey(t[j + 1])) return false;
+    if (isDone(s, i)) return false; if (j < low(s, i)) return false; // caged / egg / sleeping birds (and everything under them) are excluded
+    if (s.bomb && s.bomb.i === i && (s.bomb.j === j || s.bomb.j === j + 1)) return false; if (s.ice && iceAt(s, i)) return false; return true; }
+  function swap(s, i, j) { var n = clone(s), t = n.t[i], x = t[j]; t[j] = t[j + 1]; t[j + 1] = x;
+    if ((n.cage || n.egg) && isDone(n, i)) { if (n.cage) tick(n, 1); if (n.egg && !n.brood) hatch(n, 1); }
+    if (n.slp) wake(n); if (n.brood || n.th || n.ice || n.bomb) post(s, n, i, i, t.length, 0, [i, j]); return n; }
   function tick(n, c) { var open = []; for (var i = 0; i < n.cage.length; i++) { var k = n.cage[i]; if (!k) continue; k.n -= c; if (k.n <= 0) { n.cage[i] = null; open.push(i); } }
     if (!n.cage.some(Boolean)) delete n.cage; return open; }
   function hatch(n, c) { var out = []; n.egg = n.egg.filter(function (e) { e.n -= c; if (e.n <= 0) { out.push(e); return false; } return true; }); if (!n.egg.length) delete n.egg; return out; }
@@ -82,7 +117,7 @@ var SP = (typeof window !== 'undefined') ? (window.SP = window.SP || {}) : (glob
     var out = [], n = s.t.length;
     for (var a = 0; a < n; a++) {
       var A = s.t[a]; if (!A.length || s.lock[a] !== null || isDone(s, a) || fixedTop(s, a)) continue;
-      var mono = prune && !(s.cage && s.cage[a]) && !(low(s, a) > 0) && !isKey(A[0]) && A.every(function (c) { return c === A[0]; });
+      var mono = prune && !(s.th && thornAt(s, a)) && !(s.cage && s.cage[a]) && !(low(s, a) > 0) && !isKey(A[0]) && A.every(function (c) { return c === A[0]; });
       for (var b = 0; b < n; b++) {
         if (!canMove(s, a, b)) continue;
         if (mono && !s.t[b].length && s.cap[b] === s.cap[a] && !isKey(A[A.length - 1])) continue; // provably useless
@@ -98,6 +133,7 @@ var SP = (typeof window !== 'undefined') ? (window.SP = window.SP || {}) : (glob
       var str = s.t[i].join(','), cg = s.cage && s.cage[i]; if (cg) str += '~' + cg.f + '-' + cg.t + 'n' + cg.n; // v8: cage is part of the state key (G10)
       if (s.egg) for (var q = 0; q < s.egg.length; q++) if (s.egg[q].i === i) str += '^' + s.egg[q].j + 'n' + s.egg[q].n; // v8.1: eggs / sleepers too
       if (s.slp) for (q = 0; q < s.slp.length; q++) if (s.slp[q][0] === i) str += 'z' + s.slp[q][1];
+      if (s.th && thornAt(s, i)) str += 'T'; if (s.ice) { var iz = iceAt(s, i); if (iz) str += 'I' + iz.n; } if (s.bomb && s.bomb.i === i) str += 'B' + s.bomb.j + 'n' + s.bomb.n;
       if (s.lock[i] !== null) fixed.push(i + ':' + s.lock[i] + ':' + str);
       else (groups[s.cap[i]] = groups[s.cap[i]] || []).push(str);
     }
@@ -197,7 +233,7 @@ var SP = (typeof window !== 'undefined') ? (window.SP = window.SP || {}) : (glob
   }
   function firstMoveOptions(stage) { return moves(init(stage), false).length; }
   function completeAtStart(stage) { var s = init(stage); for (var i = 0; i < s.t.length; i++) if (isDone(s, i)) return true; return false; }
-  function ser(s) { var a = [s.t, s.cap, s.lock, s.cage || null]; if (s.egg || s.slp || s.al) a.push(s.egg || null, s.slp || null, s.alarm === undefined ? null : s.alarm, s.al || null); return JSON.stringify(a); } // v8 G3: state serialization for undo round-trip tests
-  SP.engine = { dfsJob: dfsJob, clone: clone, fixedTop: fixedTop, low: low, eggAt: eggAt, slpAt: slpAt, ser: ser, cagedTop: cagedTop, completions: completions, init: init, canMove: canMove, apply: apply, moveCount: moveCount, moves: moves, isSolved: isSolved, isDone: isDone, key: key, solve: solve, replay: replay, firstMoveOptions: firstMoveOptions, completeAtStart: completeAtStart, isKey: isKey, dfs: dfs, deadEndScore: deadEndScore };
+  function ser(s) { var a = [s.t, s.cap, s.lock, s.cage || null]; if (s.egg || s.slp || s.al) a.push(s.egg || null, s.slp || null, s.alarm === undefined ? null : s.alarm, s.al || null); if (s.th || s.ice || s.bomb || s.boom) a.push(s.th || null, s.ice || null, s.bomb || null, s.boom || 0); return JSON.stringify(a); } // v8 G3: state serialization for undo round-trip tests
+  SP.engine = { swap: swap, canSwap: canSwap, thornAt: thornAt, iceAt: iceAt, bombAt: bombAt, dfsJob: dfsJob, clone: clone, fixedTop: fixedTop, low: low, eggAt: eggAt, slpAt: slpAt, ser: ser, cagedTop: cagedTop, completions: completions, init: init, canMove: canMove, apply: apply, moveCount: moveCount, moves: moves, isSolved: isSolved, isDone: isDone, key: key, solve: solve, replay: replay, firstMoveOptions: firstMoveOptions, completeAtStart: completeAtStart, isKey: isKey, dfs: dfs, deadEndScore: deadEndScore };
 })();
 if (typeof module !== 'undefined') module.exports = SP.engine;

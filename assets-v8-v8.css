@@ -54,3 +54,22 @@
 .v8-sleep{transform-origin:50% 90%;animation:v8-breathe 2.4s ease-in-out infinite}
 @keyframes v8-breathe{50%{transform:scale(1.03,.97) rotate(-3deg)}}
 @media (prefers-reduced-motion:reduce){.v8-bomb.low,.v8-defuse,.v8-flyaway,.v8-thaw,.v8-sleep{animation:none}.v8-sleep{transform:rotate(-3deg)}}
+
+/* ===== v8.2b (DESIGN 20.17) — v82 플래그 뒤에서만 사용 ===== */
+/* 알 품기 하트: 알 칸(.v8-egg 등 position:relative) 안에 두고, 알 배지(우상단) 반대편 좌상단 */
+.v8-brood{position:absolute;left:-12%;top:-4%;width:max(18px,44%);height:auto;aspect-ratio:1;background:center/contain no-repeat;pointer-events:none;z-index:3}
+.v8-brood.warm{background-image:url(assets-v8-badge-brood-warm.svg?v=d924a0c6);animation:v8-brood 1.2s ease-in-out infinite}
+.v8-brood.paused{background-image:url(assets-v8-badge-brood-paused.svg?v=9be32d78);animation:none}
+@keyframes v8-brood{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+/* H1 가이드 카드 루프 아이콘(<img src="guide-loop-*.svg">) */
+.v8-guide-loop{width:72px;height:72px;flex:none;display:block}
+/* 까미 바꾸기 fx: 맞붙은 두 칸을 덮는 오버레이(100×130 비율), 0.5s 1회 */
+.v8-magpie-swap{position:absolute;left:0;width:100%;aspect-ratio:100/130;background:url(assets-v8-fx-magpie-swap.svg?v=5600fafe) center/contain no-repeat;pointer-events:none;z-index:4;animation:v8-swapfx .5s ease-out both}
+@keyframes v8-swapfx{0%{opacity:0;transform:scale(.85)}25%{opacity:1;transform:scale(1)}75%{opacity:1}100%{opacity:0}}
+.v8-swap-up{animation:v8-swap-up .5s ease-in-out both}.v8-swap-down{animation:v8-swap-down .5s ease-in-out both}
+/* v8.2c: DOM을 먼저 바꾼 뒤 재생 — 각 새는 옛 자리 오프셋에서 출발해 transform:none으로 끝남(reverse 불필요) */
+@keyframes v8-swap-up{0%{transform:translate(0,var(--swap-d,100%))}50%{transform:translate(18%,calc(var(--swap-d,100%) * .5))}100%{transform:none}}
+@keyframes v8-swap-down{0%{transform:translate(0,calc(var(--swap-d,100%) * -1))}50%{transform:translate(-18%,calc(var(--swap-d,100%) * -.5))}100%{transform:none}}
+/* 도감 카드(완성 SVG, 이름 포함) */
+.v8-album-card.bomb{background-image:url(assets-v8-album-card-bomb.svg?v=114f548f)}.v8-album-card.magpie{background-image:url(assets-v8-album-card-magpie.svg?v=87af6b52)}
+@media (prefers-reduced-motion:reduce){.v8-brood.warm,.v8-magpie-swap,.v8-swap-up,.v8-swap-down{animation:none}.v8-magpie-swap{opacity:1}}
