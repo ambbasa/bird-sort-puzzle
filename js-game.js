@@ -726,6 +726,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   // been opened today. Opening the map stores save.seen.daily = today -> the dot goes away until tomorrow's new puzzle.
   function redDot() { return !!DD && !DD.doneToday(save.daily, today()) && !(save.seen && save.seen.daily === today()); }
   function menu() {
+    try { dayCheck(); } catch (e) {}
     if (redDot()) { save.seen = save.seen || {}; save.seen.daily = today(); persist(); $('stagesBtn').classList.remove('dot'); }
     $('menu').classList.add('show'); // show first: a map/daily problem must never leave the gear doing nothing
     try { $('coins').innerHTML = IC('coin') + ' ' + (F80 ? Math.min(save.coins, EC.coinMax).toLocaleString('ko-KR') : save.coins) + (F80 ? ' <button class="btn v8-bag v8-bag-ico" id="v8bag" aria-label="가방" title="가방"><span class="v8-bag-svg" aria-hidden="true"></span></button>' : ''); if (F80) $('v8bag').onclick = bagSheet; if (F81) metaMenu(); dailyCard(); } catch (e) { console.error('menu: daily card', e); }
@@ -800,6 +801,12 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   //@qa-end
   if (F81 && !QAP && !save.m81) { var up81 = M81.upgrade81(save, debuts(), E81, EC); if (up81) save.m81sheet = up81; persist(); } // v8.1.3: one-time upgrade settlement (sheet on first map open)
   SP.ads.showBanner(); load(start); if (bootToMap) try { menu(); } catch (e) {}
+  // v8.1.4 local-midnight rollover while the screen stays on: card + red dot re-render; free perch count is recomputed from the day key whenever the sheet opens
+  var dayNow = dayNow || today();
+  function dayCheck() { var k = today(); if (dayNow === undefined) dayNow = k; if (!k || k === dayNow) return; dayNow = k; SP._dayRoll = (SP._dayRoll || 0) + 1;
+    try { if ($('menu').classList.contains('show')) dailyCard(); } catch (e) {}
+    try { $('stagesBtn').classList.toggle('dot', redDot()); } catch (e) {} }
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) dayCheck(); }); window.addEventListener('focus', dayCheck); setInterval(dayCheck, 60000); SP._dayCheck = dayCheck;
   var sp = $('splash'); if (sp) { sp.classList.add('out'); setTimeout(function () { sp.remove(); }, 300); } // L6: first screen ready
   SP._bootMs = Math.round(performance.now()); SP._inputLocked = function () { return S.locked && !S.won; };
 });
