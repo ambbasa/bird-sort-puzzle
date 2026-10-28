@@ -85,3 +85,9 @@
 .v8-album-card.locked.v2{background-image:url(assets-v8-album-locked-v2.svg?v=8baf1d59)}
 /* 까미 fx: 실기에서 약 5px 아래로 보임 → transform과 겹치지 않는 translate 속성으로 위로 보정 */
 .v8-magpie-swap{translate:0 var(--swap-fx-dy,-5px)}
+
+/* ===== v8.2e (DESIGN 20.19) 작은 3칸 둥지 구분 v2 — game.js가 F82일 때 작은 둥지에 'small-v2' 추가 ===== */
+/* 게임은 v7b-perch-wood.css로 나무를 ::before에 그림 → ::before 교체(테마 --wood-f 필터 그대로 적용) */
+#board .tube.perch.small.small-v2::before{background-image:url(assets-v8-perch-small-v2.svg?v=84cfc487)}
+#board .tube.perch.small.small-v2.thorn::before{background-image:url(assets-v8-perch-thorn-small-v2.svg?v=cd9b051d)}
+.v8-small-bench{display:inline-block;width:54px;height:21px;background:url(assets-v8-badge-small-bench.svg?v=b1adefac) center/contain no-repeat}

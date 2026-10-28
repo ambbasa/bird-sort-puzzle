@@ -251,7 +251,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
       var r = document.createElement('div'); r.className = 'row'; b.appendChild(r);
       for (var k = 0; k < cnt; k++, idx++) (function (i) {
         var t = S.tubes[i], d = document.createElement('div'), isd = done(i), small = S.caps[i] < 4, lk = S.lock[i];
-        d.className = 'tube perch' + (isd ? ' complete' : '') + (fx.fresh === i && !fl ? ' fresh' : '') + (fx.shake === i ? ' shake' : '') + (small ? ' small' : '') + (small && fx.full === i ? ' full' : '') + (lk ? ' locked' : '') + (fx.unlock && fx.unlock.tube === i ? ' locked' : '') + (F82 && S.th && S.th.indexOf(i) >= 0 ? ' thorn' : '');
+        d.className = 'tube perch' + (isd ? ' complete' : '') + (fx.fresh === i && !fl ? ' fresh' : '') + (fx.shake === i ? ' shake' : '') + (small ? ' small' + (F82 ? ' small-v2' : '') : '') + (small && fx.full === i ? ' full' : '') + (lk ? ' locked' : '') + (fx.unlock && fx.unlock.tube === i ? ' locked' : '') + (F82 && S.th && S.th.indexOf(i) >= 0 ? ' thorn' : '');
         if (isd) { var bd = document.createElement('img'); bd.className = 'badge'; bd.src = C.assets.badge; bd.alt = ''; d.appendChild(bd); }
         if (small) { var cb = document.createElement('img'); cb.className = 'capbadge'; cb.src = GA.smallTube.badge; cb.alt = '용량 3'; d.appendChild(cb); } // DESIGN 13.4: no complete glow/check on small tubes
         var lockKey = lk || (fx.unlock && fx.unlock.tube === i ? fx.unlock.key : null);
@@ -330,6 +330,8 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   var SYM_KO = { circle: '동그라미', triangle: '세모', square: '네모', star: '별', diamond: '마름모', heart: '하트', plus: '더하기', x: '엑스', hexagon: '육각형', moon: '달', drop: '물방울', ring: '고리', pentagon: '오각형', bolt: '번개', crescent: '초승달', clover: '클로버', flower: '꽃', note: '음표' };
   function birdName(k) { var b = BIRD_KO[k]; return b ? b[0] + '(' + b[1] + ' 새)' : '새'; }
   function symKo(s) { return SYM_KO[s] || '표식'; }
+  function alarmTip82(g) { var al = g ? g.alarm : null, L = (Array.isArray(al) ? al : al == null ? [] : [al]).map(function (c) { var pc = C.palette[c], b = pc && BIRD_KO[pc.key]; return b ? b[1] + ' ' + b[0] : null; }).filter(function (x, k, A) { return x && A.indexOf(x) === k; }); // v8.2: name the alarm colour(s) + bird
+    return L.length ? L.join('·') + ' 무리를 완성하면 다들 깨어나요' : '시계 든 새의 무리를 완성하면 다들 깨어나요'; }
   SP._birdName = birdName; SP._symKo = symKo;
   // QA M1: size balls so the tube grid fits the board's real height/width (safe areas, HUD, buttons, banner excluded) for any tube count
   function fitBalls(b) { // 2026-10-28 (QA N2): 11-14 perches try 3 rows AND 2 wider rows, keep whichever gives bigger birds
@@ -372,7 +374,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
       if (w) w.remove(); if (lo) lo.remove(); if (d) d.querySelectorAll('.locksym').forEach(function (x) { x.remove(); }); if (ov) ov.remove(); if (d) d.classList.remove('locked', 'unlocking');
       if (S !== S0) return; // stage changed meanwhile
       if (solved) return cheer();
-      S.locked = false; S.consuming = false; render(); flushTaps();
+      S.locked = false; S.consuming = false; render(); if (F80) afterMove(); flushTaps(); // v8.2 (planner 16:07, also flag-OFF): key-unlock move skipped the G5 dead-end check (178 gap)
     }, T.end);
   }
   function sparkle(d) { for (var i = 0; i < 5; i++) { var s = document.createElement('i'); s.className = 'spark'; s.style.left = (Math.random() * 100) + '%'; s.style.top = (Math.random() * 90) + '%'; s.style.animationDelay = (i * 30) + 'ms'; d.appendChild(s); } }
@@ -415,6 +417,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
       if (solved) { S.locked = true; S.solvedLock = true; S.tbuf = []; S.sel = -1; render(); return whenLanded(function () { setTimeout(cheer, CLEAR_DELAY); }); } // H1: lock all input during clear sequence (perch hop wave -> card)
       if (F80) { render(); afterMove(); return; } // v8 G5: dead-end check after every move
     } else if (pickable(i)) { S.sel = i; warmSide(S.tubes[i][S.tubes[i].length - 1]); sfx.play('select'); }
+    else if (F82) { if (!reduced) fx.shake = i; sfx.play('invalid'); toast('자리가 없어요'); } // v8.2 (planner 10/28 15:29): target can't take the selection -> shake target (none under reduced motion) + toast; selection kept
     else { fx.shake = i; sfx.play('invalid'); }
     render();
   }
@@ -545,7 +548,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   var guideFirst = null;
   function guideFirsts() { if (guideFirst) return guideFirst; guideFirst = {}; GUIDE.forEach(function (c) { for (var k = 1; k <= LAST; k++) { var g = SP.STAGES[k]; if (g && c.has(g)) { guideFirst[c.id] = k; break; } } }); return guideFirst; }
   function guideNew() { var F = guideFirsts(), seen = (save.guide82 || {}); return GUIDE.some(function (c) { return F[c.id] && F[c.id] <= save.unlocked && !seen[c.id]; }); }
-  function guideArt82() { return GUIDE.map(function (c) { return LOOP82[c.id] && !reduced ? 'assets-v8-guide-loop-' + LOOP82[c.id] + '.svg?v=0e3c500b' : c.art; }); }
+  function guideArt82() { return GUIDE.map(function (c) { return LOOP82[c.id] && !reduced ? 'assets-v8-guide-loop-' + LOOP82[c.id] + '.svg?v=12d7433e' : c.art; }); }
   var guidePre82 = null; function guidePreload82() { if (guidePre82) return; guidePre82 = guideArt82().map(function (u) { var im = new Image(); im.decoding = 'async'; im.src = u; return im; }); } // planner 14:37: no late white flash on first open
   function guideOpen(inStage) { guidePreload82(); var o = $('v82guide'); if (!o) { o = document.createElement('div'); o.id = 'v82guide'; o.className = 'ov v8ov'; document.body.appendChild(o); }
     var F = guideFirsts(), seen = save.guide82 || {}, g = inStage && S && !S.daily ? S.g : null, list = GUIDE.slice();
@@ -653,7 +656,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
       (function go() { var cover = document.querySelector('#menu.show, #splash, .ov.show'); if (cover && tries++ < 60) { bb._h = setTimeout(go, 100); return; } if (S.n !== n) return; bb.classList.remove('v8-boss-intro'); void bb.offsetWidth; bb.classList.add('v8-boss-intro'); bb.hidden = false; SP._bossShownAt = performance.now(); bb._h = setTimeout(function () { bb.hidden = true; }, 1500); })(); } else if (bb) { clearTimeout(bb._h); bb.hidden = true; }
     if ((g.eggs || []).length && S.brood) tip('egg82', '알 위에 같은 색 새를 앉혀 두면 ' + Math.max.apply(null, g.eggs.map(function (e) { return e.n; })) + '번 움직인 뒤 깨어나요');
     else if ((g.eggs || []).length) tip('egg', '알은 무리를 ' + Math.max.apply(null, g.eggs.map(function (e) { return e.n; })) + '번 완성하면 깨어나요');
-    if ((g.sleep || []).length) tip('sleep', '시계 든 새의 무리를 완성하면 다들 깨어나요');
+    if ((g.sleep || []).length) tip('sleep', F82 ? alarmTip82(g) : '시계 든 새의 무리를 완성하면 다들 깨어나요');
     if (g.chain) tip('chain', '자물쇠 안에 또 열쇠가 있어요'); if (F82) meta82Start(n, g); }
   function metaWin(st, prev) { var a = S.a, clean = !S.undos && !a.hintsUsed && !perches(a) && !a.addedTube, h = '', coins = 0;
     var n0 = save.streak.n, n = M81.streakWin(save, clean); if (n >= 2 && n > n0) { sfx.play('streak-up'); h += ' · ' + IC('fire') + ' ' + n + '연승'; }
@@ -810,7 +813,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     if (S.locked || !S.hist.length) return; var st = $('v8stuck'); if (st) st.classList.remove('show');
     cancelFlights(); var h = S.hist.pop(); S.tubes = h.tubes; S.caps = h.caps; S.lock = h.lock; S.mask = h.mask; S.path = h.path;
     S.cage = h.cage; if (h.x) setX(h.x); while (S.tubes.length < S.g.tubes.length + perches(S.a)) { S.tubes.push([]); S.caps.push(4); S.lock.push(null); S.mask.push([]); if (S.cage) S.cage.push(null); }
-    S.moves++; S.undos++; S.sel = -1; S.combo = 0; S.lastDone = -99; S.chain = h.chain; S.banked = h.banked; S.hint = null; S.unsolvRun = 0; sfx.play('undo'); persist(); render(); }
+    S.moves++; S.undos++; S.sel = -1; S.combo = 0; S.lastDone = -99; S.chain = h.chain; S.banked = h.banked; S.hint = null; S.unsolvRun = 0; sfx.play('undo'); persist(); render(); if (F80) afterMove(); } // v8.2 (planner 16:07, also flag-OFF): re-check after undo too
   function undo() {
     if (F80 && S && !S.locked && !SP.ads.isBusy() && !S.hist.length) { if (S.a.undoLeft <= 0) return undoSheet(); toast('되돌릴 이동이 아직 없어요'); sfx.play('invalid'); return; } // v8.0.1: no silent dead button
     if (!S.hist.length || S.locked || SP.ads.isBusy()) return;
