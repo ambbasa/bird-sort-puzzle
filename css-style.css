@@ -267,7 +267,7 @@ body .v8ov .card.v8-sheet,body[class*="theme-"] .v8ov .card.v8-sheet,body .v8ov 
 .v8-album-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;justify-items:center;width:100%;box-sizing:border-box}
 .v8-album-grid .v8-album-card{width:100%;max-width:96px;height:auto;aspect-ratio:3/4;border:0;padding:0;cursor:pointer;background-color:transparent}
 .v8-album-grid .v8-album-card>b{font-size:12px}
-.v8-album-grid.v82 .v8-album-card.locked>b{background:#CDD1DA;border-radius:8.2%/26.7%} /* v8.2c: cover the art's '???' (v82 only) */
+.v8-album-grid.v82 .v82-album-group{grid-column:1/-1;justify-self:start;margin:4px 0 0}
 .v8-album-face{display:flex;justify-content:center;gap:6px;margin:8px 0}.v8-album-face img{width:52px;height:52px}.v8-album-face[hidden]{display:none}
 .v8-boss-intro{position:fixed;left:50%;top:22%;transform:translateX(-50%);z-index:300;pointer-events:none;max-width:92vw;animation:v8bossIn .5s ease-out}
 .v8-boss-intro[hidden]{display:none}

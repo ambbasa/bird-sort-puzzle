@@ -73,3 +73,15 @@
 /* 도감 카드(완성 SVG, 이름 포함) */
 .v8-album-card.bomb{background-image:url(assets-v8-album-card-bomb.svg?v=114f548f)}.v8-album-card.magpie{background-image:url(assets-v8-album-card-magpie.svg?v=87af6b52)}
 @media (prefers-reduced-motion:reduce){.v8-brood.warm,.v8-magpie-swap,.v8-swap-up,.v8-swap-down{animation:none}.v8-magpie-swap{opacity:1}}
+
+/* ===== v8.2d (DESIGN 20.18) — 색 알 v2 · 금/배지 v2 · 잠긴 카드 v2 · 까미 fx 세로 보정 ===== */
+.v8-egg-v2{background:center/contain no-repeat}
+.v8-egg-v2.red{background-image:url(assets-v8-egg-v2-red.svg?v=d9666de5)}.v8-egg-v2.orange{background-image:url(assets-v8-egg-v2-orange.svg?v=7fd6e91c)}.v8-egg-v2.yellow{background-image:url(assets-v8-egg-v2-yellow.svg?v=35542bac)}
+.v8-egg-v2.green{background-image:url(assets-v8-egg-v2-green.svg?v=7983afd5)}.v8-egg-v2.cyan{background-image:url(assets-v8-egg-v2-cyan.svg?v=a53ea644)}.v8-egg-v2.blue{background-image:url(assets-v8-egg-v2-blue.svg?v=36d3b734)}
+.v8-egg-v2.purple{background-image:url(assets-v8-egg-v2-purple.svg?v=3bdb8e62)}.v8-egg-v2.white{background-image:url(assets-v8-egg-v2-white.svg?v=433986da)}.v8-egg-v2.pink{background-image:url(assets-v8-egg-v2-pink.svg?v=c47f2f09)}
+.v8-egg-v2.brown{background-image:url(assets-v8-egg-v2-brown.svg?v=47e5130f)}.v8-egg-v2.lime{background-image:url(assets-v8-egg-v2-lime.svg?v=79dd0a72)}.v8-egg-v2.indigo{background-image:url(assets-v8-egg-v2-indigo.svg?v=740f9e68)}
+.v8-egg-crack-1.v2{background-image:url(assets-v8-egg-crack-v2-1.svg?v=9dd3f100)}.v8-egg-crack-2.v2{background-image:url(assets-v8-egg-crack-v2-2.svg?v=618b7fe4)}
+.v8-badge-egg.v2.n1{background-image:url(assets-v8-badge-egg-v2-1.svg?v=511d15b2)}.v8-badge-egg.v2.n2{background-image:url(assets-v8-badge-egg-v2-2.svg?v=fe72cb3d)}.v8-badge-egg.v2.n3{background-image:url(assets-v8-badge-egg-v2-3.svg?v=99b3df62)}
+.v8-album-card.locked.v2{background-image:url(assets-v8-album-locked-v2.svg?v=8baf1d59)}
+/* 까미 fx: 실기에서 약 5px 아래로 보임 → transform과 겹치지 않는 translate 속성으로 위로 보정 */
+.v8-magpie-swap{translate:0 var(--swap-fx-dy,-5px)}

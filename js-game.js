@@ -245,9 +245,9 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     var tutorialHint = S.g.tutorial && !S.won ? nextMove() : null, h = S.hint || tutorialHint;
     var stuck = !S.won && isStuck(); if (S.won) cancelFlights(); var fl = fx.fly && fx.fly.from ? fx.fly : null, flyBalls = []; // v7.1: reduced motion never shortens/skips flights (only '빠른 비행' changes timing)
     var b = $('board'), ae = document.activeElement, fi = ae && ae.parentNode && ae.classList.contains('tube') && b.contains(ae) ? [].indexOf.call(b.querySelectorAll('.tube'), ae) : -1; b.innerHTML = ''; // a11y: keep keyboard focus across re-renders
-    fitBalls(b);
+    var lay = fitBalls(b);
     var idx = 0;
-    rows(S.tubes.length).forEach(function (cnt) {
+    lay.forEach(function (cnt) {
       var r = document.createElement('div'); r.className = 'row'; b.appendChild(r);
       for (var k = 0; k < cnt; k++, idx++) (function (i) {
         var t = S.tubes[i], d = document.createElement('div'), isd = done(i), small = S.caps[i] < 4, lk = S.lock[i];
@@ -332,16 +332,20 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   function symKo(s) { return SYM_KO[s] || '표식'; }
   SP._birdName = birdName; SP._symKo = symKo;
   // QA M1: size balls so the tube grid fits the board's real height/width (safe areas, HUD, buttons, banner excluded) for any tube count
-  function fitBalls(b) {
-    var rs = rows(S.tubes.length), n = rs.length, c = Math.max.apply(null, rs), cs = getComputedStyle(b);
-    var h = b.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom), w = b.clientWidth - 16;
-    // per row: tube 4.9b (+ lift/badge room 0.5b) ; between rows: gap 0.6b+6 ; per tube width 1.3b + border 6 + gap 12
-    var g = n > 2 ? 0.35 : 0.6, gp = n > 2 ? 3 : 6, fromH = (h - (n - 1) * gp - 12) / (n * 6.0 + (n - 1) * g), fromW = (w - (c - 1) * 8) / (c * 80 / 56); // perch: 80u wide, (60*4+80)u tall per 56u bird
-    var cap = n <= 2 ? 62 : 44; // v7 B8: perch size maximised to the screen width for 1-2 rows (width still limits) // DESIGN 18.2 A12: few perches -> bigger birds (60-64px)
-    var size = Math.floor(Math.max(18, Math.min(cap, fromH, fromW)));
+  function fitBalls(b) { // 2026-10-28 (QA N2): 11-14 perches try 3 rows AND 2 wider rows, keep whichever gives bigger birds
+    var cs = getComputedStyle(b), h = b.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom), w = b.clientWidth - 16, N = S.tubes.length;
+    function fit(rs) { var n = rs.length, c = Math.max.apply(null, rs);
+      // per row: tube 4.9b (+ lift/badge room 0.5b) ; between rows: gap 0.6b+6 ; per tube width 1.3b + border 6 + gap 12
+      var g = n > 2 ? 0.35 : 0.6, gp = n > 2 ? 3 : 6, fromH = (h - (n - 1) * gp - 12) / (n * 6.0 + (n - 1) * g), fromW = (w - (c - 1) * 8) / (c * 80 / 56); // perch: 80u wide, (60*4+80)u tall per 56u bird
+      var cap = n <= 2 ? 62 : 44; // v7 B8: perch size maximised to the screen width for 1-2 rows (width still limits) // DESIGN 18.2 A12: few perches -> bigger birds (60-64px)
+      return { rs: rs, g: g, gp: gp, size: Math.floor(Math.max(18, Math.min(cap, fromH, fromW))) }; }
+    var best = fit(rows(N));
+    if (N > 10 && N <= 14) { var two = fit([Math.ceil(N / 2), Math.floor(N / 2)]); if (two.size > best.size) best = two; }
+    var size = best.size; SP._layout = { rows: best.rs.slice(), size: size };
     document.documentElement.style.setProperty('--ball-size', size + 'px');
-    b.style.gap = Math.round(size * g + gp) + 'px'; // QA N2: tighter row gap for 3-row layouts
+    b.style.gap = Math.round(size * best.g + best.gp) + 'px'; // QA N2: tighter row gap for 3-row layouts
     document.documentElement.classList.toggle('sym-boost', size * 0.34 < 8); // QA N1 + DESIGN 13.8: key symbol badge (34% of ball) would render < 8px -> code fallback
+    return best.rs;
   }
   window.addEventListener('resize', function () { if (S) render(); });
   function ballSrc(c) {
@@ -425,14 +429,17 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     if (tk.length) { fx.eggTick = tk; snd('egg-crack'); } if (hz.length) { fx.hatch = hz; snd('hatch'); }
     if (wk.length) { fx.wake = wk; fx.ring = a.al ? a.al.slice() : null; snd('alarm-ring'); setTimeout(function () { sfx.play('wake'); }, 300); } }
   function ov(w, cls, ms) { var d = document.createElement('div'); d.className = 'v8-overlay ' + cls; w.appendChild(d); if (ms) setTimeout(function () { d.remove(); }, ms); return d; }
+  // v8.2d (DESIGN 20.18, v82 only): colour egg v2 = background class on the same <img> box (transparent src); off = v8.1 egg img
+  var GIF0 = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+  function eggArt(im, key) { if (F82) { im.src = GIF0; im.classList.add('v8-egg-v2', key); } else im.src = V81.egg.replace('{color}', key); }
   function xBird(w, im, i, j, c) { var P = C.palette[c], st = est(), eg = E.eggAt(st, i, j), at = function (L) { return (L || []).some(function (z) { return z[0] === i && z[1] === j; }); };
-    if (eg) { im.src = V81.egg.replace('{color}', P.key); im.alt = '알 (' + birdName(P.key) + ', ' + eg.n + '번 남음)'; w.classList.add('v8-egg');
-      if (eg.n === 1) ov(w, 'v8-egg-crack-1'); var bd = ov(w, 'v8-badge-egg n' + Math.min(3, eg.n) + (fx.eggTick && fx.eggTick.indexOf(i + ':' + j) >= 0 ? ' tick' : ''));
+    if (eg) { eggArt(im, P.key); im.alt = '알 (' + birdName(P.key) + ', ' + eg.n + '번 남음)'; w.classList.add('v8-egg');
+      if (eg.n === 1) ov(w, 'v8-egg-crack-1' + (F82 ? ' v2' : '')); var bd = ov(w, 'v8-badge-egg' + (F82 ? ' v2' : '') + ' n' + Math.min(3, eg.n) + (fx.eggTick && fx.eggTick.indexOf(i + ':' + j) >= 0 ? ' tick' : ''));
       if (symbolsLarge) bd.style.backgroundImage = 'url("' + V81.eggBadgeLg.replace('{n}', Math.min(3, eg.n)) + '")';
       if (FB && st.brood) { var e0 = (S.g.eggs || []).filter(function (e) { return e.tube === i && e.at === j; })[0], warm = S.tubes[i][j + 1] === c && !(S.mask[i] && S.mask[i][j + 1]);
         if (warm || (e0 && eg.n < e0.n)) { var hb0 = document.createElement('div'); hb0.className = 'v8-brood ' + (warm ? 'warm' : 'paused'); w.appendChild(hb0); } } } // v8.2 DESIGN 20.17 brood heart
-    else if (at(fx.hatch)) { var idle = im.src; if (reduced) return; im.src = V81.egg.replace('{color}', P.key); var c2 = ov(w, 'v8-egg-crack-2'), hb = ov(w, 'v8-hatch');
-      setTimeout(function () { im.src = idle; c2.remove(); hb.remove(); }, V81.hatchMs); }
+    else if (at(fx.hatch)) { var idle = im.src; if (reduced) return; eggArt(im, P.key); var c2 = ov(w, 'v8-egg-crack-2' + (F82 ? ' v2' : '')), hb = ov(w, 'v8-hatch');
+      setTimeout(function () { im.src = idle; im.classList.remove('v8-egg-v2', P.key); c2.remove(); hb.remove(); }, V81.hatchMs); }
     if (E.slpAt(st, i, j)) { im.src = V81.sleepy.replace('{key}', P.key); im.classList.add('v8-sleep'); im.alt += ' (잠든 새)'; ov(w, 'v8-zz'); }
     else if (at(fx.wake)) { var awake = im.src; if (!reduced) { im.src = V81.sleepy.replace('{key}', P.key); ov(w, 'v8-wake', V81.wakeMs); setTimeout(function () { im.src = awake; }, V81.wakeMs); } }
     var ring = fx.ring && fx.ring[0] === i && fx.ring[1] === j;
@@ -538,7 +545,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   var guideFirst = null;
   function guideFirsts() { if (guideFirst) return guideFirst; guideFirst = {}; GUIDE.forEach(function (c) { for (var k = 1; k <= LAST; k++) { var g = SP.STAGES[k]; if (g && c.has(g)) { guideFirst[c.id] = k; break; } } }); return guideFirst; }
   function guideNew() { var F = guideFirsts(), seen = (save.guide82 || {}); return GUIDE.some(function (c) { return F[c.id] && F[c.id] <= save.unlocked && !seen[c.id]; }); }
-  function guideArt82() { return GUIDE.map(function (c) { return LOOP82[c.id] && !reduced ? 'assets-v8-guide-loop-' + LOOP82[c.id] + '.svg?v=a2aba921' : c.art; }); }
+  function guideArt82() { return GUIDE.map(function (c) { return LOOP82[c.id] && !reduced ? 'assets-v8-guide-loop-' + LOOP82[c.id] + '.svg?v=0e3c500b' : c.art; }); }
   var guidePre82 = null; function guidePreload82() { if (guidePre82) return; guidePre82 = guideArt82().map(function (u) { var im = new Image(); im.decoding = 'async'; im.src = u; return im; }); } // planner 14:37: no late white flash on first open
   function guideOpen(inStage) { guidePreload82(); var o = $('v82guide'); if (!o) { o = document.createElement('div'); o.id = 'v82guide'; o.className = 'ov v8ov'; document.body.appendChild(o); }
     var F = guideFirsts(), seen = save.guide82 || {}, g = inStage && S && !S.daily ? S.g : null, list = GUIDE.slice();
@@ -674,12 +681,15 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     sfx.play('chest-open'); sheet('새 기능 업데이트 선물', V81.chestOpen, rows); SP._upgrade = u; }
   function albumOpen() { var o = $('v8album'); if (!o) { o = document.createElement('div'); o.id = 'v8album'; o.className = 'ov v8ov'; document.body.appendChild(o); }
     var ids = albumIds82(), A = save.album, have = ids.filter(function (i) { return A[i]; }).length, D = debuts();
-    var cards = ids.map(function (id) { var own = !!A[id], P = id[0] === 'c' ? C.palette[+id.slice(1)] : null, nm = P ? BIRD_KO[P.key][0] : ALBUM_GIM[id][0], im = P ? BF.expr(+id.slice(1), 'idle') : ALBUM_GIM[id][1];
+    var card = function (id) { var own = !!A[id], P = id[0] === 'c' ? C.palette[+id.slice(1)] : null, nm = P ? BIRD_KO[P.key][0] : ALBUM_GIM[id][0], im = P ? BF.expr(+id.slice(1), 'idle') : ALBUM_GIM[id][1];
       var full = own && (id === 'bomb' || id === 'magpie'); // DESIGN 20.17: complete card art (frame + name) as the background
       if (full) return '<button class="v8-album-card ' + id + '" data-id="' + id + '" aria-label="' + nm + '"></button>';
-      return '<button class="v8-album-card' + (own ? '' : ' locked') + '" data-id="' + id + '" aria-label="' + (own ? nm : id === 'magpie' ? '잠긴 카드, 까미를 한 번 쓰면 획득' : '잠긴 카드, ' + (D[id] || '?') + '스테이지 클리어 시 획득') + '">' + (own ? '<img src="' + im + '" alt=""' + (id === 'bomb' || id === 'magpie' ? ' class="v82-album-art v82-album-' + id + '"' : '') + '>' : '') + '<b>' + (own ? nm : id === 'magpie' ? '까미 써 보기' : (D[id] || '?') + '판') + '</b></button>'; }).join('');
+      return '<button class="v8-album-card' + (own ? '' : ' locked' + (F82 ? ' v2' : '')) + '" data-id="' + id + '" aria-label="' + (own ? nm : id === 'magpie' ? '잠긴 카드, 까미를 한 번 쓰면 획득' : '잠긴 카드, ' + (D[id] || '?') + '스테이지 클리어 시 획득') + '">' + (own ? '<img src="' + im + '" alt=""' + (id === 'bomb' || id === 'magpie' ? ' class="v82-album-art v82-album-' + id + '"' : '') + '>' : '') + '<b>' + (own ? nm : id === 'magpie' ? '까미 써 보기' : (D[id] || '?') + '판') + '</b></button>'; };
+    var cards; if (F82) { var bySt = function (x, y) { return (D[x] || 1e9) - (D[y] || 1e9) || ids.indexOf(x) - ids.indexOf(y); }, hd = function (t) { return '<div class="v8-album-sub v82-album-group" role="heading" aria-level="3">' + t + '</div>'; }; // planner 10/28: groups, first-met stage ascending
+      cards = hd('새 친구') + ids.filter(function (i) { return /^c\d+$/.test(i); }).sort(bySt).map(card).join('') + hd('기믹 친구') + ids.filter(function (i) { return !/^c\d+$/.test(i); }).sort(bySt).map(card).join(''); }
+    else cards = ids.map(card).join('');
     o.innerHTML = '<div class="card v8-sheet v8-album" role="dialog" aria-label="새 도감"><div class="title">새 도감 ' + have + '/' + ids.length + '</div><div class="v8-album-sub">6장마다 코인 ' + E81.albumReward + '</div><div class="v8-album-grid' + (F82 ? ' v82' : '') + '">' + cards + '</div><div class="v8-album-face" id="v8face" hidden></div><button class="btn wide" id="v8albumClose">닫기</button></div>';
-    o.querySelectorAll('.v8-album-card').forEach(function (b) { b.onclick = function () { var id = b.dataset.id, f = $('v8face'); if (!A[id] || id[0] !== 'c') { f.hidden = true; return; } var c = +id.slice(1), P = C.palette[c];
+    o.querySelectorAll('.v8-album-card').forEach(function (b) { b.onclick = function () { var id = b.dataset.id, f = $('v8face'); if (!A[id] || id[0] !== 'c') { f.hidden = true; if (F82 && !A[id]) toast(id === 'magpie' ? '곧 만나요' : D[id] ? D[id] + '판에서 만나요' : '곧 만나요'); return; } var c = +id.slice(1), P = C.palette[c];
       f.innerHTML = ['idle', 'happy', 'sad'].map(function (x) { return '<img src="' + BF.expr(c, x) + '" alt="">'; }).join('') + '<img src="assets-v8-bird-' + P.key + '-sleepy.svg" alt="">'; f.hidden = false; }; });
     $('v8albumClose').onclick = function () { o.classList.remove('show'); }; o.classList.add('show'); }
   SP._meta81 = function () { return { streak: save.streak, chests: save.chests, album: save.album, inv: save.inventory, debuts: debuts() }; };
