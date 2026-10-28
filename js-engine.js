@@ -100,7 +100,14 @@ var SP = (typeof window !== 'undefined') ? (window.SP = window.SP || {}) : (glob
       else if (swapAt[0] === bb.i && (bb.j === swapAt[1] || bb.j === swapAt[1] + 1)) bb.j = bb.j === swapAt[1] ? swapAt[1] + 1 : swapAt[1];
       var col = n.t[bb.i][bb.j], ok = false; for (var y = 0; y < n.t.length; y++) if (n.t[y][0] === col && isDone(n, y)) ok = true;
       if (ok) { delete n.bomb; n.defused = 1; } else { bb.n -= 1; if (bb.n <= 0) { bb.n = 0; n.boom = 1; } } }
+    if (n.brood && n.egg && !n.boom) valve(n);
   }
+  // v8.2 M3' revision (planner 15:31, stage 158 softlock): if an egg is being brooded and the ONLY legal moves left move a brooding bird
+  // (off and back never counts), every brooded egg hatches at once (same as a normal hatch; flocks completed by it -> hatchDone, never a combo).
+  function valve(n) { var br = n.egg.filter(function (e) { var c = n.t[e.i][e.j]; return n.t[e.i][e.j + 1] === c; }); if (!br.length) return;
+    var other = moves(n, false).some(function (m) { var a = m[0], k = moveCount(n, a, m[1]); return !br.some(function (e) { return e.i === a && n.t[a].length - k <= e.j + 1; }); }); // a move lifts the brooder iff its run reaches slot j+1
+    if (other) return; n.egg = n.egg.filter(function (e) { return br.indexOf(e) < 0; }); if (!n.egg.length) { delete n.egg; delete n.brood; }
+    br.forEach(function (e) { if (isDone(n, e.i)) (n.hatchDone = n.hatchDone || []).push(e.i); }); n.valve = 1; }
   // v8.2 M9 '까미' swap booster: swaps the two adjacent birds at slots j and j+1 of tube i (one move). Not used by the solver.
   function canSwap(s, i, j) { var t = s.t[i]; if (!t || j < 0 || j + 1 >= t.length || s.lock[i] !== null || s.boom) return false; if (t[j] === t[j + 1] || isKey(t[j]) || isKey(t[j + 1])) return false;
     if (isDone(s, i)) return false; if (j < low(s, i)) return false; // caged / egg / sleeping birds (and everything under them) are excluded

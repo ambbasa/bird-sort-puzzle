@@ -566,19 +566,21 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     t.textContent = msg; t.hidden = false; clearTimeout(t._h); t._h = setTimeout(function () { t.hidden = true; }, 2600); SP._lastTip = id; }
   SP._tip = function () { return SP._lastTip; };
   function stageTips() { if (S.daily) return; if (S.cage) tip('cage', '새장은 무리를 ' + Math.max.apply(null, S.cage.filter(Boolean).map(function (k) { return k.n; })) + '번 완성하면 열려요'); if (S.n === 22 && (S.g.hidden || []).length) tip('hidden22', '?새는 위가 비면 정체가 드러나요'); }
+  var STUCK_CAP82 = 4e5; // v8.2 reachability cap (states) for the G5 'no win reachable' check; measured cost in docs-v8.2-progress.md
   function afterMove() { // G5: no legal move + unsolved -> sheet at once; movable-but-unsolvable for 3 moves -> soft toast + hint glow (idle dfs, silent on budget)
     if (S.won || E.isSolved(est())) return;
     if (isStuck()) { whenLanded(function () { setTimeout(function () { if (!S.won && isStuck()) stuckSheet(); }, 120); }); return; }
     // v8.0.1: the old single dfs(2e4) gave up silently on big boards (aborted -> no toast). Now a resumable DFS runs in idle
     // slices (<= ~6 ms each, cancelled by the next move) until it proves 'solvable' or 'unsolvable'; proof of no solution -> toast at once.
-    var n0 = S.moves, job = E.dfsJob(stageOf(), 3e6), idle = window.requestIdleCallback || function (f) { setTimeout(function () { f({ timeRemaining: function () { return 6; } }); }, 30); };
+    var n0 = S.moves, job = E.dfsJob(stageOf(), F82 ? STUCK_CAP82 : 3e6), idle = window.requestIdleCallback || function (f) { setTimeout(function () { f({ timeRemaining: function () { return 6; } }); }, 30); };
     SP._deadCheck = { moves: n0, state: 'running' };
     (function slice(dl) { if (S.moves !== n0 || S.won) return; var t0 = performance.now(), r = 'running', lim = Math.min(8, Math.max(2, dl && dl.timeRemaining ? dl.timeRemaining() : 6));
       while (r === 'running' && performance.now() - t0 < lim) r = job.step(1500);
       SP._deadCheck = { moves: n0, state: r, explored: job.explored() };
       if (r === 'running') return idle(slice, { timeout: 500 });
       if (r === 'gaveup') return; S.unsolvRun = r === 'solvable' ? 0 : S.unsolvRun + 1;
-      $('hint').classList.toggle('v8-glow', r === 'unsolvable'); if (r === 'unsolvable' && S.unsolvRun === 1) toast('막힌 것 같아요'); })(); }
+      $('hint').classList.toggle('v8-glow', r === 'unsolvable'); if (r === 'unsolvable' && S.unsolvRun === 1) toast('막힌 것 같아요');
+      if (F82 && r === 'unsolvable') { SP._stuck82 = (SP._stuck82 || 0) + 1; whenLanded(function () { setTimeout(function () { if (S.moves === n0 && !S.won) stuckSheet(true); }, 120); }); } })(); } // v8.2 (planner 15:31): no win reachable (loops included) -> G5 sheet too; cap hit -> old behaviour
   function bagSheet() { var I = save.inventory; sheet('가방', null, [ // v8.0: map shows owned boosters only (buying outside a stage = v8.1 P2)
       { k: 'token', icon: V8A.token, label: '횃대 토큰 ' + I.perchToken + ' / ' + EC.tokenMax, disabled: true, go: function () {} },
       { k: 'hint', label: '힌트 ' + I.hint + ' · 판당 ' + EC.freeHintsPerStage + '회 무료(1~' + EC.freeHintUnlimitedTo + '판 무제한)', disabled: true, go: function () {} },
@@ -609,10 +611,10 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   function hintSheet() { var o = []; if (save.inventory.hint > 0) o.push({ k: 'inv', label: '보유 힌트 쓰기 (' + save.inventory.hint + ')', go: function () { save.inventory.hint--; persist(); closeSheet(); showHint(); } });
     if (adShow()) o.push(adOpt('ad', 'hint', '광고 보고 힌트 1회', function () { showHint(); }));
     o.push(coinOpt('coin', EC.hint, '힌트 1회', function () { showHint(true); })); sheet('힌트를 더 받을까요?', null, o); }
-  function stuckSheet() { if (S.won || $('v8stuck') && $('v8stuck').classList.contains('show')) return; sfx.play('stuck'); var o = $('v8stuck');
+  function stuckSheet(unwin) { if (S.won || $('v8stuck') && $('v8stuck').classList.contains('show')) return; sfx.play('stuck'); var o = $('v8stuck');
     if (!o) { o = document.createElement('div'); o.id = 'v8stuck'; o.className = 'ov v8ov'; document.body.appendChild(o); }
     var canP = perches(S.a) < EC.perchMaxPerStage;
-    o.innerHTML = '<div class="card v8-sheet" role="dialog" aria-label="막힘"><img class="v8-sheet-art" src="' + V8A.stuckArt + '" alt=""><div class="title">더 이상 옮길 수 없어요</div><div class="v8-sheet-btns">'
+    o.innerHTML = '<div class="card v8-sheet" role="dialog" aria-label="막힘"><img class="v8-sheet-art" src="' + V8A.stuckArt + '" alt=""><div class="title">' + (unwin ? '이대로는 풀 수 없어요' : '더 이상 옮길 수 없어요') + '</div><div class="v8-sheet-btns">'
       + '<button class="v8-sheet-btn" data-k="undo">되돌리기</button>' + (canP ? '<button class="v8-sheet-btn" data-k="perch">횃대 추가</button>' : '') + '<button class="v8-sheet-btn" data-k="restart">다시하기</button></div></div>';
     o.querySelectorAll('.v8-sheet-btn').forEach(function (b) { b.onclick = function () { o.classList.remove('show'); var k = b.dataset.k; if (k === 'undo') undo(); else if (k === 'perch') addTube(); else doRestart(); }; });
     o.classList.add('show'); SP._stuckShown = (SP._stuckShown || 0) + 1; }
