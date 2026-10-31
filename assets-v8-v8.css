@@ -91,3 +91,10 @@
 #board .tube.perch.small.small-v2::before{background-image:url(assets-v8-perch-small-v2.svg?v=84cfc487)}
 #board .tube.perch.small.small-v2.thorn::before{background-image:url(assets-v8-perch-thorn-small-v2.svg?v=cd9b051d)}
 .v8-small-bench{display:inline-block;width:54px;height:21px;background:url(assets-v8-badge-small-bench.svg?v=b1adefac) center/contain no-repeat}
+
+/* ===== v8.2f (DESIGN 20.20) 알 남은 수 배지 v3 — game.js: F82일 때 'v8-badge-egg v3 nN'(+ 큰 기호면 ' lg') ===== */
+/* .v8-overlay(inset:0, 100%)를 덮어써 독립 박스로: 오른쪽 위 모서리(부화 하트 = 왼쪽 위의 반대쪽) */
+.v8-overlay.v8-badge-egg.v3{inset:auto;right:-36%;top:-24%;left:auto;width:max(26px,78%);height:auto;aspect-ratio:1;background-size:contain;z-index:3}
+.v8-badge-egg.v3.n1{background-image:url(assets-v8-badge-egg-v3-1.svg?v=3320e7d6)}.v8-badge-egg.v3.n2{background-image:url(assets-v8-badge-egg-v3-2.svg?v=69c85ecd)}.v8-badge-egg.v3.n3{background-image:url(assets-v8-badge-egg-v3-3.svg?v=6acaec6b)}
+/* 큰 기호: html.symbols-large(설정 토글) 또는 .lg 수식 클래스 → 더 크게(숫자 ≥13px) */
+.symbols-large .v8-overlay.v8-badge-egg.v3,.v8-overlay.v8-badge-egg.v3.lg{width:max(30px,90%);right:-44%;top:-32%}

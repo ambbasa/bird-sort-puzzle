@@ -7,17 +7,17 @@ SP.CONFIG = {
   assets: { badge: 'assets-v5ui-rec-badge-complete.svg?v=e8cb50af' },
   gimmickAssets: {"hidden":{"file":"assets-gimmicks-ball-hidden.svg?v=c8f4f371","fileLargeSymbol":"assets-birds-badge-lg-hidden.svg?v=062ae845","tone":"#5B6070"},"pair":{"Ka":{"pair":"a","symbol":"circle","keyBall":"assets-gimmicks-ball-key-a.svg?v=9de38343","keyBallLargeSymbol":"assets-birds-badge-lg-key-a.svg?v=0392f131","lock":"assets-gimmicks-lock-a.svg?v=c319f343","lockOpen":"assets-gimmicks-lock-a-open.svg?v=a6a3309f"},"Kb":{"pair":"b","symbol":"triangle","keyBall":"assets-gimmicks-ball-key-b.svg?v=6542710e","keyBallLargeSymbol":"assets-birds-badge-lg-key-b.svg?v=6a794f4f","lock":"assets-gimmicks-lock-b.svg?v=9c174ea5","lockOpen":"assets-gimmicks-lock-b-open.svg?v=66a68a11"},"Kc":{"pair":"c","symbol":"square","keyBall":"assets-gimmicks-ball-key-c.svg?v=768cb7bd","keyBallLargeSymbol":"assets-birds-badge-lg-key-c.svg?v=49b009d3","lock":"assets-gimmicks-lock-c.svg?v=149c2b2a","lockOpen":"assets-gimmicks-lock-c-open.svg?v=40ce70a4"}},"lockedTubeOverlay":"assets-gimmicks-tube-locked-overlay.svg?v=a5fbed2d","smallTube":{"capacity":3,"file":"assets-gimmicks-tube-small.svg?v=d8fc240a","badge":"assets-gimmicks-badge-capacity-3.svg?v=aa8836be","countsForClear":false}},
   // DESIGN ch.14 birds + wooden perches (assets-birds, birds.json / perch/perch.json; files referenced, not modified)
-  birds: { pattern: 'assets-birds-bird-{color}-{frame}.svg?v=12d7433e', frames: ['up', 'mid', 'down', 'mid'], foldFrame: 'fold', frameMs: 60, liftMs: 120, landMs: 260, flightMin: 350, flightMax: 450,
+  birds: { pattern: 'assets-birds-bird-{color}-{frame}.svg?v=2d933463', frames: ['up', 'mid', 'down', 'mid'], foldFrame: 'fold', frameMs: 60, liftMs: 120, landMs: 260, flightMin: 350, flightMax: 450,
     // DESIGN 15.1-15.2 side-view flap frames (facing right; .bird-side--left mirrors, except hidden). enabled = all files present (tools/sync-art.js).
-    side: { pattern: 'assets-birds-side-bird-{key}-side-{n}.svg?v=12d7433e', frames: [1, 2, 3, 4], frameMs: 62.5, enabled: true },
-    hidden: 'assets-birds-bird-hidden.svg?v=dd67d9ad', key: 'assets-birds-bird-key-{pair}.svg?v=12d7433e',
-    expr: function (c, e) { return 'assets-birds-bird-' + SP.CONFIG.palette[c].key + '-' + e + '.svg?v=12d7433e'; },
+    side: { pattern: 'assets-birds-side-bird-{key}-side-{n}.svg?v=2d933463', frames: [1, 2, 3, 4], frameMs: 62.5, enabled: true },
+    hidden: 'assets-birds-bird-hidden.svg?v=dd67d9ad', key: 'assets-birds-bird-key-{pair}.svg?v=2d933463',
+    expr: function (c, e) { return 'assets-birds-bird-' + SP.CONFIG.palette[c].key + '-' + e + '.svg?v=2d933463'; },
     perch: { perch: 'assets-birds-perch-perch.svg?v=e14107a5', perchSmall: 'assets-v5ui-rec-perch-small.svg?v=110de3e4', perchLocked: 'assets-v5ui-rec-perch-locked.svg?v=da6f889d', perchSmallLocked: 'assets-v5ui-rec-perch-small-locked.svg?v=3356beb6', perchComplete: 'assets-v5ui-rec-perch-complete.svg?v=cdf0ce1e' } },
   // DESIGN 15.3 / assets-themes-themes.json: themeIndex = floor((stage-1)/100) % 3 -> class .theme-<key> on <body> (backgrounds in assets-theme.css)
   themes: [{ key: 'forest', name: '숲' }, { key: 'sunset', name: '노을 호수' }, { key: 'snow', name: '눈 내린 밤' }],
   // DESIGN ch.16 saga map (assets-map-map-layout.json mirrored here so file:// works without fetch; nodes from the path formula
   // x = 195 + 105*sin(2π*y/450), y = 855 - 90*i, chunk-top origin, 390px wide).
-  map: { w: 390, chunkH: 900, bandH: 450, per: 10, chunk: 'assets-map-map-chunk-{key}.svg?v=12d7433e', band: 'assets-map-map-band-{from}-{to}.svg?v=12d7433e', wide: { bleed: 195, chunk: 'assets-map-map-chunk-{key}-wide.svg?v=12d7433e', band: 'assets-map-map-band-{from}-{to}-wide.svg?v=12d7433e', soon: 'assets-map-map-band-coming-soon-{key}-wide.svg?v=12d7433e' } }, // v7 B7: designer wide art (195px bleed each side) fills the whole panel
+  map: { w: 390, chunkH: 900, bandH: 450, per: 10, chunk: 'assets-map-map-chunk-{key}.svg?v=2d933463', band: 'assets-map-map-band-{from}-{to}.svg?v=2d933463', wide: { bleed: 195, chunk: 'assets-map-map-chunk-{key}-wide.svg?v=2d933463', band: 'assets-map-map-band-{from}-{to}-wide.svg?v=2d933463', soon: 'assets-map-map-band-coming-soon-{key}-wide.svg?v=2d933463' } }, // v7 B7: designer wide art (195px bleed each side) fills the whole panel
   freeUndos: 3,
   flight: { crouch: 100, airMin: 800, airMax: 1000, airPerPx: 0.8, land: 150, fastCrouch: 60, fastAir: 400, fastLand: 100, stagger: 120 }, // v7 GDD A2 (ms)
   stars: { two: 1.3, alwaysThreeTo: 5 }, // v7.1 PM-4: 3 stars = moves <= min, 2 = moves <= ceil(min*1.3), 1 = clear; stages 1-5 always 3 (daily excluded)
@@ -47,16 +47,16 @@ SP.CONFIG = {
   economy: { undo3: 30, undo3Gives: 3, perch: 50, hint: 20, perchMaxPerStage: 2, freeHintsPerStage: 1, freeHintUnlimitedTo: 10, freePerchPerDay: 3,
     comboCoins: { 2: 5, 3: 5, 4: 10 }, comboCap: 30, comboUndoAt: 3, comboTokenAt: 4, tokenMax: 3, coinMax: 99999, noUndo3Bonus: 5 },
   // v8.0 art (DESIGN ch.20, assets-v8- — designer files, read-only for dev)
-  v8: { surprised: 'assets-v8-bird-{key}-surprised.svg?v=12d7433e', revealMs: 400, cageBadgeLg: 'assets-v8-badge-lg-badge-cage-{n}.svg?v=12d7433e', feather: 'assets-v8-badge-feather.svg?v=4076399d',
+  v8: { surprised: 'assets-v8-bird-{key}-surprised.svg?v=2d933463', revealMs: 400, cageBadgeLg: 'assets-v8-badge-lg-badge-cage-{n}.svg?v=2d933463', feather: 'assets-v8-badge-feather.svg?v=4076399d',
     coinBtn: 'assets-v8-icon-coin-btn.svg?v=0c045867', adBadge: 'assets-v8-badge-ad.svg?v=9965e9c7', token: 'assets-v8-token-perch.svg?v=2bbac79c', stuckArt: 'assets-v8-sheet-stuck.svg?v=37a59aa1', chipHidden: 'assets-v8-chip-hidden-icon.svg?v=d94d413e',
     sfx: { 'coin-spend': 'assets-v8-sfx-coin-spend.mp3', 'combo-reward': 'assets-v8-sfx-combo-reward.mp3', 'cage-tick': 'assets-v8-sfx-cage-tick.mp3', 'cage-open': 'assets-v8-sfx-cage-open.mp3', 'reveal-pop': 'assets-v8-sfx-reveal-pop.mp3', stuck: 'assets-v8-sfx-stuck.mp3' },
     debut: [22, 31, 61, 101, 121], stuckToastAfter: 3 },
   // v8.1 (GDD v8 §4 + planner decisions 2026-10-26). Only used when features.v81 is on.
   economy81: { chestEvery: 20, chestCycle: [{ coins: 30 }, { hint: 2 }, { coins: 50 }, { token: 1 }, { coins: 100 }], chestMaxAtOnce: 5, chestMaxUpgrade: 5,
     albumEvery: 6, albumReward: 50, bossBonus: 50, bossStages: [100, 200], streakUndoAt: 2, streakTokenAt: 4, streakHintAt: 6, hintMax: 9 },
-  v81: { egg: 'assets-v8-egg-{color}.svg?v=12d7433e', sleepy: 'assets-v8-bird-{key}-sleepy.svg?v=12d7433e', sleepySide: 'assets-v8-side-bird-{key}-sleepy-side-{n}.svg?v=12d7433e', alarmLg: 'assets-v8-badge-lg-badge-alarm.svg?v=46004089',
-    eggBadgeLg: 'assets-v8-badge-lg-badge-egg-{n}.svg?v=12d7433e', chestClosed: 'assets-v8-chest-closed.svg?v=fb531d60', chestOpen: 'assets-v8-chest-open.svg?v=12bd8948', bossNode: 'assets-v8-map-node-boss.svg?v=721267cb',
-    flame: 'assets-v8-streak-flame-{n}.svg?v=12d7433e', hatchMs: 450, wakeMs: 400, magpieName: '까미',
+  v81: { egg: 'assets-v8-egg-{color}.svg?v=2d933463', sleepy: 'assets-v8-bird-{key}-sleepy.svg?v=2d933463', sleepySide: 'assets-v8-side-bird-{key}-sleepy-side-{n}.svg?v=2d933463', alarmLg: 'assets-v8-badge-lg-badge-alarm.svg?v=46004089',
+    eggBadgeLg: 'assets-v8-badge-lg-badge-egg-{n}.svg?v=2d933463', chestClosed: 'assets-v8-chest-closed.svg?v=fb531d60', chestOpen: 'assets-v8-chest-open.svg?v=12bd8948', bossNode: 'assets-v8-map-node-boss.svg?v=721267cb',
+    flame: 'assets-v8-streak-flame-{n}.svg?v=2d933463', hatchMs: 450, wakeMs: 400, magpieName: '까미',
     sfx: { 'egg-crack': 'assets-v8-sfx-egg-crack.mp3', hatch: 'assets-v8-sfx-hatch.mp3', 'alarm-ring': 'assets-v8-sfx-alarm-ring.mp3', wake: 'assets-v8-sfx-wake.mp3',
       'chest-open': 'assets-v8-sfx-chest-open.mp3', 'boss-clear': 'assets-v8-sfx-boss-clear.mp3', 'streak-up': 'assets-v8-sfx-streak-up.mp3' },
     debut: [81, 100, 141, 161, 200] },
@@ -65,7 +65,8 @@ SP.CONFIG = {
     thorn: 'assets-v8-perch-thorn.svg?v=e032734e', ice: 'assets-v8-perch-ice-overlay.svg?v=35bf9764', thaw: 'assets-v8-fx-thaw.svg?v=cc319e0e', defuse: 'assets-v8-fx-bomb-defuse.svg?v=45d3fad6', sheetArt: 'assets-v8-sheet-booster.svg?v=04db0948', failMs: 650,
     sfx: { 'bomb-tick': 'assets-v8-sfx-bomb-tick.mp3', defuse: 'assets-v8-sfx-defuse.mp3', 'fail-soft': 'assets-v8-sfx-fail-soft.mp3', 'ice-crack': 'assets-v8-sfx-ice-crack.mp3', swap: 'assets-v8-sfx-swap.mp3' } },
   economy82: { magpie: 60, moves5: 40, movesGive: 5, featherTiers: [10, 25, 50], featherCoins: [30, 60, 120], challengeK: 1.3, crownCoins: 10 },
-  lastStage: 200 // playable stages in js-stages.js (31+ from tools/gen-stages.js, STAGES.md v1.1)
+  mapStages: 400, // v8.2j (10/30, F82 only): map length; stages without data show as '준비 중' (locked)
+  lastStage: 400 // v8.2j 18:47: 1-200 js-stages.js, 201-400 js-stages-v9.js (v82 ON only); flag OFF still ends at 200 (game LAST = highest stage present)
 };
 //@qa-start (v8.1 review switch: web/dev only — the toss build strips it, so toss follows features.v81 alone)
 SP.CONFIG.v81Toggle = true;

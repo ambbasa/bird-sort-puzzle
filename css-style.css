@@ -320,3 +320,27 @@ header.hud:has(> .v8-flame){position:relative}
 @media (prefers-reduced-motion:reduce){.v82-swapped,.v82-loop-bomb,.v82-loop-magpie,.v82-loop-egg,.v82-loop-ice,.v82-loop-thorn,.v8-ice.v82-tick .v82-ice-n{animation:none}}
 html.reduced-motion .v82-swapped,html.reduced-motion [class*="v82-loop-"]{animation:none}
 .v82-feather .v8-chestinfo b{font-size:13px}.v82-feather small{font-size:11px}
+
+/* 2026-10-29 daily reward box (first clear of the day) */
+#overlay .dchest{display:flex;align-items:center;justify-content:center;gap:10px;margin:8px auto 0;min-height:44px}
+#overlay .dchest-box .v5i{width:40px;height:40px;display:inline-block;background-size:contain;background-repeat:no-repeat;background-position:center;transform-origin:50% 90%}
+#overlay .dchest-amt{font-size:20px;font-weight:900;opacity:0;transform:translateY(6px);transition:opacity .25s,transform .25s}
+#overlay .dchest-amt .v5i{width:20px;height:20px;display:inline-block;background-size:contain;background-repeat:no-repeat;vertical-align:-3px}
+#overlay .dchest:not(.open) .dchest-box .v5i{animation:dchestWiggle .5s ease-in-out infinite alternate}
+#overlay .dchest.open .dchest-box .v5i{animation:dchestPop .45s cubic-bezier(.3,1.6,.5,1) forwards}
+#overlay .dchest.open .dchest-amt{opacity:1;transform:none}
+#overlay .dchest.big .dchest-box .v5i{width:52px;height:52px;filter:drop-shadow(0 0 8px #FFC83D)}
+#overlay .dchest.big .dchest-amt{color:#E89A00;font-size:24px}
+@keyframes dchestWiggle{from{transform:rotate(-6deg)}to{transform:rotate(6deg)}}
+@keyframes dchestPop{0%{transform:scale(1)}40%{transform:scale(1.35) translateY(-6px)}100%{transform:scale(1.1)}}
+@media (prefers-reduced-motion: reduce){#overlay .dchest-box .v5i,#overlay .dchest.open .dchest-box .v5i{animation:none}#overlay .dchest-amt{transition:none}}
+
+/* 2026-10-30: 오늘의 도전 shortcut on the campaign clear card */
+#overlay .dnudge{margin-top:10px;border:2px solid #FF9F1C;background:#FFF4E2;color:#8A4B00;font-weight:800;font-size:15px;line-height:1.25}
+#overlay .dnudge small{font-size:12px;font-weight:700;margin-left:4px;opacity:.9}
+#overlay .dnudge .v5i{width:18px;height:18px;display:inline-block;background-size:contain;background-repeat:no-repeat;vertical-align:-3px}
+/* v8.2j (10/30, planner 11:36 fix): size was never the problem — the bomb outline ran through the digit. Digit keeps the designer size (v8.css calc(--bird*.2)); a solid pill plate sits behind it so no outline crosses it (overrides v8.css .v8-bomb>b; ON+OFF, OFF has no bomb stages) */
+#board .v8-bomb>b{width:auto;height:auto;min-width:1.25em;padding:.14em .22em;box-sizing:border-box;transform:translate(-18%,-22%);background:#FFF8E7;border-radius:999px;box-shadow:0 0 0 1.5px #1A1A2E;z-index:2}
+/* v8.2j (10/30): combo feedback without moving the layout (replaces #app .screenshake) */
+#board.combopulse{animation:v82j-combo 220ms ease-out}@keyframes v82j-combo{50%{filter:brightness(1.18) saturate(1.15)}}
+.map-node.v82-soon{opacity:.55;filter:grayscale(1)}/* v8.2j: stage not shipped yet */
