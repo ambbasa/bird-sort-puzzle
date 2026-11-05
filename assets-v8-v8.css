@@ -98,3 +98,7 @@
 .v8-badge-egg.v3.n1{background-image:url(assets-v8-badge-egg-v3-1.svg?v=3320e7d6)}.v8-badge-egg.v3.n2{background-image:url(assets-v8-badge-egg-v3-2.svg?v=69c85ecd)}.v8-badge-egg.v3.n3{background-image:url(assets-v8-badge-egg-v3-3.svg?v=6acaec6b)}
 /* 큰 기호: html.symbols-large(설정 토글) 또는 .lg 수식 클래스 → 더 크게(숫자 ≥13px) */
 .symbols-large .v8-overlay.v8-badge-egg.v3,.v8-overlay.v8-badge-egg.v3.lg{width:max(30px,90%);right:-44%;top:-32%}
+
+/* ===== egg v3 (DESIGN 20.21, QA 11/03 '알 구분') — 기호 모양 알. game.js eggArt(): F82면 'v8-egg-v3' + 색 키 ===== */
+.v8-egg-v3{background:center/contain no-repeat}
+.v8-egg-v3.red{background-image:url(assets-v8-egg-v3-red.svg?v=f7943d48)}.v8-egg-v3.orange{background-image:url(assets-v8-egg-v3-orange.svg?v=f456687c)}.v8-egg-v3.yellow{background-image:url(assets-v8-egg-v3-yellow.svg?v=cadabd87)}.v8-egg-v3.green{background-image:url(assets-v8-egg-v3-green.svg?v=5215cd89)}.v8-egg-v3.cyan{background-image:url(assets-v8-egg-v3-cyan.svg?v=d23d8437)}.v8-egg-v3.blue{background-image:url(assets-v8-egg-v3-blue.svg?v=2189f2b0)}.v8-egg-v3.purple{background-image:url(assets-v8-egg-v3-purple.svg?v=65412517)}.v8-egg-v3.white{background-image:url(assets-v8-egg-v3-white.svg?v=cd76577c)}.v8-egg-v3.pink{background-image:url(assets-v8-egg-v3-pink.svg?v=ac51c83b)}.v8-egg-v3.brown{background-image:url(assets-v8-egg-v3-brown.svg?v=ee28577a)}.v8-egg-v3.lime{background-image:url(assets-v8-egg-v3-lime.svg?v=48830c76)}.v8-egg-v3.indigo{background-image:url(assets-v8-egg-v3-indigo.svg?v=9aaa18ef)}

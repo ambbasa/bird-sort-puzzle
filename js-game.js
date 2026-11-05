@@ -1,4 +1,4 @@
-SP.platform.whenReady(function () { // L5: runs once the platform adapter has loaded the (user-keyed) save
+SP.platform.whenReady(function () { var QA_ = {}; // L5: runs once the platform adapter has loaded the (user-keyed) save
   var C = SP.CONFIG, core = SP.core, E = SP.engine, GA = C.gimmickAssets, $ = function (id) { return document.getElementById(id); };
   var LAST = Math.min(C.lastStage || C.maxStage, Math.max.apply(null, Object.keys(SP.STAGES).map(Number))), KEY = 'sortpuzzle.v1', STAR = $('staricon').innerHTML;
   // DESIGN §5.6/§9: reduced motion = OS preference OR in-game setting ('a11y.reduceMotion'); haptics toggle ('settings.haptics', default on)
@@ -29,9 +29,11 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   var overflow = +save.current > LAST || +save.unlocked > LAST;
   /* v8.2j (10/30, both flags): keep the high-water mark of unlocked/current that the clamp below would cut (save from a 400-stage build, or data not shipped yet); restored once that data arrives -> progress never shrinks */
   var hw0 = save.hw82 || {}, hwN = function (a, b) { a = Math.floor(+a); b = Math.floor(+b); return Math.max(isFinite(a) ? a : 0, isFinite(b) ? b : 0); }; save.hw82 = { u: hwN(hw0.u, save.unlocked), c: hwN(hw0.c, save.current) };
-  if (save.hw82.u > +save.unlocked) save.unlocked = save.hw82.u; if (save.hw82.c > +save.current && +save.current >= +save.unlocked) save.current = save.hw82.c;
+  var u0 = +save.unlocked; if (save.hw82.u > u0) save.unlocked = save.hw82.u; if (save.hw82.c > +save.current && +save.current >= u0 && save.hw82.c <= +save.unlocked) save.current = save.hw82.c; // 11/03: compare with the unlocked value before the restore (a clamped 255 came back as 200)
   save.current = clampN(save.current); save.unlocked = clampN(save.unlocked);
-  if (!save.stars || typeof save.stars !== 'object') save.stars = {}; if (!isFinite(+save.coins) || +save.coins < 0) save.coins = 0;
+  if (!save.stars || typeof save.stars !== 'object') save.stars = {};
+  /* 11/03 (v8.2 ON by default, 400 stages): a 200-stage save that cleared its last stage kept unlocked = 200 (the old cap) -> open the next stage now; current follows when it sat on that cleared cap */
+  if (save.stars[save.unlocked] && save.unlocked < LAST) { var cap = save.unlocked; save.unlocked = cap + 1; if (+save.current === cap) save.current = cap + 1; } if (!isFinite(+save.coins) || +save.coins < 0) save.coins = 0;
   var bootToMap = overflow && !!save.stars[LAST]; // all 200 cleared -> open the map instead of replaying 200
   save.attempt = save.attempt || {}; // per-stage consumables (GDD v0.2): { undoLeft, addedTube } persist across restarts/reloads
   var DEBUG = false;
@@ -39,7 +41,17 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   var symbolsLarge = SP.store.get(A11Y_KEY) === 'true';
   document.documentElement.classList.toggle('symbols-large', symbolsLarge);
   if (save.theme) document.documentElement.dataset.theme = save.theme;
-  function persist() { SP.store.set(KEY, JSON.stringify(save)); }
+  function persist() { midPut(); SP.store.set(KEY, JSON.stringify(save)); }
+  // 11/03 22:46 (QA L1+M4, 닭부장님): the in-progress board is saved with the rest (save.mid, one slot) and resumed on reload / toss re-entry:
+  // nests, moves, undo stack, used items, egg/brood counters, locks/keys, bomb numbers (= the undo snapshot + counters). Cleared on win/restart;
+  // a daily slot from another day is dropped. Same SP.store path as the rest of the save (toss Storage / localStorage).
+  function midKey() { return S.daily ? 'd' + S.daily : S.n; }
+  function midPut() { if (!S || !S.g || (S.a && S.a.sandbox)) return; var k = midKey();
+    if (S.won) { if (save.mid && save.mid.k === k) delete save.mid; return; } if (!(S.moves > 0)) return;
+    var h = snap(); h.chain = S.chain; h.banked = S.banked; h.path = S.path; save.mid = { k: k, i0: S.init0, h: h, hist: S.hist.slice(-300), moves: S.moves, undos: S.undos, mag82: S.mag82, chalOver: S.chalOver || 0 }; }
+  function midRestore(m) { var h = m.h; S.tubes = h.tubes; S.caps = h.caps; S.lock = h.lock; S.mask = h.mask; S.cage = h.cage; S.path = h.path || 0; if (h.x) setX(h.x);
+    while (S.tubes.length < S.g.tubes.length + perches(S.a)) { S.tubes.push([]); S.caps.push(4); S.lock.push(null); S.mask.push([]); if (S.cage) S.cage.push(null); } // a perch bought after the snapshot
+    S.hist = m.hist || []; S.moves = m.moves; S.undos = m.undos || 0; S.mag82 = m.mag82 || 0; S.chain = h.chain || 0; S.banked = h.banked || 0; S.chalOver = m.chalOver || 0; S.resumed = 1; }
   // Daily challenge (js-daily.js): S.n === DAILY, S.daily = date key of the puzzle. Progress in save.daily, consumables in save.attempt.daily.
   var DAILY = 'daily', DD = SP.daily || null; save.daily = save.daily || { last: '', streak: 0, best: 0, stars: {} };
   function today() { return DD ? DD.dateKey() : ''; }
@@ -47,9 +59,9 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   function sn() { return S.g.source || S.n; } // star thresholds / bands follow the daily puzzle's source stage
   var HAPTIC = { invalid: 10, complete: 15, combo: [15, 40, 25], clear: [30, 60, 40] }; // DESIGN §5.6: vibration rides on the same events as sfx (works while muted)
   var rawSfx = SP.sfx || { play: function () {} }, S, fx = {}, sfx = { play: function (n, a) { if (HAPTIC[n]) vibrate(HAPTIC[n], n); rawSfx.play(n, a); } };
-  SP._haptics = []; // QA: log of vibrate() calls that actually fired
+  QA_.haptics = []; // QA: log of vibrate() calls that actually fired
   // DESIGN §6 move: ball flies along a parabola (220–340ms), then drop-bounce. Landing sounds/glow wait for touchdown.
-  var pend = null, flights = []; SP._flights = 0;
+  var pend = null, flights = []; QA_.flights = 0;
   function snd(name, arg) { if (pend) pend.push([name, arg]); else sfx.play(name, arg); }
   // Feedback v2 flight: small hop (18%) -> parabolic arc over the perch tops -> decelerating arrival with a slight overshoot bounce.
   // Total clamp(350, 330 + 0.15*|dx|, 450) ms. Side-view flap frames (mirrored to the travel direction) when C.birds.side.enabled,
@@ -59,7 +71,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   function birdFrame(c, fr) { return BF.pattern.replace('{color}', C.palette[c].key).replace('{frame}', fr); }
   function sideKey(c) { return C.palette[c] ? C.palette[c].key : E.isKey(c) ? 'key-' + C.gimmickAssets.pair[c].pair : 'hidden'; }
   function sideFrame(k, i) { return BF.side.pattern.replace('{key}', k).replace('{n}', BF.side.frames[i]); }
-  function finishFlight(f, instant) { var k = flights.indexOf(f); if (k < 0) return; flights.splice(k, 1); f.clone.remove(); (f.feathers || []).forEach(function (q) { q.el.remove(); }); f.land(instant); if (!flights.length && landWaiters.length) { SP._lastLandAt = performance.now(); landWaiters.splice(0).forEach(function (cb) { cb(); }); } }
+  function finishFlight(f, instant) { var k = flights.indexOf(f); if (k < 0) return; flights.splice(k, 1); f.clone.remove(); (f.feathers || []).forEach(function (q) { q.el.remove(); }); f.land(instant); if (!flights.length && landWaiters.length) { QA_.lastLandAt = performance.now(); landWaiters.splice(0).forEach(function (cb) { cb(); }); } }
   var CLEAR_DELAY = 150; /* v7.1 PM-3: touchdown -> clear sheet (completion glow/sparkle plays meanwhile; was 250) */
   var landWaiters = []; /* v7.1 PM-3: clear fires on the last touchdown event (was a 30ms polling loop) */
   function cancelFlights() { flights.slice().forEach(function (f) { finishFlight(f, true); }); }
@@ -76,7 +88,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   // v7 (GDD A2): air time 0.8-1.0 s parabola (normal) / 0.4 s ('빠른 비행'); landing squash+bounce ~0.15 s. Run moves launch
   // one bird every 0.12 s (C.flight.stagger), capped so a 4-bird run adds at most 0.36 s.
   function flyTimes(adx) { var fast = SP.store.get(FLY_KEY) === 'fast', F = C.flight; return fast ? { crouch: F.fastCrouch, air: F.fastAir, land: F.fastLand } : { crouch: F.crouch, air: Math.max(F.airMin, Math.min(F.airMax, F.airMin + F.airPerPx * adx)), land: F.land }; }
-  SP._flyTimes = flyTimes;
+  QA_.flyTimes = flyTimes;
   function tick(now) {
     flights.slice().forEach(function (f) { var e = now - f.t0, P = f.P, x, y, a = 0, sx = 1, sy = 1;
       if (e < 0) { x = f.x0; y = f.y0; } // staggered run member waiting on the branch
@@ -111,15 +123,15 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     var c = document.createElement('div'); c.className = 'ball flyer'; c.style.width = r.width + 'px'; c.style.height = r.height + 'px';
     var im = document.createElement('img'); im.alt = ''; im.draggable = false; im.className = 'ball bird'; im.src = ball.firstChild.getAttribute('src'); c.appendChild(im);
     var obs = ball.querySelector('.bigsym'), fbs = obs ? bigSym(obs.dataset.k, false) : null; if (fbs) c.appendChild(fbs); /* v7b: badge rides along, follows front/side frames */
-    c.style.transform = 'translate3d(' + x0 + 'px,' + y0 + 'px,0)'; document.body.appendChild(c); ball.style.visibility = 'hidden'; SP._flights++;
+    c.style.transform = 'translate3d(' + x0 + 'px,' + y0 + 'px,0)'; document.body.appendChild(c); ball.style.visibility = 'hidden'; QA_.flights++;
     var f = { bs: fbs, clone: c, im: im, to: to, slot: slot, color: color, ball: ball, tube: tube, side: side, sk: sk, front: front, B: B, x0: x0, y0: y0, y2: y2, dx: dx, g: g, v0: v0,
       P: flyTimes(adx), t0: performance.now() + (delay || 0), sideCls: 'bird-side bird-side-img' + (dx < 0 && sk !== 'hidden' ? ' bird-side--left' : ''),
       sideSrc: function (i) { return sideFrame(sk, i); }, flap: function (i) { return C.palette[color] ? birdFrame(color, BF.frames[i]) : front; },
       land: function (instant) { f.ball.style.visibility = ''; if (!instant) landFx(f.ball, reduced); if (fresh) { f.tube.classList.add('fresh'); if (!instant) sparkle(f.tube); } sounds.forEach(function (a) { sfx.play(a[0], a[1]); }); } };
-    SP._lastFlight = { ms: f.P.crouch + f.P.air + f.P.land, air: f.P.air, delay: delay || 0, apexRatio: adx ? +((Math.min(y0, y2) - ya) / adx).toFixed(2) : null, dx: Math.round(adx) };
+    QA_.lastFlight = { ms: f.P.crouch + f.P.air + f.P.land, air: f.P.air, delay: delay || 0, apexRatio: adx ? +((Math.min(y0, y2) - ya) / adx).toFixed(2) : null, dx: Math.round(adx) };
     flights.push(f); if (!rafOn) { rafOn = true; requestAnimationFrame(tick); }
   }
-  function whenLanded(cb) { if (!flights.length) { SP._lastLandAt = performance.now(); return cb(); } landWaiters.push(cb); } // clear waits for the last bird to touch down
+  function whenLanded(cb) { if (!flights.length) { QA_.lastLandAt = performance.now(); return cb(); } landWaiters.push(cb); } // clear waits for the last bird to touch down
   // Gimmick state (js-engine.js rules): S.caps (small tubes), S.lock (per tube key id or null), S.mask (per tube: true = '?' ball)
   // v8.2 a11y (planner 14:37): eggs are not birds — listed separately as '알(색, N번 남음)'; sleeping/bomb birds carry their state (v82 only; flag OFF keeps v8.1.4 labels)
   function ariaBirds82(i, t) { var st = est(), eggs = [], birds = [];
@@ -151,7 +163,9 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     S = { n: n, daily: dk, g: g, a: a, tubes: tubes, caps: caps, lock: lock, mask: mask, cage: cage, egg: null, slp: null, alarm: null, al: null, hist: [], sel: -1, path: 0, moves: 0, lastDone: -99, combo: 0, chain: 0, banked: 0, won: false, locked: false, hint: null, undos: 0, mag82: 0, unsolvRun: 0 };
     if (F81) setX(E.init(g)); if (F82) load82(n, g, dk); S.init0 = JSON.stringify([g.tubes, g.caps || null, (g.locks || []).length, (g.hidden || []).length]); /* v7.1 PM-6: the stage's pristine layout */
     applyTheme(dk ? 1 + 100 * (g.seed % C.themes.length) : n, sb || !!dk); // daily: theme rotates by date, no unlock toast
-    if (!sb) { if (!dk) save.current = n; persist(); } fx = {}; render(); if (F80) stageTips(); if (F81 && !sb && !dk) metaStart(n, g); try { artStage(g, n); } catch (e) { console.error('artStage', e); } // art warm-up must never break a stage
+    var m = save.mid; if (m && /^d/.test(String(m.k)) && m.k !== 'd' + today()) { delete save.mid; m = null; } // daily slot of another day
+    if (m && !sb && m.k === midKey()) { if (m.i0 === S.init0 && m.h && m.h.tubes) midRestore(m); else delete save.mid; } // stage data changed -> start fresh
+    if (!sb) { if (!dk) save.current = n; persist(); } fx = {}; render(); if (F80) stageTips(); if (S.resumed && F80) afterMove(); /* 11/03: re-check stuck state on a resumed board */ if (F81 && !sb && !dk) metaStart(n, g); try { artStage(g, n); } catch (e) { console.error('artStage', e); } // art warm-up must never break a stage
   }
   // v5 art budget (birds 4-7KB each): load only what the current stage uses. The board waits (max 350ms) for the idle
   // frames it shows to decode -> no pop-in; then, when idle, expressions + flap frames of these colors and the next
@@ -165,7 +179,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
       im.src = u; })(src); })); }
   function stageColors(g) { var u = []; g.tubes.forEach(function (t) { t.forEach(function (c) { if (u.indexOf(c) < 0 && (E.isKey(c) ? GA.pair[c] : C.palette[c])) u.push(c); }); }); return u; }
   function idleSrc(c) { return ballSrc(c).src; }
-  SP._artLoaded = function () { return Object.keys(artDone); }; // QA hook
+  QA_.artLoaded = function () { return Object.keys(artDone); }; // QA hook
   function artStage(g, n) {
     var cs = stageColors(g), b = $('board'), first = cs.map(idleSrc).concat((g.hidden || []).length ? [BF.hidden] : []);
     if (!reduced) { b.style.opacity = 0; var shown = false, show = function () { if (!shown) { shown = true; b.style.opacity = ''; } };
@@ -187,7 +201,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     save.themesSeen = save.themesSeen || [0];
     if (blk > 0 && save.themesSeen.indexOf(blk) < 0 && !sb) { save.themesSeen.push(blk); persist(); themeUnlock(th); }
   }
-  SP._themeFor = function (n) { return C.themes[Math.floor((n - 1) / 100) % C.themes.length].key; }; // QA hook
+  QA_.themeFor = function (n) { return C.themes[Math.floor((n - 1) / 100) % C.themes.length].key; }; // QA hook
   // DESIGN 17.5 (A08): system emoji -> v5 icons (background SVGs, aria-hidden; text stays for screen readers)
   function IC(n) { return '<i class="v5i v5i-' + n + '" aria-hidden="true"></i>'; }
   function CAL(key) { var d = key ? +String(key).split('-')[2] : new Date().getDate(); return '<span class="v5-cal" aria-hidden="true"><b>' + d + '</b></span>'; }
@@ -211,7 +225,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     if (up) top = Math.min(top, fT - h - 2); else top = Math.max(top, hB + 2);
     el.style.top = Math.round(top) + 'px'; el.style.bottom = 'auto'; bub.classList.toggle('v7-bubble--up', up);
     var hm = nextMove(), tb = hm ? document.querySelectorAll('#board .tube')[S.sel < 0 ? hm[0] : hm[1]] : null, tx = tb ? tb.getBoundingClientRect().left + tb.getBoundingClientRect().width / 2 : innerWidth / 2;
-    var br = bub.getBoundingClientRect(); bub.style.setProperty('--tail-x', Math.max(18, Math.min(br.width - 18, tx - br.left)) + 'px'); SP._tutorPlace = { up: up, top: Math.round(top), h: h }; }
+    var br = bub.getBoundingClientRect(); bub.style.setProperty('--tail-x', Math.max(18, Math.min(br.width - 18, tx - br.left)) + 'px'); QA_.tutorPlace = { up: up, top: Math.round(top), h: h }; }
   function landFx(el, quiet) { // quiet (reduced motion): squash only, no feathers/dust // v7 A2/19.2: 0.15s squash (.v7-land) + feathers/dust (.v7-fx) from assets-v7ui-v7.css
     var bird = el.querySelector('.bird, svg, img') || el; bird.classList.remove('v7-land'); void bird.offsetWidth; bird.classList.add('v7-land'); setTimeout(function () { bird.classList.remove('v7-land'); }, 160);
     if (quiet) return;
@@ -342,7 +356,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   function symKo(s) { return SYM_KO[s] || '표식'; }
   function alarmTip82(g) { var al = g ? g.alarm : null, L = (Array.isArray(al) ? al : al == null ? [] : [al]).map(function (c) { var pc = C.palette[c], b = pc && BIRD_KO[pc.key]; return b ? b[1] + ' ' + b[0] : null; }).filter(function (x, k, A) { return x && A.indexOf(x) === k; }); // v8.2: name the alarm colour(s) + bird
     return L.length ? L.join('·') + ' 무리를 완성하면 다들 깨어나요' : '시계 든 새의 무리를 완성하면 다들 깨어나요'; }
-  SP._birdName = birdName; SP._symKo = symKo;
+  QA_.birdName = birdName; QA_.symKo = symKo;
   // QA M1: size balls so the tube grid fits the board's real height/width (safe areas, HUD, buttons, banner excluded) for any tube count
   function fitBalls(b) { // 2026-10-28 (QA N2): 11-14 perches try 3 rows AND 2 wider rows, keep whichever gives bigger birds
     var cs = getComputedStyle(b), h = b.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom), w = b.clientWidth - 16, N = S.tubes.length;
@@ -353,7 +367,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
       return { rs: rs, g: g, gp: gp, size: Math.floor(Math.max(18, Math.min(cap, fromH, fromW))) }; }
     var best = fit(rows(N));
     if (N > 10 && N <= 14) { var two = fit([Math.ceil(N / 2), Math.floor(N / 2)]); if (two.size > best.size) best = two; }
-    var size = best.size; SP._layout = { rows: best.rs.slice(), size: size };
+    var size = best.size; QA_.layout = { rows: best.rs.slice(), size: size };
     document.documentElement.style.setProperty('--ball-size', size + 'px');
     b.style.gap = Math.round(size * best.g + best.gp) + 'px'; // QA N2: tighter row gap for 3-row layouts
     document.documentElement.classList.toggle('sym-boost', size * 0.34 < 8); // QA N1 + DESIGN 13.8: key symbol badge (34% of ball) would render < 8px -> code fallback
@@ -368,7 +382,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   // (520ms; '찰칵' at ~790) -> 1020 remove key+lock+overlay, release input. Reduced motion: no flight, consume-fade 150ms together.
   function consume(fromRect, tubeIdx, keySrc, solved) {
     var d = document.querySelectorAll('#board .tube')[tubeIdx], lo = d && d.querySelector('.lock'), ov = d && d.querySelector('.lock-overlay');
-    SP._consumeT0 = performance.now(); // QA hook (timeline checks)
+    QA_.consumeT0 = performance.now(); // QA hook (timeline checks)
     var S0 = S, T = { consume: 500, click: 790, end: 1020 }, w = null; // v7.1: key flight keeps its timing under reduced motion
     if (lo && fromRect) {
       var r = lo.getBoundingClientRect(); w = document.createElement('div'); w.className = 'keyfly'; w.style.width = fromRect.width + 'px'; w.style.height = fromRect.height + 'px';
@@ -393,13 +407,13 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     var st = stageOf(), s = E.solve(st, { limit: 1e5 }); if (s.solvable) return s.path[0] || null;
     var d = E.dfs(st, 1e5); return d.solvable && d.path.length ? d.path[0] : null;
   }
-  function flushTaps() { var b = S.tbuf || []; S.tbuf = []; if (document.querySelector('.ov.show') || S.won) return; SP._tbufRan = (SP._tbufRan || 0) + b.length; b.forEach(function (k) { tap(k); }); }
+  function flushTaps() { var b = S.tbuf || []; S.tbuf = []; if (document.querySelector('.ov.show') || S.won) return; QA_.tbufRan = (QA_.tbufRan || 0) + b.length; b.forEach(function (k) { tap(k); }); }
   function clearTaps() { if (S) S.tbuf = []; }
   function tap(i) {
     if (S.cheer) return S.cheer.skip(); // tap during the clear celebration -> straight to the card
     if (F82 && S.swapMode && !S.locked && !SP.ads.isBusy()) return swapTap(i);
     if (F82 && S.boom && !S.locked && !S.won) return boomFail();
-    if (S.locked || SP.ads.isBusy()) { if (S.locked && !S.won && !S.solvedLock && !document.querySelector('.ov.show')) { S.tbuf = S.tbuf || []; if (S.tbuf.length < 2) S.tbuf.push(i); SP._tbuf = S.tbuf.slice(); } return; } // v8.1.1: up to 2 taps buffered during a locked animation
+    if (S.locked || SP.ads.isBusy()) { if (S.locked && !S.won && !S.solvedLock && !document.querySelector('.ov.show')) { S.tbuf = S.tbuf || []; if (S.tbuf.length < 2) S.tbuf.push(i); QA_.tbuf = S.tbuf.slice(); } return; } // v8.1.1: up to 2 taps buffered during a locked animation
     var pickable = function (k) { return S.tubes[k].length && !done(k) && !S.lock[k] && !(F81 ? E.fixedTop(est(), k) : E.cagedTop(est(), k)); }; // v8 M1: caged top birds can't be picked
     if (S.sel < 0) { if (pickable(i)) { S.sel = i; warmSide(S.tubes[i][S.tubes[i].length - 1]); sfx.play('select'); } else { fx.shake = i; sfx.play('invalid'); } }
     else if (S.sel === i) S.sel = -1;
@@ -422,7 +436,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
       if (!isd && S.chain > 0) { S.banked += S.chain; S.chain = 0; } // chain broken by a normal move -> banked (paid on clear)
       if (isd) { if (F82 && ns.hatchDone && ns.hatchDone.indexOf(i) >= 0) hatchDone(i, solved); else onTubeDone(i, solved); }
       if (F82 && S.boom) { render(); return boomFail(); }
-      fx.fly = { from: !unlock && sb ? (airRect || sb.getBoundingClientRect()) : null, froms: unlock ? [] : froms, n: unlock ? 1 : kk, to: i, sounds: pend }; pend = null; SP._lastRun = kk;
+      fx.fly = { from: !unlock && sb ? (airRect || sb.getBoundingClientRect()) : null, froms: unlock ? [] : froms, n: unlock ? 1 : kk, to: i, sounds: pend }; pend = null; QA_.lastRun = kk;
       if (unlock) { fx.fly.sounds.forEach(function (a) { sfx.play(a[0], a[1]); }); fx.fly = null; render(); return; }
       if (solved) { S.locked = true; S.solvedLock = true; S.tbuf = []; S.sel = -1; render(); return whenLanded(function () { setTimeout(cheer, CLEAR_DELAY); }); } // H1: lock all input during clear sequence (perch hop wave -> card)
       if (F80) { render(); afterMove(); return; } // v8 G5: dead-end check after every move
@@ -445,7 +459,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   function ov(w, cls, ms) { var d = document.createElement('div'); d.className = 'v8-overlay ' + cls; w.appendChild(d); if (ms) setTimeout(function () { d.remove(); }, ms); return d; }
   // v8.2d (DESIGN 20.18, v82 only): colour egg v2 = background class on the same <img> box (transparent src); off = v8.1 egg img
   var GIF0 = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-  function eggArt(im, key) { if (F82) { im.src = GIF0; im.classList.add('v8-egg-v2', key); } else im.src = V81.egg.replace('{color}', key); }
+  function eggArt(im, key) { if (F82) { im.src = GIF0; im.classList.add('v8-egg-v3', key); } else im.src = V81.egg.replace('{color}', key); } // 11/03 22:46: egg v3 (symbol shapes, colour-blind / grey) — designer assets linked as-is
   function xBird(w, im, i, j, c) { var P = C.palette[c], st = est(), eg = E.eggAt(st, i, j), at = function (L) { return (L || []).some(function (z) { return z[0] === i && z[1] === j; }); };
     if (eg) { eggArt(im, P.key); im.alt = '알 (' + birdName(P.key) + ', ' + eg.n + '번 남음)'; w.classList.add('v8-egg');
       if (eg.n === 1) ov(w, 'v8-egg-crack-1' + (F82 ? ' v2' : '')); var bd = ov(w, 'v8-badge-egg' + (F82 ? ' v3' + (symbolsLarge ? ' lg' : '') : '') + ' n' + Math.min(3, eg.n) + (fx.eggTick && fx.eggTick.indexOf(i + ':' + j) >= 0 ? ' tick' : ''));
@@ -453,7 +467,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
       if (FB && st.brood) { var e0 = (S.g.eggs || []).filter(function (e) { return e.tube === i && e.at === j; })[0], warm = S.tubes[i][j + 1] === c && !(S.mask[i] && S.mask[i][j + 1]);
         if (warm || (e0 && eg.n < e0.n)) { var hb0 = document.createElement('div'); hb0.className = 'v8-brood ' + (warm ? 'warm' : 'paused'); w.appendChild(hb0); } } } // v8.2 DESIGN 20.17 brood heart
     else if (at(fx.hatch)) { var idle = im.src; if (reduced) return; eggArt(im, P.key); var c2 = ov(w, 'v8-egg-crack-2' + (F82 ? ' v2' : '')), hb = ov(w, 'v8-hatch');
-      setTimeout(function () { im.src = idle; im.classList.remove('v8-egg-v2', P.key); c2.remove(); hb.remove(); }, V81.hatchMs); }
+      setTimeout(function () { im.src = idle; im.classList.remove('v8-egg-v3', P.key); c2.remove(); hb.remove(); }, V81.hatchMs); }
     if (E.slpAt(st, i, j)) { im.src = V81.sleepy.replace('{key}', P.key); im.classList.add('v8-sleep'); im.alt += ' (잠든 새)'; ov(w, 'v8-zz'); }
     else if (at(fx.wake)) { var awake = im.src; if (!reduced) { im.src = V81.sleepy.replace('{key}', P.key); ov(w, 'v8-wake', V81.wakeMs); setTimeout(function () { im.src = awake; }, V81.wakeMs); } }
     var ring = fx.ring && fx.ring[0] === i && fx.ring[1] === j;
@@ -482,15 +496,15 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   function x82Fx(a, ns) { var th = [], tk = [];
     (a.ice || []).forEach(function (z) { var nz = (S.ice || []).filter(function (y) { return y.i === z.i; })[0]; if (!nz) th.push(z.i); else if (nz.n < z.n) tk.push(z.i); });
     if (th.length) fx.thaw = th; if (tk.length) fx.iceTick = tk; if (th.length || tk.length) snd('ice-crack');
-    if (a.bomb && ns.defused) { var c = a.bc; for (var y = 0; y < S.tubes.length; y++) if (S.tubes[y][0] === c && done(y)) { fx.defuse = [y, S.tubes[y].length - 1]; break; } snd('defuse'); SP._defused = (SP._defused || 0) + 1; }
+    if (a.bomb && ns.defused) { var c = a.bc; for (var y = 0; y < S.tubes.length; y++) if (S.tubes[y][0] === c && done(y)) { fx.defuse = [y, S.tubes[y].length - 1]; break; } snd('defuse'); QA_.defused = (QA_.defused || 0) + 1; }
     else if (S.boom) fx.flyaway = 1; else if (S.bomb && S.bomb.n <= 3) snd('bomb-tick'); }
-  function hatchDone(i, solving) { fx.fresh = i; if (!solving) { flyAway(i); snd('complete'); } else S.chain = 0; SP._hatchDone = (SP._hatchDone || 0) + 1; } // M3': a flock completed by hatching never counts toward the combo
+  function hatchDone(i, solving) { fx.fresh = i; if (!solving) { flyAway(i); snd('complete'); } else S.chain = 0; QA_.hatchDone = (QA_.hatchDone || 0) + 1; } // M3': a flock completed by hatching never counts toward the combo
   function boomFail() { S.sel = -1; S.swapMode = false; if (S._boomT) return; sfx.play('fail-soft'); S._boomT = setTimeout(function () { S._boomT = 0; if (!S.boom || S.won) return; var o = [];
       o.push({ k: 'undo', label: '되돌리기', go: function () { closeSheet(); undo(); } });
       if (adShow()) o.push(adOpt('ad', 'moves5', '광고 보고 이동 +' + E82.movesGive, bombMore));
       o.push(coinOpt('coin', E82.moves5, '이동 +' + E82.movesGive, bombMore));
       o.push({ k: 'restart', label: '다시하기', go: function () { closeSheet(); doRestart(); } });
-      sheet('폭탄 새가 날아가 버렸어요', V82.sheetArt, o); SP._boomShown = (SP._boomShown || 0) + 1; }, reduced ? 200 : V82.failMs); }
+      sheet('폭탄 새가 날아가 버렸어요', V82.sheetArt, o); QA_.boomShown = (QA_.boomShown || 0) + 1; }, reduced ? 200 : V82.failMs); }
   function bombMore() { if (!S.boom || !S.bomb) return; S.bomb.n = E82.movesGive; S.boom = 0; render(); toast('폭탄 새 이동 +' + E82.movesGive); }
   function magBtn() { var f = document.querySelector('footer.bottom'), b = $('v82magpie'); if (b || !f) return b;
     f.classList.add('v82'); b = document.createElement('button'); b.className = 'btn v82-magpie'; b.id = 'v82magpie'; b.innerHTML = '<img src="' + V82.magpie + '" alt="" aria-hidden="true"><span>까미</span><span class="cnt" id="v82magcnt"></span>'; f.appendChild(b);
@@ -504,7 +518,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     var h = snap(); h.chain = S.chain; h.banked = S.banked; h.combo = S.combo; h.lastDone = S.lastDone; h.path = S.path; S.hist.push(h);
     var bc = S.bomb ? S.tubes[S.bomb.i][S.bomb.j] : null, cg0 = S.cage, ns = E.swap(est(), i, j); S.tubes = ns.t; S.lock = ns.lock; S.cage = ns.cage || null; if (cg0) cageFx(cg0, S.cage);
     var x0 = { egg: S.egg, slp: S.slp, al: S.al, ice: S.ice, bomb: S.bomb, bc: bc }; setX(ns); xFx(x0); x82Fx(x0, ns);
-    save.inventory.magpie = Math.max(0, (save.inventory.magpie || 0) - 1); if (!QAP && !save.album.magpie) { save.album.magpie = 1; M81.albumSync(save, debuts(), E81, EC); } persist(); S.moves++; S.mag82 = (S.mag82 || 0) + 1; S.swapMode = false; S.hint = null; S.path = -1; S.sel = -1; fx.swap = [i, j]; sfx.play('swap'); SP._swaps = (SP._swaps || 0) + 1;
+    save.inventory.magpie = Math.max(0, (save.inventory.magpie || 0) - 1); if (!QAP && !save.album.magpie) { save.album.magpie = 1; M81.albumSync(save, debuts(), E81, EC); } persist(); S.moves++; S.mag82 = (S.mag82 || 0) + 1; S.swapMode = false; S.hint = null; S.path = -1; S.sel = -1; fx.swap = [i, j]; sfx.play('swap'); QA_.swaps = (QA_.swaps || 0) + 1;
     var solved = E.isSolved(est()), isd = done(i);
     if (!isd && S.chain > 0) { S.banked += S.chain; S.chain = 0; }
     if (isd) { if (ns.hatchDone && ns.hatchDone.indexOf(i) >= 0) hatchDone(i, solved); else onTubeDone(i, solved); }
@@ -526,7 +540,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   function meta82Win(st) { var h = '', coins = 0, e = feather82(), add = st === 3 ? 2 : 1, T = E82.featherTiers; e.n += add; h += ' · 깃털 +' + add;
     T.forEach(function (t, q) { if (e.n >= t && e.got.indexOf(t) < 0) { e.got.push(t); coins += E82.featherCoins[q]; h += ' · 깃털 ' + t + '개 보상 +' + E82.featherCoins[q]; } });
     if (S.chal && S.moves <= S.chal) { save.crown82 = save.crown82 || {}; if (!save.crown82[S.n]) { save.crown82[S.n] = 1; coins += E82.crownCoins; h += ' · 도전 성공 왕관 +' + E82.crownCoins; } else h += ' · 도전 성공'; }
-    if (coins) V8.addCoins(save, coins, EC); SP._meta82 = { feather: e, crown: save.crown82 || {}, coins: coins }; return { coins: coins, html: h }; }
+    if (coins) V8.addCoins(save, coins, EC); QA_.meta82 = { feather: e, crown: save.crown82 || {}, coins: coins }; return { coins: coins, html: h }; }
   var chal82 = false;
   function menu82(co) { guidePreload82(); if (!$('v82guideBtn')) { co.insertAdjacentHTML('beforeend', ' <button class="btn v8-bag v82-guide-btn' + (guideNew() ? ' dot' : '') + '" id="v82guideBtn">기믹 안내</button>'); $('v82guideBtn').onclick = function () { guideOpen(false); }; }
     var e = feather82(), T = E82.featherTiers, nx = T.filter(function (t) { return e.n < t; })[0], row = $('v82feather'), anchor = $('v8chestrow') || co;
@@ -559,7 +573,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   var guideFirst = null;
   function guideFirsts() { if (guideFirst) return guideFirst; guideFirst = {}; GUIDE.forEach(function (c) { for (var k = 1; k <= LAST; k++) { var g = SP.STAGES[k]; if (g && c.has(g)) { guideFirst[c.id] = k; break; } } }); return guideFirst; }
   function guideNew() { var F = guideFirsts(), seen = (save.guide82 || {}); return GUIDE.some(function (c) { return F[c.id] && F[c.id] <= save.unlocked && !seen[c.id]; }); }
-  function guideArt82() { return GUIDE.map(function (c) { return LOOP82[c.id] && !reduced ? 'assets-v8-guide-loop-' + LOOP82[c.id] + '.svg?v=2d933463' : c.art; }); }
+  function guideArt82() { return GUIDE.map(function (c) { return LOOP82[c.id] && !reduced ? 'assets-v8-guide-loop-' + LOOP82[c.id] + '.svg?v=749fd446' : c.art; }); }
   var guidePre82 = null; function guidePreload82() { if (guidePre82) return; guidePre82 = guideArt82().map(function (u) { var im = new Image(); im.decoding = 'async'; im.src = u; return im; }); } // planner 14:37: no late white flash on first open
   function guideOpen(inStage) { guidePreload82(); var o = $('v82guide'); if (!o) { o = document.createElement('div'); o.id = 'v82guide'; o.className = 'ov v8ov'; document.body.appendChild(o); }
     var F = guideFirsts(), seen = save.guide82 || {}, g = inStage && S && !S.daily ? S.g : null, list = GUIDE.slice();
@@ -572,10 +586,10 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     $('v82guideClose').onclick = function () { o.classList.remove('show'); }; o.classList.add('show');
     o.querySelectorAll('.v82-guide-card.locked').forEach(function (el) { el.setAttribute('tabindex', '0'); el.onclick = function () { var f = F[el.dataset.id]; toast(f ? f + '판에서 만나요' : '곧 만나요'); }; }); // planner 14:37: locked card tap -> toast (first stage under the current flag set)
     var ch = false; save.guide82 = save.guide82 || {}; GUIDE.forEach(function (c) { if (F[c.id] && F[c.id] <= save.unlocked && !save.guide82[c.id]) { save.guide82[c.id] = 1; ch = true; } }); if (ch) persist();
-    var gb = $('v82guideBtn'); if (gb) gb.classList.remove('dot'); SP._guide = list.map(function (c) { return { id: c.id, open: !!(F[c.id] && F[c.id] <= save.unlocked), first: F[c.id] || null, here: !!(g && c.has(g)) }; }); }
-  SP._x82 = function () { return { th: S.th, ice: S.ice, bomb: S.bomb, boom: S.boom, brood: S.brood, egg: S.egg, swapMode: !!S.swapMode, chal: S.chal, magpie: save.inventory.magpie, feather: save.feather82 || null, crown: save.crown82 || null, guide: save.guide82 || null, combo: S.combo, moves: S.moves }; }; // QA hook
-  SP._x82week = week82;
-  SP._x81 = function () { return { egg: S.egg, slp: S.slp, alarm: S.alarm, al: S.al, chain: S.g.chain || null, boss: !!S.g.boss }; }; // QA hook
+    var gb = $('v82guideBtn'); if (gb) gb.classList.remove('dot'); QA_.guide = list.map(function (c) { return { id: c.id, open: !!(F[c.id] && F[c.id] <= save.unlocked), first: F[c.id] || null, here: !!(g && c.has(g)) }; }); }
+  QA_.x82 = function () { return { th: S.th, ice: S.ice, bomb: S.bomb, boom: S.boom, brood: S.brood, egg: S.egg, swapMode: !!S.swapMode, chal: S.chal, magpie: save.inventory.magpie, feather: save.feather82 || null, crown: save.crown82 || null, guide: save.guide82 || null, combo: S.combo, moves: S.moves }; }; // QA hook
+  QA_.x82week = week82;
+  QA_.x81 = function () { return { egg: S.egg, slp: S.slp, alarm: S.alarm, al: S.al, chain: S.g.chain || null, boss: !!S.g.boss }; }; // QA hook
   var CHIP_KEY = 'settings.v8chips';
   function chips() { var el = $('v8chips'); if (!el) { el = document.createElement('div'); el.id = 'v8chips'; el.className = 'v8-chips'; el.setAttribute('aria-live', 'polite'); document.querySelector('header.hud').insertAdjacentElement('afterend', el); }
     var hid = 0, per = {}; S.mask.forEach(function (m, i) { m.forEach(function (x, j) { if (x) { hid++; var c = S.tubes[i][j]; per[c] = (per[c] || 0) + 1; } }); });
@@ -585,26 +599,29 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     el.innerHTML = h; }
   function tip(id, msg) { if (!F80 || save.tips[id]) return; save.tips[id] = 1; persist(); var t = $('v8tip'); if (!t) { t = document.createElement('div'); t.id = 'v8tip'; t.className = 'v8-tip'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
     if (F82 && !t.hidden && t._q) { t._q.push([id, msg]); return; } // v8.2j (10/30, 171 wake hint hidden by the thorn hint): a tip that comes while one is showing waits its turn
-    (function show(id, msg) { t.textContent = msg; t.hidden = false; SP._lastTip = id; clearTimeout(t._h); t._h = setTimeout(function () { var nx = F82 && t._q && t._q.shift(); if (nx) show(nx[0], nx[1]); else t.hidden = true; }, 2600); })(id, msg); if (F82 && !t._q) t._q = []; }
-  SP._tip = function () { return SP._lastTip; };
+    (function show(id, msg) { t.textContent = msg; t.hidden = false; tipBelowChips(t); QA_.lastTip = id; clearTimeout(t._h); t._h = setTimeout(function () { var nx = F82 && t._q && t._q.shift(); if (nx) show(nx[0], nx[1]); else t.hidden = true; }, 2600); })(id, msg); if (F82 && !t._q) t._q = []; }
+  QA_.tip = function () { return QA_.lastTip; };
+  function tipBelowChips(t) { var c = $('v8chips'), r = c && !c.hidden && c.getBoundingClientRect(); t.style.top = r && r.height ? Math.round(r.bottom + 4) + 'px' : ''; } // 11/03 22:46 (QA L3): the start tip never covers the gimmick chip row
+  window.addEventListener('resize', function () { var t = $('v8tip'); if (t && !t.hidden) tipBelowChips(t); });
   function wakeTipAgain(i) { // v8.2g (planner 17:15): tapping a nest holding a sleeping bird shows the wake hint again (same tip box, 3 s debounce)
     if (!S.slp || !S.g || !(S.g.sleep || []).length || !S.slp.some(function (z) { return z[0] === i; })) return;
     var now = Date.now(); if (now - (S.wakeTipAt || 0) < 3000) return; S.wakeTipAt = now; save.tips.sleep = 0; tip('sleep', alarmTip82(S.g)); }
   function stageTips() { if (S.daily) return; if (S.cage) tip('cage', '새장은 무리를 ' + Math.max.apply(null, S.cage.filter(Boolean).map(function (k) { return k.n; })) + '번 완성하면 열려요'); if (S.n === 22 && (S.g.hidden || []).length) tip('hidden22', '?새는 위가 비면 정체가 드러나요'); }
   var STUCK_CAP82 = 4e5; // v8.2 reachability cap (states) for the G5 'no win reachable' check; measured cost in docs-v8.2-progress.md
-  function afterMove() { // G5: no legal move + unsolved -> sheet at once; movable-but-unsolvable for 3 moves -> soft toast + hint glow (idle dfs, silent on budget)
+  function afterMove() { persist(); // 11/03: every move/undo keeps save.mid current
+    // G5: no legal move + unsolved -> sheet at once; movable-but-unsolvable for 3 moves -> soft toast + hint glow (idle dfs, silent on budget)
     if (S.won || E.isSolved(est())) return;
     if (isStuck() || roundTrip()) { whenLanded(function () { setTimeout(function () { if (!S.won && (isStuck() || roundTrip())) stuckSheet(); }, 120); }); return; } // v8.2i (닭부장 17:50, ON+OFF): notice only for 0 moves or round-trips only
     // v8.0.1: the old single dfs(2e4) gave up silently on big boards (aborted -> no toast). Now a resumable DFS runs in idle
     // slices (<= ~6 ms each, cancelled by the next move) until it proves 'solvable' or 'unsolvable'; proof of no solution -> toast at once.
     var n0 = S.moves, job = E.dfsJob(stageOf(), F82 ? STUCK_CAP82 : 3e6), idle = window.requestIdleCallback || function (f) { setTimeout(function () { f({ timeRemaining: function () { return 6; } }); }, 30); };
-    SP._deadCheck = { moves: n0, state: 'running' };
+    QA_.deadCheck = { moves: n0, state: 'running' };
     (function slice(dl) { if (S.moves !== n0 || S.won) return; var t0 = performance.now(), r = 'running', lim = Math.min(8, Math.max(2, dl && dl.timeRemaining ? dl.timeRemaining() : 6));
       while (r === 'running' && performance.now() - t0 < lim) r = job.step(1500);
-      SP._deadCheck = { moves: n0, state: r, explored: job.explored() };
+      QA_.deadCheck = { moves: n0, state: r, explored: job.explored() };
       if (r === 'running') return idle(slice, { timeout: 500 });
       if (r === 'gaveup') return; S.unsolvRun = r === 'solvable' ? 0 : S.unsolvRun + 1;
-      if (r === 'unsolvable') SP._stuck82 = (SP._stuck82 || 0) + 1; })(); } // v8.2i: solver result alone shows nothing (no toast/sheet/glow); the hint button says '되돌려 보세요' // v8.2 (planner 15:31): no win reachable (loops included) -> G5 sheet too; cap hit -> old behaviour
+      if (r === 'unsolvable') QA_.stuck82 = (QA_.stuck82 || 0) + 1; })(); } // v8.2i: solver result alone shows nothing (no toast/sheet/glow); the hint button says '되돌려 보세요' // v8.2 (planner 15:31): no win reachable (loops included) -> G5 sheet too; cap hit -> old behaviour
   function bagSheet() { var I = save.inventory; sheet('가방', null, [ // v8.0: map shows owned boosters only (buying outside a stage = v8.1 P2)
       { k: 'token', icon: V8A.token, label: '횃대 토큰 ' + I.perchToken + ' / ' + EC.tokenMax, disabled: true, go: function () {} },
       { k: 'hint', label: '힌트 ' + I.hint + ' · 판당 ' + EC.freeHintsPerStage + '회 무료(1~' + EC.freeHintUnlimitedTo + '판 무제한)', disabled: true, go: function () {} },
@@ -616,15 +633,15 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     var bx = o.querySelector('.v8-sheet-btns'); opts.forEach(function (p) { var b = document.createElement('button'); b.className = 'v8-sheet-btn' + (p.ad ? ' ad' : ''); b.innerHTML = (p.icon ? '<img src="' + p.icon + '" alt="">' : '') + '<span>' + p.label + '</span>'; b.disabled = !!p.disabled; b.dataset.k = p.k;
       b.onclick = function () { if (b.disabled) return; b.disabled = true; p.go(); }; bx.appendChild(b); });
     $('v8close').onclick = closeSheet; o.classList.add('show'); tip('coin0', '코인으로도 받을 수 있어요'); }
-  SP._sheet = function () { var o = $('v8sheet'); return o && o.classList.contains('show') ? [].map.call(o.querySelectorAll('.v8-sheet-btn'), function (b) { return { k: b.dataset.k, label: b.textContent, disabled: b.disabled }; }) : null; };
+  QA_.sheet = function () { var o = $('v8sheet'); return o && o.classList.contains('show') ? [].map.call(o.querySelectorAll('.v8-sheet-btn'), function (b) { return { k: b.dataset.k, label: b.textContent, disabled: b.disabled }; }) : null; };
   function coinOpt(k, price, label, grant) { var short = price - save.coins; return { k: k, icon: V8A.coinBtn, label: short > 0 ? label + ' · 코인 ' + short + '개 부족' : label + ' · 코인 ' + price, disabled: short > 0,
     go: function () { if (!V8.spend(save, price)) return; grant(); persist(); sfx.play('coin-spend'); closeSheet(); } }; } // R1: deduct + grant, then a single persist (atomic)
   function adShow() { return F81 ? SP.ads.mode() !== 'none' : adAvail(); } // v8.1: toss/dummy always show the ad button (disabled until an ad is loaded); web never
   function adOpt(k, reason, label, grant) { if (F81 && !adAvail()) return { k: k, ad: true, icon: V8A.adBadge, label: label + ' · 광고 준비 중', disabled: true, go: function () {} };
     return adOpt0(k, reason, label, grant); }
-  function adOpt0(k, reason, label, grant) { return { k: k, ad: true, icon: V8A.adBadge, label: label, go: function () { closeSheet(); SP.ads.showRewarded(reason, function (ok) { if (ok === true) grant(); }); } }; } // G9: only ok === true pays
+  function adOpt0(k, reason, label, grant) { return { k: k, ad: true, icon: V8A.adBadge, label: label, go: function () { closeSheet(); var paid = false; SP.ads.showRewarded(reason, function (ok) { if (ok === true && !paid) { paid = true; grant(); } }); } }; } // G9: only ok === true pays; QA L6: one ad = one payout even if a callback repeats
   function undoSheet() { var o = []; // v8.0.1: also opens with no move yet (0 left shows '+'); then the bought undos are stored, none used
-    if (adShow()) o.push(adOpt('ad', 'undo', '광고 보고 되돌리기 1회', function () { if (S.hist.length) doUndo(); else { S.a.undoLeft++; persist(); render(); toast('되돌리기 +1'); } }));
+    if (adShow()) o.push(adOpt('ad', 'undo', '광고 보고 되돌리기 1회', function () { if (S.hist.length) { var h0 = S.hist.length; doUndo(); if (S.hist.length < h0) toast('되돌리기 +1 (바로 1회 사용)'); /* QA L6: the reward is used at once — say so */ } else { S.a.undoLeft++; persist(); render(); toast('되돌리기 +1'); } }));
     o.push(coinOpt('coin', EC.undo3, '되돌리기 +' + EC.undo3Gives, function () { S.a.undoLeft += EC.undo3Gives; if (S.hist.length) { S.a.undoLeft--; doUndo(true); if (F81) toast('되돌리기 +' + EC.undo3Gives + ' (1회 사용)'); } else { render(); toast('되돌리기 +' + EC.undo3Gives); } })); sheet('되돌리기를 더 받을까요?', null, o); }
   function perchSheet() { var o = [], key = V8.dayKey(), fl = V8.freePerchLeft(save, EC, key), ad = adShow() && !S.a.adPerch;
     if (save.inventory.perchToken > 0) o.push({ k: 'token', icon: V8A.token, label: '횃대 토큰 쓰기 (보유 ' + save.inventory.perchToken + ')', go: function () { save.inventory.perchToken--; closeSheet(); addPerch(); } });
@@ -641,7 +658,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     o.innerHTML = '<div class="card v8-sheet" role="dialog" aria-label="막힘"><img class="v8-sheet-art" src="' + V8A.stuckArt + '" alt=""><div class="title">' + '더 옮길 수 있는 새가 없어요' + '</div><div class="v8-sheet-btns">'
       + '<button class="v8-sheet-btn" data-k="undo">되돌리기</button>' + (canP ? '<button class="v8-sheet-btn" data-k="perch">횃대 추가</button>' : '') + '<button class="v8-sheet-btn" data-k="restart">다시하기</button></div></div>';
     o.querySelectorAll('.v8-sheet-btn').forEach(function (b) { b.onclick = function () { o.classList.remove('show'); var k = b.dataset.k; if (k === 'undo') undo(); else if (k === 'perch') addTube(); else doRestart(); }; });
-    o.classList.add('show'); SP._stuckShown = (SP._stuckShown || 0) + 1; }
+    o.classList.add('show'); QA_.stuckShown = (QA_.stuckShown || 0) + 1; }
   function addPerch(paid) { if (S.locked || perches(S.a) >= EC.perchMaxPerStage) return; S.a.perches = perches(S.a) + 1; S.a.addedTube = true; persist();
     S.tubes.push([]); S.caps.push(4); S.lock.push(null); S.mask.push([]); if (S.cage) S.cage.push(null); S.sel = -1; render(); toast('횃대가 하나 늘었어요'); }
   function hintFree() { return (!S.daily && S.n <= EC.freeHintUnlimitedTo) || (S.a.hintsUsed || 0) < EC.freeHintsPerStage; }
@@ -668,7 +685,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     flameHud(); document.body.classList.toggle('v8-boss', !!g.boss);
     var bb = $('v8bossbanner'); if (g.boss) { if (!bb) { bb = document.createElement('div'); bb.id = 'v8bossbanner'; bb.className = 'v8-boss-banner v8-boss-intro'; bb.setAttribute('role', 'status'); document.body.appendChild(bb); }
       bb.textContent = '보스 스테이지 ' + n; bb.hidden = true; clearTimeout(bb._h); var tries = 0; // v8.1.1: show 1.5 s once the board is really on screen (map / splash / sheets closed), never blocks input
-      (function go() { var cover = document.querySelector('#menu.show, #splash, .ov.show'); if (cover && tries++ < 60) { bb._h = setTimeout(go, 100); return; } if (S.n !== n) return; bb.classList.remove('v8-boss-intro'); void bb.offsetWidth; bb.classList.add('v8-boss-intro'); bb.hidden = false; SP._bossShownAt = performance.now(); bb._h = setTimeout(function () { bb.hidden = true; }, 1500); })(); } else if (bb) { clearTimeout(bb._h); bb.hidden = true; }
+      (function go() { var cover = document.querySelector('#menu.show, #splash, .ov.show'); if (cover && tries++ < 60) { bb._h = setTimeout(go, 100); return; } if (S.n !== n) return; bb.classList.remove('v8-boss-intro'); void bb.offsetWidth; bb.classList.add('v8-boss-intro'); bb.hidden = false; QA_.bossShownAt = performance.now(); bb._h = setTimeout(function () { bb.hidden = true; }, 1500); })(); } else if (bb) { clearTimeout(bb._h); bb.hidden = true; }
     if ((g.eggs || []).length && S.brood) tip('egg82', '알 위에 같은 색 새를 앉혀 두면 ' + Math.max.apply(null, g.eggs.map(function (e) { return e.n; })) + '번 움직인 뒤 깨어나요');
     else if ((g.eggs || []).length) tip('egg', '알은 무리를 ' + Math.max.apply(null, g.eggs.map(function (e) { return e.n; })) + '번 완성하면 깨어나요');
     if ((g.sleep || []).length) tip('sleep', F82 ? alarmTip82(g) : '시계 든 새의 무리를 완성하면 다들 깨어나요');
@@ -678,9 +695,9 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     save.v8paid = save.v8paid || {}; if (S.g.boss && !save.v8paid['boss' + S.n]) { save.v8paid['boss' + S.n] = 1; V8.addCoins(save, E81.bossBonus, EC); coins += E81.bossBonus; h += ' · 보스 +' + E81.bossBonus; setTimeout(function () { sfx.play('boss-clear'); }, 900); }
     var al = M81.albumSync(save, debuts(), E81, EC); if (al.got.length) h += ' · 도감 카드 +' + al.got.length; if (al.coins) { coins += al.coins; h += ' · 도감 보상 +' + al.coins; }
     var ch = M81.chestAccrue(save, E81); if (ch) h += ' · 별 상자 +' + ch + ' (지도에서 열어요)';
-    flameHud(); SP._meta = { clean: clean, streak: n, album: al, chests: ch, coins: coins }; return { coins: coins, html: h }; }
+    flameHud(); QA_.meta = { clean: clean, streak: n, album: al, chests: ch, coins: coins }; return { coins: coins, html: h }; }
   function metaMenu() { var co = $('coins'); co.insertAdjacentHTML('beforeend', ' <button class="btn v8-bag" id="v8albumBtn">도감</button>'); $('v8albumBtn').onclick = albumOpen;
-    if (save.m81sheet && !QAP) { var u = save.m81sheet; delete save.m81sheet; persist(); upgradeSheet(u); SP._upgradeShown = (SP._upgradeShown || 0) + 1; }
+    if (save.m81sheet && !QAP) { var u = save.m81sheet; delete save.m81sheet; persist(); upgradeSheet(u); QA_.upgradeShown = (QA_.upgradeShown || 0) + 1; }
     var got = []; if (!QAP) { M81.albumSync(save, debuts(), E81, EC); M81.chestAccrue(save, E81); got = M81.chestOpen(save, E81, EC); persist(); } // v8.1.1: QA practice opens / grants nothing
     var pr = M81.chestProgress(save, E81), row = $('v8chestrow'); if (!row) { row = document.createElement('div'); row.id = 'v8chestrow'; row.className = 'v8-chestrow'; co.insertAdjacentElement('afterend', row); }
     row.innerHTML = '<img src="' + V81.chestClosed + '" alt="" width="36" height="36"><div class="v8-chestinfo"><b>별 상자까지 ' + pr.left + '개</b><div class="v8-star-bar" aria-hidden="true"><i style="width:' + (75 * pr.have / pr.need).toFixed(1) + '%"></i></div><small>' + pr.have + ' / ' + pr.need + '</small></div>';
@@ -689,14 +706,14 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
       var parts = []; if (t.coins) parts.push('코인 +' + t.coins); if (t.hint) parts.push('힌트 +' + t.hint); if (t.token) parts.push('횃대 토큰 +' + t.token);
       $('coins').firstChild && (co.innerHTML = co.innerHTML.replace(/^[\s\S]*?(?= <button)/, IC('coin') + ' ' + Math.min(save.coins, EC.coinMax).toLocaleString('ko-KR'))); $('v8bag').onclick = bagSheet; $('v8albumBtn').onclick = albumOpen;
       sheet('별 상자 ' + got.length + '개를 열었어요', V81.chestOpen, [{ k: 'got', label: parts.join(' · '), disabled: true, go: function () {} }]);
-      if (save.chests.pending) toast('남은 상자 ' + save.chests.pending + '개는 다음에 열려요'); SP._chestGot = got; } if (F82) menu82(co); }
+      if (save.chests.pending) toast('남은 상자 ' + save.chests.pending + '개는 다음에 열려요'); QA_.chestGot = got; } if (F82) menu82(co); }
   // v8.1.3: the single upgrade sheet (chests + album together, shown once; data kept in save.m81sheet until shown)
   function upgradeSheet(u) { var t = { coins: 0, hint: 0, token: 0 }; (u.chests || []).forEach(function (r) { for (var x in r) t[x] += r[x]; });
     var rows = [], parts = []; if (t.coins) parts.push('코인 +' + t.coins); if (t.hint) parts.push('힌트 +' + t.hint); if (t.token) parts.push('횃대 토큰 +' + t.token);
     if (u.chests.length) rows.push({ k: 'chest', label: '별 상자 ' + u.chests.length + '개: ' + parts.join(' · '), disabled: true, go: function () {} });
     if (u.cards || u.albumCoins) rows.push({ k: 'album', label: '도감 카드 ' + u.cards + '장 해금' + (u.albumCoins ? ' · 도감 보상 코인 +' + u.albumCoins : ''), disabled: true, go: function () {} });
     var pr = M81.chestProgress(save, E81); rows.push({ k: 'next', label: '지금까지 모은 별은 정산됐어요 · 다음 상자까지 별 ' + pr.left + '개', disabled: true, go: function () {} });
-    sfx.play('chest-open'); sheet('새 기능 업데이트 선물', V81.chestOpen, rows); SP._upgrade = u; }
+    sfx.play('chest-open'); sheet('새 기능 업데이트 선물', V81.chestOpen, rows); QA_.upgrade = u; }
   function albumOpen() { var o = $('v8album'); if (!o) { o = document.createElement('div'); o.id = 'v8album'; o.className = 'ov v8ov'; document.body.appendChild(o); }
     var ids = albumIds82(), A = save.album, have = ids.filter(function (i) { return A[i]; }).length, D = debuts();
     var card = function (id) { var own = !!A[id], P = id[0] === 'c' ? C.palette[+id.slice(1)] : null, nm = P ? BIRD_KO[P.key][0] : ALBUM_GIM[id][0], im = P ? BF.expr(+id.slice(1), 'idle') : ALBUM_GIM[id][1];
@@ -710,9 +727,9 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     o.querySelectorAll('.v8-album-card').forEach(function (b) { b.onclick = function () { var id = b.dataset.id, f = $('v8face'); if (!A[id] || id[0] !== 'c') { f.hidden = true; if (F82 && !A[id]) toast(id === 'magpie' ? '곧 만나요' : D[id] ? D[id] + '판에서 만나요' : '곧 만나요'); return; } var c = +id.slice(1), P = C.palette[c];
       f.innerHTML = ['idle', 'happy', 'sad'].map(function (x) { return '<img src="' + BF.expr(c, x) + '" alt="">'; }).join('') + '<img src="assets-v8-bird-' + P.key + '-sleepy.svg" alt="">'; f.hidden = false; }; });
     $('v8albumClose').onclick = function () { o.classList.remove('show'); }; o.classList.add('show'); }
-  SP._meta81 = function () { return { streak: save.streak, chests: save.chests, album: save.album, inv: save.inventory, debuts: debuts() }; };
-  SP._v8 = function () { return { next: nextMove, save: save, S: S, adAvail: adAvail() }; }; // QA hook
-  function vibrate(ms, ev) { if (!hapticsOn) return; SP._haptics.push(ms); if (SP.platform && SP.platform.haptic && SP.platform.haptic(ev || 'toggle')) return; /* Toss host haptic (iOS too) */ if (navigator.vibrate) try { navigator.vibrate(ms); } catch (e) {} }
+  QA_.meta81 = function () { return { streak: save.streak, chests: save.chests, album: save.album, inv: save.inventory, debuts: debuts() }; };
+  QA_.v8 = function () { return { next: nextMove, save: save, S: S, adAvail: adAvail() }; }; // QA hook
+  function vibrate(ms, ev) { if (!hapticsOn) return; QA_.haptics.push(ms); if (SP.platform && SP.platform.haptic && SP.platform.haptic(ev || 'toggle')) return; /* Toss host haptic (iOS too) */ if (navigator.vibrate) try { navigator.vibrate(ms); } catch (e) {} }
   // Remaining solution completes a tube on every move until solved => automatic end-of-stage cascade.
   function isCascade() {
     if (S.lock.some(Boolean) || S.egg || S.slp || S.bomb || S.ice) return false;
@@ -737,10 +754,11 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     if (S.combo >= 4 && !reduced) { $('board').classList.add('combopulse'); setTimeout(function () { $('board').classList.remove('combopulse'); }, 220); /* v8.2j (10/30, both flags): was a #app screenshake that moved the whole screen on 4+ combos = the reported jitter; now a flash with no geometry change */ }
   }
   function comboReward() { // v8 R3: x3 -> +1 undo this stage, x4+ -> perch token (max 3). Once per stage (save.v8paid), undo/restart can't farm it
-    var pk = S.daily ? 'd' + S.daily : S.n, pf = save.v8paid[pk] || (save.v8paid[pk] = {}), msg = '';
+    var pk = S.daily ? 'd' + S.daily : S.n, pf, msg = '';
+    pf = pf || save.v8paid[pk] || (save.v8paid[pk] = {});
     if (S.combo >= EC.comboUndoAt && !pf.u) { pf.u = 1; S.a.undoLeft++; msg = '되돌리기 +1'; tip('combo3', '콤보 보상! 되돌리기가 1번 늘었어요'); }
     if (S.combo >= EC.comboTokenAt && !pf.t && save.inventory.perchToken < EC.tokenMax) { pf.t = 1; save.inventory.perchToken++; msg += (msg ? ' · ' : '') + '횃대 토큰 +1'; }
-    persist(); if (!msg) return; snd('combo-reward'); var p = document.createElement('div'); p.className = 'v8-pop v8-pop-fixed'; p.innerHTML = '<span>' + msg + '</span>'; document.body.appendChild(p); setTimeout(function () { p.remove(); }, 1400); SP._comboReward = msg; }
+    persist(); if (!msg) return; snd('combo-reward'); var p = document.createElement('div'); p.className = 'v8-pop v8-pop-fixed'; p.innerHTML = '<span>' + msg + '</span>'; document.body.appendChild(p); setTimeout(function () { p.remove(); }, 1400); QA_.comboReward = msg; }
   function flyAway(i) { if (reduced) return; whenLanded(function () { var t = document.querySelectorAll('#board .tube')[i]; if (!t || !t.animate) return; // F1: the flock flies off 0.6s (data keeps the completed perch)
     [].forEach.call(t.querySelectorAll('img.bird'), function (b, k) { var r = b.getBoundingClientRect(), c = b.cloneNode(); c.className = 'ball bird v8-flock'; c.style.cssText = 'position:fixed;left:' + r.left + 'px;top:' + r.top + 'px;width:' + r.width + 'px;height:' + r.height + 'px;z-index:30;pointer-events:none';
       document.body.appendChild(c); c.animate([{ transform: 'none', opacity: 1 }, { transform: 'translate(' + ((k % 2 ? 1 : -1) * 30) + 'px,-' + (80 + 20 * k) + 'px) scale(.8)', opacity: 0 }], { duration: 600, delay: k * 40, easing: 'ease-in', fill: 'forwards' }); setTimeout(function () { c.remove(); }, 800); }); }); }
@@ -763,16 +781,16 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     if (!E.isSolved(est())) return win();
     var show = win(true); if (!show) return; // progress/coins are saved right away (app closed mid-wave keeps the clear); only the card waits
     ts = [].slice.call(document.querySelectorAll('#board .tube')); n = ts.length; // win() re-rendered the board
-    if (reduced || !n || !ts[0].animate) { SP._cheer = { n: 0, reduced: reduced }; return show(); }
+    if (reduced || !n || !ts[0].animate) { QA_.cheer = { n: 0, reduced: reduced }; return show(); }
     var step = n > 1 ? Math.min(HOP.stagger, HOP.wave / (n - 1)) : 0, bs = parseFloat(getComputedStyle(ts[0]).getPropertyValue('--ball-size')) || 40, h = Math.round(Math.max(10, bs * 0.5)), anims = [], timers = [], over = false;
     var kf = [{ transform: 'translateY(0) scale(1,1)' }, { transform: 'translateY(0) scale(1.06,.9)', offset: .15 }, { transform: 'translateY(-' + h + 'px) scale(.96,1.05)', offset: .45, easing: 'cubic-bezier(.5,0,.75,0)' },
       { transform: 'translateY(0) scale(1.05,.94)', offset: .78 }, { transform: 'translateY(0) scale(1,1)' }];
-    function end(skipped) { if (over) return; over = true; timers.forEach(clearTimeout); if (skipped) anims.forEach(function (a) { try { a.cancel(); } catch (e) {} }); /* natural end: the last hop's final ~80ms settles under the sliding card */ SP._cheer.end = performance.now(); SP._cheer.skipped = !!skipped; if (S === S0) { S.cheer = null; show(); } }
-    SP._cheer = { n: n, step: step, ms: HOP.ms, h: h, start: performance.now(), delays: [], hops: 0 };
+    function end(skipped) { if (over) return; over = true; timers.forEach(clearTimeout); if (skipped) anims.forEach(function (a) { try { a.cancel(); } catch (e) {} }); /* natural end: the last hop's final ~80ms settles under the sliding card */ QA_.cheer.end = performance.now(); QA_.cheer.skipped = !!skipped; if (S === S0) { S.cheer = null; show(); } }
+    QA_.cheer = { n: n, step: step, ms: HOP.ms, h: h, start: performance.now(), delays: [], hops: 0 };
     S.cheer = { skip: function () { end(true); } };
-    ts.forEach(function (t, i) { var d = Math.round(i * step); SP._cheer.delays.push(d); t.style.transformOrigin = '50% 100%';
+    ts.forEach(function (t, i) { var d = Math.round(i * step); QA_.cheer.delays.push(d); t.style.transformOrigin = '50% 100%';
       var a = t.animate(kf, { duration: HOP.ms, delay: d, easing: 'ease-out' }); anims.push(a);
-      timers.push(setTimeout(function () { if (!over && S === S0) { SP._cheer.hops++; sfx.play('hop', i); } }, d + Math.round(HOP.ms * 0.15))); });
+      timers.push(setTimeout(function () { if (!over && S === S0) { QA_.cheer.hops++; sfx.play('hop', i); } }, d + Math.round(HOP.ms * 0.15))); });
     var land = Math.round((n - 1) * step + HOP.ms * 0.78); // card slides up as the last perch touches down (DESIGN: jump -> confetti + card)
     timers.push(setTimeout(function () { end(false); }, land));
   }
@@ -793,28 +811,52 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     if (S.n < LAST) save.current = S.n + 1; // L2
     save.attempt[S.n] = { undoLeft: C.freeUndos, addedTube: false, perches: 0 }; // GDD v0.2: clear resets this stage's consumables (restart does not)
     var mx = F81 ? metaWin(st, prev) : null; if (mx) got += mx.coins; if (F82 && mx) { var m2 = meta82Win(st); mx.coins += m2.coins; got += m2.coins; mx.html += m2.html; }
+    save.best = save.best && typeof save.best === 'object' ? save.best : {}; var pb = +save.best[S.n] || 0, nb = !pb || S.moves < pb; if (nb) save.best[S.n] = S.moves; // 2026-10-31: personal best (fewest moves) per stage
     persist(); render();
-    $('bigstars').innerHTML = starsHtml(st); $('result').textContent = '이동 ' + S.moves + ' / 최소 ' + S.g.min; starTip(); if (F82) usedLine82();
+    $('bigstars').innerHTML = starsHtml(st); $('result').textContent = '이동 ' + S.moves + ' / 최소 ' + S.g.min; bestLine(pb, nb); perfectLine(pb); starTip(); if (F82) usedLine82();
     $('coinsGot').innerHTML = IC('coin') + ' 코인 +' + (got + combo) + ' (보유 ' + save.coins + ')' + (combo ? ' · 콤보 +' + combo : '') + (fe ? ' · 깃털 배지 +' + fe : '') + (mx ? mx.html : ''); // v7 B6
     if (qsnap) { $('coinsGot').innerHTML += ' <b class="qa-nosave">(QA 연습: 저장 안 됨)</b>'; var q0 = JSON.parse(qsnap); Object.keys(save).forEach(function (k) { delete save[k]; }); Object.assign(save, q0); render(); }
     $('next').style.display = S.n < LAST ? '' : 'none';
     dailyNudge(); // 2026-10-30: shortcut to today's 오늘의 도전 on the campaign clear card
     if (!(F80 && V8A.debut.indexOf(S.n) >= 0)) SP.ads.noteClear(S.n); // v8 F1: no interstitial right after a gimmick debut stage // L7: interstitial (if due) shows only when the player taps 다음
-    var end = S.n === LAST, show = function () { reveal(st); if (end) $('endov').classList.add('show'); }; // QA F3: all stages cleared -> '새 스테이지 곧 추가' ending
+    var end = S.n === LAST, show = function () { reveal(st); if (end) { endStats(); $('endov').classList.add('show'); } }; // QA F3: all stages cleared -> '새 스테이지 곧 추가' ending
     if (defer) return show; show();
   }
-  function reveal(st) { confetti(); sfx.play('clear'); for (var k = 0; k < st; k++) setTimeout(sfx.play.bind(sfx, 'star', k), 1000 + k * 150); SP._clearShownAt = performance.now(); $('overlay').classList.add('show'); } // DESIGN §7: fanfare, then a ding per star
+  function bestLine(pb, nb) { // 2026-10-31: replay motivation - '내 최고 N수' on the clear card, '새 기록!' when a replay beats it (first clear shows nothing)
+    QA_.best = { prev: pb, isNew: !!(pb && nb), best: save.best[S.n] }; if (!pb) return; var e = document.createElement('span'); e.id = 'bestrec'; e.className = 'bestrec' + (nb ? ' new' : '');
+    e.textContent = nb ? '새 기록! (이전 ' + pb + '수)' : '내 최고 ' + pb + '수'; $('result').appendChild(document.createTextNode(' · ')); $('result').appendChild(e); }
+  function perfectLine(pb) { // 2026-11-01: '완벽' badge when the clear used exactly the minimum moves (campaign only)
+    var ok = S.moves <= S.g.min, was = !!(pb && S.g.min > 0 && pb <= S.g.min), cnt = perfectCount(); QA_.perfect = ok; QA_.perfectNew = ok && !was ? cnt : 0; if (!ok) return; var e = document.createElement('span'); e.id = 'perfect'; e.className = 'perfectb'; e.textContent = '완벽!'; e.setAttribute('aria-label', '최소 수로 클리어, 완벽'); $('result').appendChild(document.createTextNode(' ')); $('result').appendChild(e);
+    if (!was) { var c = document.createElement('span'); c.id = 'perfectcnt'; c.className = 'perfectcnt'; c.textContent = '완벽 ' + cnt + '개째'; c.setAttribute('aria-label', '완벽 클리어 ' + cnt + '번째 스테이지'); $('result').appendChild(document.createTextNode(' ')); $('result').appendChild(c); } } // 2026-11-02: first perfect on this stage -> running total
+  function perfectCount() { var k = 0; for (var n = 1; n <= LAST; n++) if (isPerfect(n)) k++; return k; } // 2026-11-02: perfect collection (best record step 3)
+  function perfectHud() { var h = $('mapperfect'); if (!h) return; var k = perfectCount(), cl = 0; for (var n = 1; n <= LAST; n++) if (save.stars[n]) cl++; QA_.perfectHud = { perfect: k, cleared: cl }; h.hidden = !cl; h.textContent = '완벽 ' + k + ' / 클리어 ' + cl + (cl ? ' ›' : ''); h.setAttribute('aria-label', '완벽 클리어 ' + k + '개, 클리어 ' + cl + '개' + (cl > k ? ', 눌러서 완벽이 아닌 판 찾기' : '')); h.title = '최소 수로 깬 스테이지 수 · 눌러서 완벽 도전할 판 찾기'; }
+  // 2026-11-03: tap the '완벽 K / 클리어 M' pill -> jump the map to the next cleared stage that is not perfect yet (lowest first, cycles on repeat taps)
+  var mapTarget = 0, mapJumpLast = 0;
+  function perfectTargets() { var a = []; for (var n = 1; n <= LAST; n++) if (save.stars[n] && !isPerfect(n)) a.push(n); return a; }
+  function perfectMsg(txt) { var w = $('mapperfectmsg'); if (!w) return; clearTimeout(w._h); w.textContent = txt; w.hidden = false; w.classList.remove('pop'); void w.offsetWidth; w.classList.add('pop'); w._h = setTimeout(function () { w.hidden = true; }, 2800); }
+  function perfectJump() { var a = perfectTargets(), m = $('sagamap'); QA_.perfectJump = null; if (!m) return;
+    if (!a.length) { perfectMsg('클리어한 판을 모두 완벽하게 깼어요!'); sfx.play('streak-up'); QA_.perfectJump = { n: 0, left: 0 }; return; }
+    var n = a.filter(function (x) { return x > mapJumpLast; })[0] || a[0]; mapJumpLast = n;
+    var old = mapTarget && mapLive['n' + mapTarget]; if (old) old.classList.remove('map-node--target'); mapTarget = n;
+    m.scrollTop = mapPos(n).y * mapK - m.clientHeight / 2 + 20; mapRender(); var e = mapLive['n' + n]; if (e) e.classList.add('map-node--target');
+    var b = save.best && +save.best[n], mn = SP.STAGES[n] && SP.STAGES[n].min;
+    perfectMsg(n + '판 · ' + (b ? '내 최고 ' + b + '수 / ' : '') + '최소 ' + mn + '수' + (b && mn ? ' (' + (b - mn) + '수 줄이면 완벽)' : '에 도전해 보세요'));
+    sfx.play('select'); QA_.perfectJump = { n: n, left: a.length, best: b || 0, min: mn };
+    clearTimeout(perfectJump._h); perfectJump._h = setTimeout(function () { var x = mapLive['n' + n]; if (x) x.classList.remove('map-node--target'); if (mapTarget === n) mapTarget = 0; }, 3000); }
+  if ($('mapperfect')) $('mapperfect').onclick = perfectJump;
+  function isPerfect(n) { var b = save.best && +save.best[n], m = SP.STAGES[n] && SP.STAGES[n].min; return !!(b && m > 0 && b <= m); } // 2026-11-01: map ring for stages whose best equals the minimum
+  function reveal(st) { confetti(); sfx.play('clear'); for (var k = 0; k < st; k++) setTimeout(sfx.play.bind(sfx, 'star', k), 1000 + k * 150); QA_.clearShownAt = performance.now(); $('overlay').classList.add('show'); } // DESIGN §7: fanfare, then a ding per star
   function winDaily(st, defer) { // first clear of the day pays the 7-day track reward (coins only); replays only keep the best stars
     var r = DD.complete(save.daily, S.daily, st); save.coins += r.reward;
     save.attempt.daily = { key: S.daily, undoLeft: C.freeUndos, addedTube: false }; persist(); render();
     $('bigstars').innerHTML = starsHtml(st); $('result').textContent = '이동 ' + S.moves + ' / 최소 ' + S.g.min; starTip(); if (F82) usedLine82();
     $('coinsGot').innerHTML = r.first ? IC('fire') + ' ' + r.streak + '일 연속 · ' + r.day + '일차 보상 ' + IC('coin') + ' +' + r.reward + ' · 보유 ' + save.coins : '오늘 보상은 이미 받았어요 · ' + IC('fire') + ' ' + r.streak + '일 연속';
     if (r.first) $('coinsGot').innerHTML += '<div class="dchest' + (r.day === 7 ? ' big' : '') + '" id="dchest" aria-hidden="true"><span class="dchest-box">' + IC('gift') + '</span><span class="dchest-amt">' + IC('coin') + ' +<b id="dchestN">0</b></span></div>';
-    $('next').style.display = ''; $('dailyNudge').style.display = 'none'; SP._dailyNudge = null; SP._dailyResult = r; SP._dailyChest = r.first ? { opened: false, shown: 0, reward: r.reward, big: r.day === 7 } : null;
+    $('next').style.display = ''; $('dailyNudge').style.display = 'none'; QA_.dailyNudge = null; QA_.dailyResult = r; QA_.dailyChest = r.first ? { opened: false, shown: 0, reward: r.reward, big: r.day === 7 } : null;
     var show = function () { reveal(st); if (r.first) dailyChest(r, st); }; if (defer) return show; show();
   }
   function dailyChest(r, st) { // 2026-10-29: first daily clear -> reward box pops open after the star dings, coins count up (DESIGN §7 상자 열림)
-    var S0 = S, q = SP._dailyChest, at = reduced ? 300 : 1000 + st * 150 + 350;
+    var S0 = S, q = QA_.dailyChest, at = reduced ? 300 : 1000 + st * 150 + 350;
     setTimeout(function () { var el = $('dchest'), n = $('dchestN'); if (S !== S0 || !el || !n || !q) return;
       el.classList.add('open'); q.opened = true; sfx.play('chest-open'); if (q.big) setTimeout(function () { sfx.play('streak-up'); }, 260);
       if (reduced) { n.textContent = r.reward; q.shown = r.reward; return; }
@@ -826,12 +868,12 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   // not cleared yet, with the streak and the reward waiting today. Rewards/streak rules unchanged. Goes through ads.beforeNext
   // like 다음, so the interstitial cadence is the same as before.
   var NUDGE_FROM = 5;
-  function dailyNudge() { var b = $('dailyNudge'); if (!b) return; SP._dailyNudge = null;
+  function dailyNudge() { var b = $('dailyNudge'); if (!b) return; QA_.dailyNudge = null;
     var k = today(); if (!DD || !k || S.daily || S.n < NUDGE_FROM || S.n >= LAST || DD.doneToday(save.daily, k)) { b.style.display = 'none'; return; }
     var cur = DD.streakNow(save.daily, k), day = (cur % 7) + 1, rw = DD.REWARDS[day - 1];
     b.innerHTML = IC('fire') + ' 오늘의 도전 <small>' + (cur ? cur + '일 연속 이어가기 · ' : '') + day + '일차 ' + IC(day === 7 ? 'gift' : 'coin') + ' +' + rw + '</small>';
     b.setAttribute('aria-label', '오늘의 도전 하기, ' + (cur ? cur + '일 연속 중, ' : '') + day + '일차 보상 코인 ' + rw);
-    b.style.display = ''; SP._dailyNudge = { streak: cur, day: day, reward: rw }; }
+    b.style.display = ''; QA_.dailyNudge = { streak: cur, day: day, reward: rw }; }
   $('dailyNudge').onclick = function () { if (SP.ads.isBusy()) return; SP.ads.beforeNext(function () { $('overlay').classList.remove('show'); load(DAILY); }); };
   function campaign() { return Math.min(save.current || 1, save.unlocked); }
   // DESIGN §5.5 daily card (top of the stage menu): date, streak flame, 7-day track (today highlighted), countdown once done
@@ -871,7 +913,7 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   var M = C.map, BLK = M.chunkH * M.per + M.bandH, mapLive = {}, mapIO = null, mapK = 1, mapTotal = 0;
   function nodeXY(i) { var y = M.chunkH - 45 - 90 * i; return { x: 195 + 105 * Math.sin(2 * Math.PI * y / 450), y: y }; }
   function mapPos(n) { var b = Math.floor((n - 1) / 100), j = (n - 1) % 100, c = Math.floor(j / 10), q = nodeXY(j % 10); return { x: q.x, y: mapTotal - (b * BLK + c * M.chunkH + (M.chunkH - q.y)) }; }
-  SP._mapPos = function (n) { return mapPos(n); };
+  QA_.mapPos = function (n) { return mapPos(n); };
   function soonSeg(e, th) { e.classList.add('saga-seg--soon'); if (th && M.wide) e.classList.add('v7-soon-' + th); e.setAttribute('aria-label', '새 스테이지 곧 추가'); return e; } // DESIGN 17.4 (A05): band above the last stage = '곧 추가돼요!' (no '201~' label)
   function segBg(e) { e.style.backgroundImage = 'url("' + e.dataset.src + '")'; SP.net.watchBg(e, e.dataset.src); } // v7.3: lazy tile + retry on failure
   function mapSeg(key, top, h, src, label) {
@@ -905,6 +947,8 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     if (F81 && SP.STAGES[n] && SP.STAGES[n].boss) { e.classList.add('v8-boss-node'); var bi = document.createElement('img'); bi.className = 'v8-boss-ico'; bi.src = V81.bossNode; bi.alt = ''; e.appendChild(bi); e.setAttribute('aria-label', e.getAttribute('aria-label') + ', 보스 스테이지'); }
     if (F80 && save.badges.feather[n]) { var fb = document.createElement('img'); fb.className = 'v8-feather'; fb.src = V8A.feather; fb.alt = '노 되돌리기 배지'; e.appendChild(fb); }
     if (F82 && save.crown82 && save.crown82[n]) { var cr = document.createElement('img'); cr.className = 'v82-crown'; cr.src = V82.crown; cr.alt = '도전 성공 왕관'; e.appendChild(cr); }
+    if (stt === 'cleared' && save.best && +save.best[n]) { var pf = isPerfect(n), mn = SP.STAGES[n] && SP.STAGES[n].min; e.title = '내 최고 ' + save.best[n] + '수' + (mn > 0 ? ' / 최소 ' + mn + '수' : ''); e.setAttribute('aria-label', e.getAttribute('aria-label') + ', 내 최고 ' + save.best[n] + '수' + (pf ? ', 완벽' : '')); if (pf) e.classList.add('map-node--perfect'); } // 2026-11-01: best record on the map
+    if (n === mapTarget) e.classList.add('map-node--target'); // 2026-11-03: perfect-jump highlight survives re-render
     if (n in starPop) setTimeout(function () { delete starPop[n]; }, 0);
     e.onclick = function () { $('menu').classList.remove('show'); load(n); }; return e;
   }
@@ -925,11 +969,12 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     mapIO = window.IntersectionObserver ? new IntersectionObserver(function (es) { es.forEach(function (x) { if (x.isIntersecting) { segBg(x.target); mapIO.unobserve(x.target); } }); }, { root: m, rootMargin: '100% 0px' }) : null;
     mapTotal = Math.ceil(MAPN() / 100) * BLK; mapK = Math.min(1, (m.clientWidth || M.w) / M.w);
     tr.style.height = mapTotal + 'px'; tr.style.transform = 'scale(' + mapK + ')'; $('sagasize').style.height = mapTotal * mapK + 'px';
-    var focus = Math.min(Math.max(1, save.unlocked), LAST); m.scrollTop = (mapPos(focus).y + 120) * mapK - m.clientHeight / 2; // current node a bit below centre
+    var focus = Math.min(Math.max(1, save.unlocked), LAST); m.scrollTop = mapPos(focus).y * mapK + Math.min(120 * mapK, Math.max(0, m.clientHeight / 2 - 40)) - m.clientHeight / 2; // current node a bit above centre (shows the path ahead); 11/05: offset capped so the node stays fully inside short maps (360x560 map is ~126px)
     if (!m._bound) { m._bound = true; m.addEventListener('scroll', function () { if (!mapRaf) mapRaf = requestAnimationFrame(function () { mapRaf = 0; mapRender(); }); }, { passive: true }); }
-    mapRender();
+    mapTarget = 0; mapJumpLast = 0; var pm = $('mapperfectmsg'); if (pm) pm.hidden = true;
+    mapRender(); perfectHud();
   }
-  $('undo').onclick = undo; function doRestart() { if (F81 && !S.daily && !S.won) M81.streakReset(save); $('restartov').classList.remove('show'); var st = $('v8stuck'); if (st) st.classList.remove('show'); if (S.a.addedTube || S.a.perches) { S.a.addedTube = false; S.a.perches = 0; persist(); } load(S.n); }
+  $('undo').onclick = undo; function doRestart() { if (F81 && !S.daily && !S.won) M81.streakReset(save); $('restartov').classList.remove('show'); var st = $('v8stuck'); if (st) st.classList.remove('show'); if (S.a.addedTube || S.a.perches) { S.a.addedTube = false; S.a.perches = 0; } S.moves = 0; if (save.mid && save.mid.k === midKey()) delete save.mid; persist(); load(S.n); } // restart drops the saved board
   $('board').addEventListener('pointerdown', hideToast, true); // v7.2 PM-1: tapping the board closes the toast (the tap itself still reaches the bird)
   if (window.MutationObserver) { var tOb = new MutationObserver(function () { if (document.querySelector('.ov.show')) hideToast(); }); [].forEach.call(document.querySelectorAll('.ov'), function (o) { tOb.observe(o, { attributes: true, attributeFilter: ['class'] }); }); } // any modal/sheet -> toast closes at once
   $('restart').onclick = function () { if (S.locked || SP.ads.isBusy()) return; if (dirty()) { $('restartMsg').textContent = (S.moves > 0 || (S.hist && S.hist.length)) ? '지금까지의 이동이 사라져요.' : (S.a.addedTube ? '추가한 횃대도 사라져요.' : '지금까지의 이동이 사라져요.'); $('restartov').classList.add('show'); } else doRestart(); }; // v7 A4 + v7.1 PM-6: confirm whenever the board differs from the stage start (moves, added perch, ...)
@@ -947,6 +992,16 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
   onTap($('settings'), settingsOpen); onTap($('stagesBtn'), menu); onTap($('closeMenu'), function () { $('menu').classList.remove('show'); clearInterval(cdT); });
   $('closeSet').onclick = function () { $('setov').classList.remove('show'); };
   // QA F3: ending popup after the last stage
+  // 2026-11-04: ending card title follows the real campaign length (LAST, 400 with v8.2 ON) + a small '내 기록' summary from the save
+  // (stars earned / max, perfect clears via isPerfect, daily streak). Read-only: no new save fields, no rewards.
+  function endStats() { var stars = 0, n, k = perfectCount(), cur = DD ? DD.streakNow(save.daily, today()) : 0, best = DD && save.daily ? +save.daily.best || 0 : 0, el = $('endstats');
+    for (n = 1; n <= LAST; n++) stars += Math.min(3, +save.stars[n] || 0);
+    $('endTitle').textContent = LAST + ' 스테이지 모두 클리어!';
+    var row = function (ic, v, lb, aria) { return '<li class="endstat"><span class="sr-only">' + aria + '</span><span class="endstat-v" aria-hidden="true">' + ic + v + '</span><span class="endstat-l" aria-hidden="true">' + lb + '</span></li>'; };
+    var h = row('<i class="endstat-star">' + STAR + '</i>', stars + '<small>/' + LAST * 3 + '</small>', '모은 별', '모은 별 ' + LAST * 3 + '개 중 ' + stars + '개')
+      + row('<i class="endstat-ring"></i>', k + '<small>/' + LAST + '</small>', '완벽 클리어', '완벽 클리어 ' + LAST + '판 중 ' + k + '판');
+    if (DD) h += row(IC('fire'), cur + '<small>일</small>', '도전 연속', '오늘의 도전 ' + cur + '일 연속' + (best > cur ? ', 최고 ' + best + '일' : ''));
+    if (el) el.innerHTML = h; QA_.endStats = { last: LAST, stars: stars, maxStars: LAST * 3, perfect: k, streak: DD ? cur : null, title: $('endTitle').textContent }; }
   function endClose() { $('endov').classList.remove('show'); $('overlay').classList.remove('show'); SP.ads.cancelDue(); }
   $('endDaily').onclick = function () { endClose(); load(DAILY); };
   $('endMap').onclick = function () { endClose(); menu(); };
@@ -987,13 +1042,14 @@ SP.platform.whenReady(function () { // L5: runs once the platform adapter has lo
     qb.style.cssText = 'position:fixed;left:4px;bottom:4px;z-index:9999;font:700 10px/1 sans-serif;padding:3px 5px;border-radius:6px;background:#1A1A2Ecc;color:#fff;pointer-events:none'; document.body.appendChild(qb); }
   //@qa-end
   if (F81 && !QAP && !save.m81) { var up81 = M81.upgrade81(save, debuts(), E81, EC); if (up81) save.m81sheet = up81; persist(); } // v8.1.3: one-time upgrade settlement (sheet on first map open)
+  if (!QAP && DD && save.mid && save.mid.k === 'd' + today() && start === Math.min(save.current || 1, save.unlocked)) { start = DAILY; bootToMap = false; } // 11/03: resume today's half-played daily
   SP.ads.showBanner(); load(start); if (bootToMap) try { menu(); } catch (e) {}
   // v8.1.4 local-midnight rollover while the screen stays on: card + red dot re-render; free perch count is recomputed from the day key whenever the sheet opens
   var dayNow = dayNow || today();
-  function dayCheck() { var k = today(); if (dayNow === undefined) dayNow = k; if (!k || k === dayNow) return; dayNow = k; SP._dayRoll = (SP._dayRoll || 0) + 1;
+  function dayCheck() { var k = today(); if (dayNow === undefined) dayNow = k; if (!k || k === dayNow) return; dayNow = k; QA_.dayRoll = (QA_.dayRoll || 0) + 1;
     try { if ($('menu').classList.contains('show')) dailyCard(); } catch (e) {}
     try { $('stagesBtn').classList.toggle('dot', redDot()); } catch (e) {} }
-  document.addEventListener('visibilitychange', function () { if (!document.hidden) dayCheck(); }); window.addEventListener('focus', dayCheck); setInterval(dayCheck, 60000); SP._dayCheck = dayCheck;
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) dayCheck(); }); window.addEventListener('focus', dayCheck); setInterval(dayCheck, 60000); QA_.dayCheck = dayCheck;
   var sp = $('splash'); if (sp) { sp.classList.add('out'); setTimeout(function () { sp.remove(); }, 300); } // L6: first screen ready
-  SP._bootMs = Math.round(performance.now()); SP._inputLocked = function () { return S.locked && !S.won; };
+  QA_.bootMs = Math.round(performance.now()); SP.booted = 1; /* index.html load-fail check (not a QA hook) */ QA_.inputLocked = function () { return S.locked && !S.won; };
 });
