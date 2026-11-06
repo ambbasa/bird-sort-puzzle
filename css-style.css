@@ -359,6 +359,12 @@ html.reduce-motion .perfectb{animation:none}
 .perfectcnt{display:inline-block;margin-left:2px;font-weight:800;font-size:.85em;color:#B47A00;white-space:nowrap;animation:bestpop .5s 1.35s both}
 @media (prefers-reduced-motion:reduce){.perfectcnt{animation:none}}
 html.reduce-motion .perfectcnt{animation:none}
+/* 2026-11-06: perfect-count milestone reward line on the clear card (role=status). Gold like .perfectcnt; reduce-motion keeps text, drops pop. */
+.perfectrew{margin:6px 0 0;font-weight:800;font-size:.9em;color:#B47A00;line-height:1.35;animation:bestpop .5s 1.5s both}
+.perfectrew .perfectrew-item{white-space:nowrap}
+.perfectrew .v5i{width:14px;height:14px;vertical-align:-2px;margin-right:1px}
+@media (prefers-reduced-motion:reduce){.perfectrew{animation:none}}
+html.reduce-motion .perfectrew{animation:none}
 .mapperfect{position:absolute;right:8px;top:8px;padding:3px 10px;border-radius:12px;background:#FFFFFFD9;color:#8A5C00;font-weight:800;font-size:13px;pointer-events:none;box-shadow:inset 0 0 0 2px #E8A317}
 .mapperfect[hidden]{display:none}
 /* 2026-11-03: perfect pill is a button -> jump to the next non-perfect cleared stage */
@@ -404,3 +410,15 @@ html.reduce-motion .mapperfectmsg.pop,html.reduce-motion .map-node.map-node--tar
   #menu .v8-chestrow img{width:24px;height:24px}
   #menu #dailycard .dtitle{font-size:15px}
 }
+
+/* 11/06 E1: clear-card next button ad affordance (badge-ad.svg) */
+#next.has-ad{display:inline-flex;align-items:center;justify-content:center;gap:6px}
+#next .next-ad{width:18px;height:18px;flex:0 0 auto}
+/* 11/06 E3: rewarded sheet buttons sit below the sheet art/title (not over the board); one .ad per sheet enforced in JS */
+.v8-sheet .v8-sheet-btns{margin-top:12px}
+.v8-sheet-btn.ad{position:relative}
+.v8-sheet-btn.ad::after{content:"광고";position:absolute;top:-8px;right:8px;font-size:10px;font-weight:900;background:#4FC3F7;color:#1A1A2E;border:2px solid #1A1A2E;border-radius:8px;padding:0 5px;line-height:16px}
+
+/* 11/06 E3 sheet viewport: keep rewarded actions reachable without covering the live board controls underneath the modal dimmer */
+.v8ov .card.v8-sheet{max-height:calc(100dvh - 16px);overflow-y:auto;-webkit-overflow-scrolling:touch}
+@media (max-height:700px){.v8ov .card.v8-sheet .v8-sheet-art{max-height:72px;width:auto;margin:0 auto}}

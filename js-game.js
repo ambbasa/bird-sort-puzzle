@@ -34,6 +34,7 @@ SP.platform.whenReady(function () { var QA_ = {}; // L5: runs once the platform 
   if (!save.stars || typeof save.stars !== 'object') save.stars = {};
   /* 11/03 (v8.2 ON by default, 400 stages): a 200-stage save that cleared its last stage kept unlocked = 200 (the old cap) -> open the next stage now; current follows when it sat on that cleared cap */
   if (save.stars[save.unlocked] && save.unlocked < LAST) { var cap = save.unlocked; save.unlocked = cap + 1; if (+save.current === cap) save.current = cap + 1; } if (!isFinite(+save.coins) || +save.coins < 0) save.coins = 0;
+  if (!Array.isArray(save.perfectReward)) save.perfectReward = []; // 2026-11-06: claimed perfect-count milestones [10,25,50]
   var bootToMap = overflow && !!save.stars[LAST]; // all 200 cleared -> open the map instead of replaying 200
   save.attempt = save.attempt || {}; // per-stage consumables (GDD v0.2): { undoLeft, addedTube } persist across restarts/reloads
   var DEBUG = false;
@@ -501,10 +502,10 @@ SP.platform.whenReady(function () { var QA_ = {}; // L5: runs once the platform 
   function hatchDone(i, solving) { fx.fresh = i; if (!solving) { flyAway(i); snd('complete'); } else S.chain = 0; QA_.hatchDone = (QA_.hatchDone || 0) + 1; } // M3': a flock completed by hatching never counts toward the combo
   function boomFail() { S.sel = -1; S.swapMode = false; if (S._boomT) return; sfx.play('fail-soft'); S._boomT = setTimeout(function () { S._boomT = 0; if (!S.boom || S.won) return; var o = [];
       o.push({ k: 'undo', label: '되돌리기', go: function () { closeSheet(); undo(); } });
-      if (adShow()) o.push(adOpt('ad', 'moves5', '광고 보고 이동 +' + E82.movesGive, bombMore));
+      if (adShow()) o.push(adOpt('ad', 'moves5', '광고 보고 받기 · 이동 +' + E82.movesGive, bombMore));
       o.push(coinOpt('coin', E82.moves5, '이동 +' + E82.movesGive, bombMore));
       o.push({ k: 'restart', label: '다시하기', go: function () { closeSheet(); doRestart(); } });
-      sheet('폭탄 새가 날아가 버렸어요', V82.sheetArt, o); QA_.boomShown = (QA_.boomShown || 0) + 1; }, reduced ? 200 : V82.failMs); }
+      sheet('폭탄 새가 날아가 버렸어요', V82.sheetArt, o); SP.ads.skipNext(); QA_.boomShown = (QA_.boomShown || 0) + 1; }, reduced ? 200 : V82.failMs); } // E2: fail sheet -> skip next interstitial once
   function bombMore() { if (!S.boom || !S.bomb) return; S.bomb.n = E82.movesGive; S.boom = 0; render(); toast('폭탄 새 이동 +' + E82.movesGive); }
   function magBtn() { var f = document.querySelector('footer.bottom'), b = $('v82magpie'); if (b || !f) return b;
     f.classList.add('v82'); b = document.createElement('button'); b.className = 'btn v82-magpie'; b.id = 'v82magpie'; b.innerHTML = '<img src="' + V82.magpie + '" alt="" aria-hidden="true"><span>까미</span><span class="cnt" id="v82magcnt"></span>'; f.appendChild(b);
@@ -630,7 +631,8 @@ SP.platform.whenReady(function () { var QA_ = {}; // L5: runs once the platform 
   function closeSheet() { var o = $('v8sheet'); if (o) o.classList.remove('show'); }
   function sheet(title, art, opts) { clearTaps(); var o = $('v8sheet'); if (!o) { o = document.createElement('div'); o.id = 'v8sheet'; o.className = 'ov v8ov'; document.body.appendChild(o); }
     o.innerHTML = '<div class="card v8-sheet" role="dialog" aria-label="' + title + '">' + (art ? '<img class="v8-sheet-art" src="' + art + '" alt="">' : '') + '<div class="title">' + title + '</div><div class="v8-sheet-btns"></div><button class="btn wide" id="v8close">닫기</button></div>';
-    var bx = o.querySelector('.v8-sheet-btns'); opts.forEach(function (p) { var b = document.createElement('button'); b.className = 'v8-sheet-btn' + (p.ad ? ' ad' : ''); b.innerHTML = (p.icon ? '<img src="' + p.icon + '" alt="">' : '') + '<span>' + p.label + '</span>'; b.disabled = !!p.disabled; b.dataset.k = p.k;
+    var bx = o.querySelector('.v8-sheet-btns'); opts = (function (a) { var seen = 0, out = []; (a || []).forEach(function (x) { if (x && x.ad) { if (seen++) return; } out.push(x); }); return out; })(opts); /* E3: one rewarded ad button per sheet */
+    opts.forEach(function (p) { var b = document.createElement('button'); b.className = 'v8-sheet-btn' + (p.ad ? ' ad' : ''); b.innerHTML = (p.icon ? '<img src="' + p.icon + '" alt="">' : '') + '<span>' + p.label + '</span>'; b.disabled = !!p.disabled; b.dataset.k = p.k;
       b.onclick = function () { if (b.disabled) return; b.disabled = true; p.go(); }; bx.appendChild(b); });
     $('v8close').onclick = closeSheet; o.classList.add('show'); tip('coin0', '코인으로도 받을 수 있어요'); }
   QA_.sheet = function () { var o = $('v8sheet'); return o && o.classList.contains('show') ? [].map.call(o.querySelectorAll('.v8-sheet-btn'), function (b) { return { k: b.dataset.k, label: b.textContent, disabled: b.disabled }; }) : null; };
@@ -641,16 +643,16 @@ SP.platform.whenReady(function () { var QA_ = {}; // L5: runs once the platform 
     return adOpt0(k, reason, label, grant); }
   function adOpt0(k, reason, label, grant) { return { k: k, ad: true, icon: V8A.adBadge, label: label, go: function () { closeSheet(); var paid = false; SP.ads.showRewarded(reason, function (ok) { if (ok === true && !paid) { paid = true; grant(); } }); } }; } // G9: only ok === true pays; QA L6: one ad = one payout even if a callback repeats
   function undoSheet() { var o = []; // v8.0.1: also opens with no move yet (0 left shows '+'); then the bought undos are stored, none used
-    if (adShow()) o.push(adOpt('ad', 'undo', '광고 보고 되돌리기 1회', function () { if (S.hist.length) { var h0 = S.hist.length; doUndo(); if (S.hist.length < h0) toast('되돌리기 +1 (바로 1회 사용)'); /* QA L6: the reward is used at once — say so */ } else { S.a.undoLeft++; persist(); render(); toast('되돌리기 +1'); } }));
+    if (adShow()) o.push(adOpt('ad', 'undo', '광고 보고 받기 · 되돌리기 1회', function () { if (S.hist.length) { var h0 = S.hist.length; doUndo(); if (S.hist.length < h0) toast('되돌리기 +1 (바로 1회 사용)'); /* QA L6: the reward is used at once — say so */ } else { S.a.undoLeft++; persist(); render(); toast('되돌리기 +1'); } }));
     o.push(coinOpt('coin', EC.undo3, '되돌리기 +' + EC.undo3Gives, function () { S.a.undoLeft += EC.undo3Gives; if (S.hist.length) { S.a.undoLeft--; doUndo(true); if (F81) toast('되돌리기 +' + EC.undo3Gives + ' (1회 사용)'); } else { render(); toast('되돌리기 +' + EC.undo3Gives); } })); sheet('되돌리기를 더 받을까요?', null, o); }
   function perchSheet() { var o = [], key = V8.dayKey(), fl = V8.freePerchLeft(save, EC, key), ad = adShow() && !S.a.adPerch;
     if (save.inventory.perchToken > 0) o.push({ k: 'token', icon: V8A.token, label: '횃대 토큰 쓰기 (보유 ' + save.inventory.perchToken + ')', go: function () { save.inventory.perchToken--; closeSheet(); addPerch(); } });
-    if (ad) o.push(adOpt('ad', 'add_tube', '광고 보고 횃대 추가', function () { S.a.adPerch = true; addPerch(); }));
+    if (ad) o.push(adOpt('ad', 'add_tube', '광고 보고 받기 · 횃대 추가', function () { S.a.adPerch = true; addPerch(); }));
     o.push(coinOpt('coin', EC.perch, '횃대 추가', function () { addPerch(true); }));
     if (!adAvail() && save.coins < EC.perch && fl > 0) o.push({ k: 'free', label: '무료 횃대 (오늘 ' + fl + '번 남음)', go: function () { if (V8.useFreePerch(save, EC, key)) { closeSheet(); addPerch(); } } });
     sheet('횃대를 추가할까요?', null, o); }
   function hintSheet() { var o = []; if (save.inventory.hint > 0) o.push({ k: 'inv', label: '보유 힌트 쓰기 (' + save.inventory.hint + ')', go: function () { save.inventory.hint--; persist(); closeSheet(); showHint(); } });
-    if (adShow()) o.push(adOpt('ad', 'hint', '광고 보고 힌트 1회', function () { showHint(); }));
+    if (adShow()) o.push(adOpt('ad', 'hint', '광고 보고 받기 · 힌트 1회', function () { showHint(); }));
     o.push(coinOpt('coin', EC.hint, '힌트 1회', function () { showHint(true); })); sheet('힌트를 더 받을까요?', null, o); }
   function stuckSheet(unwin) { if (S.won || $('v8stuck') && $('v8stuck').classList.contains('show')) return; sfx.play('stuck'); var o = $('v8stuck');
     if (!o) { o = document.createElement('div'); o.id = 'v8stuck'; o.className = 'ov v8ov'; document.body.appendChild(o); }
@@ -658,7 +660,7 @@ SP.platform.whenReady(function () { var QA_ = {}; // L5: runs once the platform 
     o.innerHTML = '<div class="card v8-sheet" role="dialog" aria-label="막힘"><img class="v8-sheet-art" src="' + V8A.stuckArt + '" alt=""><div class="title">' + '더 옮길 수 있는 새가 없어요' + '</div><div class="v8-sheet-btns">'
       + '<button class="v8-sheet-btn" data-k="undo">되돌리기</button>' + (canP ? '<button class="v8-sheet-btn" data-k="perch">횃대 추가</button>' : '') + '<button class="v8-sheet-btn" data-k="restart">다시하기</button></div></div>';
     o.querySelectorAll('.v8-sheet-btn').forEach(function (b) { b.onclick = function () { o.classList.remove('show'); var k = b.dataset.k; if (k === 'undo') undo(); else if (k === 'perch') addTube(); else doRestart(); }; });
-    o.classList.add('show'); QA_.stuckShown = (QA_.stuckShown || 0) + 1; }
+    o.classList.add('show'); SP.ads.skipNext(); QA_.stuckShown = (QA_.stuckShown || 0) + 1; } // E2: stuck sheet -> skip next interstitial once
   function addPerch(paid) { if (S.locked || perches(S.a) >= EC.perchMaxPerStage) return; S.a.perches = perches(S.a) + 1; S.a.addedTube = true; persist();
     S.tubes.push([]); S.caps.push(4); S.lock.push(null); S.mask.push([]); if (S.cage) S.cage.push(null); S.sel = -1; render(); toast('횃대가 하나 늘었어요'); }
   function hintFree() { return (!S.daily && S.n <= EC.freeHintUnlimitedTo) || (S.a.hintsUsed || 0) < EC.freeHintsPerStage; }
@@ -799,6 +801,7 @@ SP.platform.whenReady(function () { var QA_ = {}; // L5: runs once the platform 
     if (!E.isSolved(est())) { S.locked = false; S.solvedLock = false; render(); return; } // H1: re-check before saving
     S.won = true; if (F82) S.used82 = used82(); var st = starsFor(S.moves, S.g.min, sn(), !!S.daily), prev = save.stars[S.n] || 0;
     $('cleartitle').textContent = S.daily ? '오늘의 도전 완료!' : '스테이지 클리어!'; $('cleartitle').classList.toggle('sr-only', !S.daily); /* v7 B6: art ribbon already says 스테이지 클리어 -> title for screen readers only (daily keeps its title) */ $('next').textContent = S.daily ? '캠페인으로' : '다음';
+    var oldRew = $('perfectrew'); if (oldRew) oldRew.remove(); QA_.perfectReward = null; // 2026-11-06: clear previous milestone line
     if (S.daily) return winDaily(st, defer);
     var qsnap = QAP ? JSON.stringify(save) : null; // v8.1.1: QA practice -> nothing about the clear is kept, not even in memory
     var got = prev === 0 ? C.coinsFirstClear : Math.max(0, st - prev) * C.coinsPerStarImprove; // GDD v0.2
@@ -812,24 +815,66 @@ SP.platform.whenReady(function () { var QA_ = {}; // L5: runs once the platform 
     save.attempt[S.n] = { undoLeft: C.freeUndos, addedTube: false, perches: 0 }; // GDD v0.2: clear resets this stage's consumables (restart does not)
     var mx = F81 ? metaWin(st, prev) : null; if (mx) got += mx.coins; if (F82 && mx) { var m2 = meta82Win(st); mx.coins += m2.coins; got += m2.coins; mx.html += m2.html; }
     save.best = save.best && typeof save.best === 'object' ? save.best : {}; var pb = +save.best[S.n] || 0, nb = !pb || S.moves < pb; if (nb) save.best[S.n] = S.moves; // 2026-10-31: personal best (fewest moves) per stage
+    var prGot = perfectRewardTry(pb); // 2026-11-06: first perfect crossing 10/25/50 -> coin reward (once)
     persist(); render();
     $('bigstars').innerHTML = starsHtml(st); $('result').textContent = '이동 ' + S.moves + ' / 최소 ' + S.g.min; bestLine(pb, nb); perfectLine(pb); starTip(); if (F82) usedLine82();
-    $('coinsGot').innerHTML = IC('coin') + ' 코인 +' + (got + combo) + ' (보유 ' + save.coins + ')' + (combo ? ' · 콤보 +' + combo : '') + (fe ? ' · 깃털 배지 +' + fe : '') + (mx ? mx.html : ''); // v7 B6
+    $('coinsGot').innerHTML = IC('coin') + ' 코인 +' + (got + combo + prGot) + ' (보유 ' + save.coins + ')' + (combo ? ' · 콤보 +' + combo : '') + (fe ? ' · 깃털 배지 +' + fe : '') + (prGot ? ' · 완벽 달성 +' + prGot : '') + (mx ? mx.html : ''); // v7 B6
     if (qsnap) { $('coinsGot').innerHTML += ' <b class="qa-nosave">(QA 연습: 저장 안 됨)</b>'; var q0 = JSON.parse(qsnap); Object.keys(save).forEach(function (k) { delete save[k]; }); Object.assign(save, q0); render(); }
     $('next').style.display = S.n < LAST ? '' : 'none';
     dailyNudge(); // 2026-10-30: shortcut to today's 오늘의 도전 on the campaign clear card
     if (!(F80 && V8A.debut.indexOf(S.n) >= 0)) SP.ads.noteClear(S.n); // v8 F1: no interstitial right after a gimmick debut stage // L7: interstitial (if due) shows only when the player taps 다음
+    markNextAd(); // E1
     var end = S.n === LAST, show = function () { reveal(st); if (end) { endStats(); $('endov').classList.add('show'); } }; // QA F3: all stages cleared -> '새 스테이지 곧 추가' ending
     if (defer) return show; show();
   }
   function bestLine(pb, nb) { // 2026-10-31: replay motivation - '내 최고 N수' on the clear card, '새 기록!' when a replay beats it (first clear shows nothing)
     QA_.best = { prev: pb, isNew: !!(pb && nb), best: save.best[S.n] }; if (!pb) return; var e = document.createElement('span'); e.id = 'bestrec'; e.className = 'bestrec' + (nb ? ' new' : '');
     e.textContent = nb ? '새 기록! (이전 ' + pb + '수)' : '내 최고 ' + pb + '수'; $('result').appendChild(document.createTextNode(' · ')); $('result').appendChild(e); }
+  // 2026-11-06: perfect-count milestones (campaign only). Coin amounts match star-chest steps (30/50/100); gates match weekly feather 10/25/50. No album/star-chest link.
+  var PERFECT_REWARDS = [[10, 30], [25, 50], [50, 100]];
+  function perfectRewardTry(pb) { // call after save.best is updated for this clear; returns coins granted (0 if none)
+    QA_.perfectReward = null;
+    var ok = S.moves <= S.g.min, was = !!(pb && S.g.min > 0 && pb <= S.g.min);
+    if (!ok || was) return 0; // only the first perfect of a stage can cross a threshold
+    save.perfectReward = Array.isArray(save.perfectReward) ? save.perfectReward : [];
+    var cnt = perfectCount(), total = 0, hit = [];
+    for (var i = 0; i < PERFECT_REWARDS.length; i++) {
+      var m = PERFECT_REWARDS[i][0], c = PERFECT_REWARDS[i][1];
+      if (cnt >= m && save.perfectReward.indexOf(m) < 0) { save.perfectReward.push(m); total += c; hit.push({ n: m, coins: c }); }
+    }
+    if (!total) return 0;
+    if (F80) V8.addCoins(save, total, EC); else save.coins += total;
+    QA_.perfectReward = { count: cnt, hit: hit, coins: total };
+    return total;
+  }
   function perfectLine(pb) { // 2026-11-01: '완벽' badge when the clear used exactly the minimum moves (campaign only)
     var ok = S.moves <= S.g.min, was = !!(pb && S.g.min > 0 && pb <= S.g.min), cnt = perfectCount(); QA_.perfect = ok; QA_.perfectNew = ok && !was ? cnt : 0; if (!ok) return; var e = document.createElement('span'); e.id = 'perfect'; e.className = 'perfectb'; e.textContent = '완벽!'; e.setAttribute('aria-label', '최소 수로 클리어, 완벽'); $('result').appendChild(document.createTextNode(' ')); $('result').appendChild(e);
-    if (!was) { var c = document.createElement('span'); c.id = 'perfectcnt'; c.className = 'perfectcnt'; c.textContent = '완벽 ' + cnt + '개째'; c.setAttribute('aria-label', '완벽 클리어 ' + cnt + '번째 스테이지'); $('result').appendChild(document.createTextNode(' ')); $('result').appendChild(c); } } // 2026-11-02: first perfect on this stage -> running total
+    if (!was) { var c = document.createElement('span'); c.id = 'perfectcnt'; c.className = 'perfectcnt'; c.textContent = '완벽 ' + cnt + '개째'; c.setAttribute('aria-label', '완벽 클리어 ' + cnt + '번째 스테이지'); $('result').appendChild(document.createTextNode(' ')); $('result').appendChild(c); } // 2026-11-02: first perfect on this stage -> running total
+    var pr = QA_.perfectReward; if (pr && pr.hit && pr.hit.length) { // 2026-11-06: milestone celebration under the perfect count
+      var line = document.createElement('div'); line.id = 'perfectrew'; line.className = 'perfectrew'; line.setAttribute('role', 'status'); line.setAttribute('aria-live', 'polite');
+      line.innerHTML = pr.hit.map(function (h) { return '<span class="perfectrew-item">완벽 ' + h.n + '개 달성! ' + IC('coin') + '+' + h.coins + '</span>'; }).join('<span aria-hidden="true"> · </span>');
+      line.setAttribute('aria-label', pr.hit.map(function (h) { return '완벽 ' + h.n + '개 달성, 코인 ' + h.coins + '개 보상'; }).join(', '));
+      var res = $('result'); if (res && res.parentNode) res.parentNode.insertBefore(line, res.nextSibling);
+      sfx.play('streak-up');
+    }
+  }
   function perfectCount() { var k = 0; for (var n = 1; n <= LAST; n++) if (isPerfect(n)) k++; return k; } // 2026-11-02: perfect collection (best record step 3)
-  function perfectHud() { var h = $('mapperfect'); if (!h) return; var k = perfectCount(), cl = 0; for (var n = 1; n <= LAST; n++) if (save.stars[n]) cl++; QA_.perfectHud = { perfect: k, cleared: cl }; h.hidden = !cl; h.textContent = '완벽 ' + k + ' / 클리어 ' + cl + (cl ? ' ›' : ''); h.setAttribute('aria-label', '완벽 클리어 ' + k + '개, 클리어 ' + cl + '개' + (cl > k ? ', 눌러서 완벽이 아닌 판 찾기' : '')); h.title = '최소 수로 깬 스테이지 수 · 눌러서 완벽 도전할 판 찾기'; }
+  function perfectHud() { var h = $('mapperfect'); if (!h) return; var k = perfectCount(), cl = 0; for (var n = 1; n <= LAST; n++) if (save.stars[n]) cl++;
+    save.perfectReward = Array.isArray(save.perfectReward) ? save.perfectReward : [];
+    var claimed = save.perfectReward.filter(function (m) { return m === 10 || m === 25 || m === 50; }).slice().sort(function (a, b) { return a - b; });
+    var next = 0, nextCoins = 0; for (var i = 0; i < PERFECT_REWARDS.length; i++) if (claimed.indexOf(PERFECT_REWARDS[i][0]) < 0) { next = PERFECT_REWARDS[i][0]; nextCoins = PERFECT_REWARDS[i][1]; break; }
+    QA_.perfectHud = { perfect: k, cleared: cl, claimed: claimed, next: next, nextCoins: nextCoins };
+    h.hidden = !cl; h.textContent = '완벽 ' + k + ' / 클리어 ' + cl + (cl ? ' ›' : '');
+    var aria = '완벽 클리어 ' + k + '개, 클리어 ' + cl + '개' + (cl > k ? ', 눌러서 완벽이 아닌 판 찾기' : '');
+    if (claimed.length) aria += ', 완벽 보상 ' + claimed.join(', ') + '개 달성';
+    if (next) aria += ', 다음 보상 ' + next + '개';
+    h.setAttribute('aria-label', aria);
+    var tip = '최소 수로 깬 스테이지 수 · 눌러서 완벽 도전할 판 찾기';
+    if (claimed.length) tip += ' · 보상 ' + claimed.join('·') + ' 받음';
+    if (next) tip += ' · 다음 ' + next + '개(+' + nextCoins + ')';
+    else if (claimed.indexOf(50) >= 0) tip += ' · 모든 완벽 보상 받음';
+    h.title = tip;
+  }
   // 2026-11-03: tap the '완벽 K / 클리어 M' pill -> jump the map to the next cleared stage that is not perfect yet (lowest first, cycles on repeat taps)
   var mapTarget = 0, mapJumpLast = 0;
   function perfectTargets() { var a = []; for (var n = 1; n <= LAST; n++) if (save.stars[n] && !isPerfect(n)) a.push(n); return a; }
@@ -874,7 +919,7 @@ SP.platform.whenReady(function () { var QA_ = {}; // L5: runs once the platform 
     b.innerHTML = IC('fire') + ' 오늘의 도전 <small>' + (cur ? cur + '일 연속 이어가기 · ' : '') + day + '일차 ' + IC(day === 7 ? 'gift' : 'coin') + ' +' + rw + '</small>';
     b.setAttribute('aria-label', '오늘의 도전 하기, ' + (cur ? cur + '일 연속 중, ' : '') + day + '일차 보상 코인 ' + rw);
     b.style.display = ''; QA_.dailyNudge = { streak: cur, day: day, reward: rw }; }
-  $('dailyNudge').onclick = function () { if (SP.ads.isBusy()) return; SP.ads.beforeNext(function () { $('overlay').classList.remove('show'); load(DAILY); }); };
+  $('dailyNudge').onclick = function () { if (SP.ads.isBusy() || nextLock) return; nextLock = 1; SP.ads.beforeNext(function () { $('overlay').classList.remove('show'); load(DAILY); setTimeout(function () { nextLock = 0; }, 500); }); };
   function campaign() { return Math.min(save.current || 1, save.unlocked); }
   // DESIGN §5.5 daily card (top of the stage menu): date, streak flame, 7-day track (today highlighted), countdown once done
   var cdT = 0;
@@ -1014,8 +1059,19 @@ SP.platform.whenReady(function () { var QA_ = {}; // L5: runs once the platform 
   if ($('v8chipsOpt')) { $('v8chipsRow').hidden = !F80; $('v8chipsOpt').checked = SP.store.get(CHIP_KEY) !== 'off'; $('v8chipsOpt').onchange = function () { SP.store.set(CHIP_KEY, this.checked ? 'on' : 'off'); if (S) render(); }; } // v8 M2b
   syncSym();
   $('theme').onclick = function () { var d = document.documentElement; save.theme = d.dataset.theme === 'light' ? '' : 'light'; d.dataset.theme = save.theme; persist(); };
-  $('next').onclick = function () { if (SP.ads.isBusy()) return; if (S.daily) { $('overlay').classList.remove('show'); return load(campaign()); } var n = S.n + 1; SP.ads.beforeNext(function () { $('overlay').classList.remove('show'); load(n); }); };
-  $('again').onclick = function () { SP.ads.cancelDue(); $('overlay').classList.remove('show'); load(S.n); };
+  function markNextAd() { // E1: clear-card '다음' shows an ad icon + spoken notice only when an interstitial will actually play
+    var n = $('next'); if (!n) return;
+    var due = SP.ads.willShowNext && SP.ads.willShowNext();
+    var base = S && S.daily ? '캠페인으로' : '다음';
+    if (due) {
+      n.innerHTML = '<img class="next-ad" src="' + V8A.adBadge + '" alt="" width="18" height="18">' + base;
+      n.setAttribute('aria-label', '다음 판 전 광고가 나와요'); n.title = '다음 판 전 광고가 나와요'; n.classList.add('has-ad');
+    } else {
+      n.textContent = base; n.removeAttribute('title'); n.setAttribute('aria-label', base); n.classList.remove('has-ad');
+    }
+  }
+  var nextLock = 0; $('next').onclick = function () { if (SP.ads.isBusy() || nextLock) return; if (S.daily) { $('overlay').classList.remove('show'); return load(campaign()); } nextLock = 1; var n = S.n + 1; SP.ads.beforeNext(function () { $('overlay').classList.remove('show'); load(n); setTimeout(function () { nextLock = 0; }, 500); }); }; // E1/E2: ignore rapid re-taps
+  $('again').onclick = function () { SP.ads.cancelDue(); markNextAd(); $('overlay').classList.remove('show'); load(S.n); };
   // L4: Android back -> close popup -> stage select -> exit confirm modal
   var shown = function (id) { return $(id).classList.contains('show'); };
   function exitModal(on) { $('exitov').classList.toggle('show', on); }
@@ -1043,7 +1099,7 @@ SP.platform.whenReady(function () { var QA_ = {}; // L5: runs once the platform 
   //@qa-end
   if (F81 && !QAP && !save.m81) { var up81 = M81.upgrade81(save, debuts(), E81, EC); if (up81) save.m81sheet = up81; persist(); } // v8.1.3: one-time upgrade settlement (sheet on first map open)
   if (!QAP && DD && save.mid && save.mid.k === 'd' + today() && start === Math.min(save.current || 1, save.unlocked)) { start = DAILY; bootToMap = false; } // 11/03: resume today's half-played daily
-  SP.ads.showBanner(); load(start); if (bootToMap) try { menu(); } catch (e) {}
+  SP.ads.showBanner(); SP.ads.onChange(function () { if ($('overlay') && $('overlay').classList.contains('show')) markNextAd(); }); load(start); if (bootToMap) try { menu(); } catch (e) {}
   // v8.1.4 local-midnight rollover while the screen stays on: card + red dot re-render; free perch count is recomputed from the day key whenever the sheet opens
   var dayNow = dayNow || today();
   function dayCheck() { var k = today(); if (dayNow === undefined) dayNow = k; if (!k || k === dayNow) return; dayNow = k; QA_.dayRoll = (QA_.dayRoll || 0) + 1;
