@@ -277,6 +277,8 @@ body.v8-boss #board{filter:none}body.v8-boss header.hud{box-shadow:0 0 0 3px #F2
 .map-node.v8-boss-node{overflow:visible}.v8-boss-ico{position:absolute;left:50%;top:-34px;width:44px;height:44px;transform:translateX(-50%);pointer-events:none;z-index:3}/* v8.1.1: 44px badge fully above the node */
 body:has(#menu.show) #v8bossbanner{display:none}
 header.hud:has(> .v8-flame){position:relative}
+/* 11/10 QA L1: streak flame shares the existing gimmick chip row instead of covering it */
+.v8-chips>.v8-flame{position:static;left:auto;top:auto;transform:none;z-index:auto;flex:none}
 
 /* v8.1 planner live feedback (2026-10-26, all flags): sheets never scroll sideways; stuck sheet 3 buttons in one row at 360; bag = icon button by the coin chip */
 .v8ov,.v8ov .card.v8-sheet{overflow-x:hidden}
@@ -422,3 +424,54 @@ html.reduce-motion .mapperfectmsg.pop,html.reduce-motion .map-node.map-node--tar
 /* 11/06 E3 sheet viewport: keep rewarded actions reachable without covering the live board controls underneath the modal dimmer */
 .v8ov .card.v8-sheet{max-height:calc(100dvh - 16px);overflow-y:auto;-webkit-overflow-scrolling:touch}
 @media (max-height:700px){.v8ov .card.v8-sheet .v8-sheet-art{max-height:72px;width:auto;margin:0 auto}}
+
+/* 2026-11-07 clear cheer 3★: taller hop wave + soft star glow (hand-drawn feel, no glossy 3D). Reduce-motion / html.reduce-motion: no extra motion. */
+#board.cheer-three img.cheer-bird{animation:cheer-bird-pulse 380ms ease-out both}
+@keyframes cheer-bird-pulse{0%,100%{filter:brightness(1) saturate(1)}45%{filter:brightness(1.14) saturate(1.12)}}
+.bigstars.three svg{width:56px;height:56px;filter:drop-shadow(0 0 3px rgba(232,163,23,.5))}
+.bigstars.three span{animation:star-in-three 480ms var(--ease-bounce) both}
+.bigstars.three span:nth-child(1){animation-delay:0ms}
+.bigstars.three span:nth-child(2){animation-delay:70ms}
+.bigstars.three span:nth-child(3){animation-delay:140ms}
+@keyframes star-in-three{0%{transform:scale(0) rotate(-24deg);opacity:0}65%{transform:scale(1.22) rotate(8deg);opacity:1}100%{transform:scale(1) rotate(0);opacity:1}}
+@media (prefers-reduced-motion:reduce){
+  #board.cheer-three img.cheer-bird{animation:none}
+  .bigstars.three span{animation:none}
+  .bigstars.three svg{filter:none}
+}
+html.reduce-motion #board.cheer-three img.cheer-bird{animation:none}
+html.reduce-motion .bigstars.three span{animation:none}
+html.reduce-motion .bigstars.three svg{filter:none}
+@media (max-height:639px){body #overlay.v5 .bigstars.three{transform:scale(.9)}}
+
+/* 2026-11-13: weekday theme guide (daily card '요일 테마 ›' + sheet rows) */
+#dailycard .dweek{font:inherit;font-size:12px;font-weight:800;color:#C25E00;text-decoration:underline;text-underline-offset:2px;background:none;border:0;padding:6px 2px;margin:-6px 0;min-height:28px;cursor:pointer;white-space:nowrap}
+.v8ov .card.v8-sheet .v8-sheet-btn.v82-wk{min-height:38px;padding:4px 12px;font-size:14px;text-align:left;border-style:solid;background:#FFF6DC;color:#1A1A2E;cursor:default}
+.v8ov .card.v8-sheet .v8-sheet-btn.v82-wk.wk-locked{background:#E2E4EA;color:#5C6070;border-style:dashed}
+.v8ov .card.v8-sheet .v8-sheet-btn.v82-wk.wk-today{background:#FFE3A3;box-shadow:0 0 0 3px #FF9E40}
+.v82-wknote{font-size:12px;line-height:1.4;color:#1A1A2E;opacity:.75;text-align:center;padding:2px 4px}
+@media (max-height:700px){.v8ov .card.v8-sheet .v8-sheet-btn.v82-wk{min-height:32px;padding:2px 10px;font-size:13px}#v8sheet .v8-sheet .v8-sheet-btns{gap:5px}}
+
+.hud #stage .nw{white-space:nowrap} /* 11/14 QA 11/11 L2: date never splits ('11 / 월') */
+/* 2026-11-16: daily best record line on the daily card (shown once today's challenge is cleared) */
+#dailycard .drec{font-size:13px;font-weight:700;line-height:1.3;color:inherit;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:2px 4px;text-align:center}
+#dailycard .drec>span:first-child{color:var(--text-muted)}
+#dailycard .drec-st i{font-style:normal;color:#0003;letter-spacing:-1px}#dailycard .drec-st i.on{color:#E8A317}
+#dailycard .drec-pf{padding:0 7px;border-radius:999px;background:#E8A317;color:#fff;font-weight:800;font-size:12px}
+#dailycard .drec-gap{color:#C25E00;font-weight:800;white-space:nowrap}
+@media (max-height:700px){#menu #dailycard .drec{font-size:12px;line-height:1.2}}
+/* 2026-11-17: daily card recent-7-days mini calendar */
+#dailycard .dweekrec{display:flex;flex-direction:column;gap:3px}
+#dailycard .dwk-h{font-size:11px;font-weight:700;color:var(--text-muted);text-align:left}#dailycard .dwk-h b{color:inherit;font-weight:800}#dailycard .dwk-h .dwk-pfn{color:#C25E00}
+#dailycard .dwk-row{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+#dailycard .dwk{display:flex;flex-direction:column;align-items:center;gap:0;padding:2px 0;border-radius:8px;background:#0002;font-size:10px;line-height:1.25;border:1.5px solid transparent;color:var(--text-muted)}
+#dailycard .dwk b{font-size:10px;font-weight:700}
+#dailycard .dwk span{font-size:9px;letter-spacing:-1px;white-space:nowrap}
+#dailycard .dwk i{font-style:normal;color:#0003}#dailycard .dwk i.on{color:#E8A317}
+#dailycard .dwk.done{color:inherit}
+#dailycard .dwk.pf{border-color:#E8A317;background:#E8A31726}
+#dailycard .dwk.today{border-style:dashed;border-color:var(--accent)}#dailycard .dwk.today.pf{border-style:solid;border-color:#E8A317}
+#dailycard .dwk b{white-space:nowrap}
+#dailycard button.dwk{font-family:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;min-width:0;margin:0;touch-action:manipulation}#dailycard .dwk.sel{outline:2px solid var(--accent);outline-offset:1px}#dailycard .dwk:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+#dailycard .dwk-h{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#dailycard .dwk-h.detail{color:inherit}#dailycard .dwk-h.detail.pf{color:#C25E00}
+@media (max-height:700px){#menu #dailycard .dwk{padding:0;line-height:1.05;border-radius:6px}#menu #dailycard .dweekrec{gap:1px}#menu #dailycard .dwk-h{font-size:10px;line-height:1.2}#menu #dailycard .dwk b,#menu #dailycard .dwk span{font-size:9px}}
