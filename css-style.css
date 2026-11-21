@@ -295,7 +295,6 @@ header.hud:has(> .v8-flame){position:relative}
 .caged-top{z-index:4}
 .v8-cage-lid{position:absolute;left:-2px;right:-2px;top:-4px;height:8px;background:url(assets-v8-cage-front.svg?v=4b4aae46) center top/100% 1250% no-repeat;pointer-events:none;z-index:5;filter:drop-shadow(0 1px 0 rgba(26,26,46,.35))}
 /* v8.1.3: v81 on by default - keep the map card (chest row + map + 닫기) inside short viewports */
-#menu #v8chestrow{flex:none}
 #menu #mapwrap{min-height:0}
 @media (max-height:700px){.v8-chestrow{margin-top:4px;padding:2px 8px}.v8-chestrow img{width:28px;height:28px}.v8-chestrow .v8-star-bar{height:16px}}
 /* ---- v8.2 (HIDDEN flag): 까미 button, swap mode, ice count, guide (H1), feather event, crown. Art is the designer's (assets-v8, v8.css). ---- */
@@ -391,26 +390,34 @@ html.reduce-motion .mapperfectmsg.pop,html.reduce-motion .map-node.map-node--tar
 .endstat-ring{display:inline-block;width:12px;height:12px;border-radius:50%;background:#FFF3C4;box-shadow:0 0 0 2.5px #E8A317}
 .endstat .v5i{width:16px;height:16px}
 @media (max-width:359px){.endstat-v{font-size:16px}}
-/* 2026-11-05 map card on short screens: since v8.2 went default ON (11/03) the feather-event row (+112px at 360 wide) pushed the stage
-   map down to 0px at 360x560 (only a 6px strip, card scrolled 9px). Compact the rows above the map on short viewports so the map keeps
-   real room and 닫기 stays on screen without the card scrolling. Tall screens (>700px, e.g. 390x844 / 412x915) are unchanged. */
-@media (max-height:700px){
-  #menu.ov .card{gap:6px;padding:12px 16px calc(12px + var(--sa-bottom,env(safe-area-inset-bottom)))}
-  #menu .v8-chestrow{margin:2px 8px 0}
-  #menu .v82-feather{padding:3px 8px}
-  #menu .v82-feather .v8-chestinfo b{font-size:12px;line-height:1.25;display:block}
-  #menu .v82-feather .v8-chestinfo small{font-size:10px;line-height:1.25;display:block}
-  #menu .v82-feather .v82-chal{min-height:40px;padding:0 10px;font-size:12px;white-space:nowrap}
-  #menu #dailycard{padding:8px 10px;gap:6px}
-  #menu #dailycard .dday{padding:3px 0}
-  #menu #dailycard .wide{height:40px}
-  #menu #mapwrap{min-height:120px}
-  #menu #closeMenu{height:48px;min-height:44px}
-}
-@media (max-height:600px){
-  #menu .v82-feather .v8-chestinfo small{display:none} /* deadline line; the row keeps its aria-label and the event title */
-  #menu .v8-chestrow img{width:24px;height:24px}
-  #menu #dailycard .dtitle{font-size:15px}
+/* 2026-11-05 map card on short screens -> 2026-11-18 rework (닭부장님): the rows above the map are now one line each
+   (daily card collapsed, star box + feather event = two half pills), so the old per-row compaction is gone; the map flex-fills the rest. */
+#menu.ov .card{gap:8px}
+#menu #v8events{flex:none;margin-top:8px} /* clear of the coin-row buttons (they overhang the line by 14px) */
+.v8-events{display:flex;gap:8px;width:100%}
+.v8-events>.v8-chestrow{flex:1 1 0;min-width:0;margin:0;padding:4px 6px 4px 8px;gap:6px;min-height:44px;box-sizing:border-box;cursor:pointer}
+.v8-events .v8-chestrow img{width:28px;height:28px;flex:none}
+.v8-events .v8-chestinfo{display:flex;align-items:center;gap:4px}
+.v8-events .v8-chestrow .v8-star-bar{flex:1;min-width:28px;height:16px}
+.v8-events .v8-chestinfo small{font-size:12px;font-weight:800;white-space:nowrap}
+.v8-events .v82-chal{flex:none;margin:0;height:auto;min-height:40px;padding:2px 8px;font-size:12px;line-height:1.05;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;white-space:nowrap}
+.v8-events .v82-chal i{font-style:normal;font-size:10px;font-weight:800;opacity:.75}
+#dailycard{gap:8px}
+#menu #dailycard{padding:6px 8px 6px 10px}
+#dailycard .dhead{gap:6px}
+#dailycard .dtoggle{flex:1;min-width:0;min-height:44px;display:flex;align-items:center;gap:6px;padding:0;margin:0;border:0;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#dailycard .dname{font-weight:800;font-size:15px;white-space:nowrap}
+#dailycard .dtoggle .dstreak{font-size:13px;overflow:hidden;text-overflow:ellipsis}
+#dailycard .dchev{flex:none;width:8px;height:8px;margin:0 4px 0 auto;border:solid currentColor;border-width:0 2.5px 2.5px 0;transform:translateY(-2px) rotate(45deg);transition:transform .15s;opacity:.7}
+#dailycard.open .dchev{transform:translateY(2px) rotate(-135deg)}
+#dailycard .dgo{flex:none;width:auto;min-height:44px;height:auto;padding:4px 14px;font-size:14px;line-height:1.15;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;white-space:nowrap}
+#dailycard .dgo small{font-size:10px;font-weight:700;opacity:.8}
+#dailycard .dmore{display:flex;flex-direction:column;gap:8px}
+#dailycard:not(.open) .dmore{display:none}
+#dailycard .dsub{font-size:12px;font-weight:700;color:var(--text-muted)}
+#menu #mapwrap{min-height:100px}
+@media (max-height:700px){#menu.ov .card{gap:6px;padding:12px 16px calc(12px + var(--sa-bottom,env(safe-area-inset-bottom)))}#menu #dailycard .dday{padding:3px 0}#menu #closeMenu{height:48px;min-height:44px}}
+@media (max-width:370px){#dailycard .dname{font-size:14px}#dailycard .dgo{padding:4px 10px}}
 }
 
 /* 11/06 E1: clear-card next button ad affordance (badge-ad.svg) */

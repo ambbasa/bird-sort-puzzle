@@ -38,6 +38,20 @@ SP.platform.whenReady(function () { var QA_ = {}; // L5: runs once the platform 
   var bootToMap = overflow && !!save.stars[LAST]; // all 200 cleared -> open the map instead of replaying 200
   save.attempt = save.attempt || {}; // per-stage consumables (GDD v0.2): { undoLeft, addedTube } persist across restarts/reloads
   var DEBUG = false;
+  // 2026-11-19: desktop keyboard shortcuts (DOM only, same path as a tap/click): 1–9,0 = perch 1–10, Z/Backspace = undo, H = hint
+SP.platform.whenReady(function () {
+  var q = function (id) { return document.getElementById(id); };
+  ['undo', 'hint'].forEach(function (id, k) { var b = q(id); if (b) { b.setAttribute('aria-keyshortcuts', k ? 'H' : 'Z Backspace'); b.title = (k ? '힌트 (H)' : '되돌리기 (Z)'); } });
+  window.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.metaKey || e.altKey || e.repeat || e.isComposing && !/^(Digit|Numpad|Key)/.test(e.code)) return;
+    var t = e.target, tag = t && t.tagName; if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return;
+    if (document.querySelector('.ov.show')) return; // menu, settings, clear card, sheets: shortcuts off
+    var m = /^(?:Digit|Numpad)(\d)$/.exec(e.code || ''), btn = null;
+    if (m) { var n = m[1] === '0' ? 9 : +m[1] - 1, ts = document.querySelectorAll('#board .tube'); if (!ts[n]) return; e.preventDefault(); ts[n].dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true })); QA_.lastKey = 'perch' + (n + 1); return; }
+    if (e.code === 'KeyZ' || e.key === 'Backspace') btn = q('undo'); else if (e.code === 'KeyH') btn = q('hint');
+    if (!btn || btn.disabled || btn.offsetParent === null) return; e.preventDefault(); btn.click(); QA_.lastKey = btn.id;
+  });
+});
   var A11Y_KEY = 'a11y.symbolsLarge'; // DESIGN.md §8: default off
   var symbolsLarge = SP.store.get(A11Y_KEY) === 'true';
   document.documentElement.classList.toggle('symbols-large', symbolsLarge);
@@ -545,12 +559,12 @@ SP.platform.whenReady(function () { var QA_ = {}; // L5: runs once the platform 
     if (coins) V8.addCoins(save, coins, EC); QA_.meta82 = { feather: e, crown: save.crown82 || {}, coins: coins }; return { coins: coins, html: h }; }
   var chal82 = false;
   function menu82(co) { guidePreload82(); if (!$('v82guideBtn')) { co.insertAdjacentHTML('beforeend', ' <button class="btn v8-bag v82-guide-btn' + (guideNew() ? ' dot' : '') + '" id="v82guideBtn">기믹 안내</button>'); $('v82guideBtn').onclick = function () { guideOpen(false); }; }
-    var e = feather82(), T = E82.featherTiers, nx = T.filter(function (t) { return e.n < t; })[0], row = $('v82feather'), anchor = $('v8chestrow') || co;
-    if (!row) { row = document.createElement('div'); row.id = 'v82feather'; row.className = 'v8-chestrow v82-feather'; anchor.insertAdjacentElement('afterend', row); }
-    var have = Math.min(e.n, T[T.length - 1]), need = nx || T[T.length - 1];
-    row.innerHTML = '<img src="' + V82.featherEvent + '" alt="" width="36" height="36"><div class="v8-chestinfo"><b>깃털 이벤트 ' + e.n + '개' + (nx ? ' · ' + nx + '개에 코인 ' + E82.featherCoins[T.indexOf(nx)] : ' · 이번 주 완료') + '</b><div class="v8-star-bar" aria-hidden="true"><i style="width:' + (75 * Math.min(1, have / need)).toFixed(1) + '%"></i></div><small>일요일 23:59까지 · 클리어당 깃털 1(★3은 2)</small></div>'
-      + '<button class="btn v8-bag v82-chal' + (chal82 ? ' on' : '') + '" id="v82chal" aria-pressed="' + chal82 + '">도전 모드 ' + (chal82 ? '켜짐' : '꺼짐') + '</button>';
-    row.setAttribute('aria-label', '깃털 이벤트 ' + e.n + '개');
+    var e = feather82(), T = E82.featherTiers, nx = T.filter(function (t) { return e.n < t; })[0], row = $('v82feather');
+    if (!row) { row = document.createElement('div'); row.id = 'v82feather'; row.className = 'v8-chestrow v82-feather'; evRow(co).appendChild(row); }
+    var have = Math.min(e.n, T[T.length - 1]), need = nx || T[T.length - 1], full = '깃털 이벤트 ' + e.n + '개' + (nx ? ' · ' + nx + '개에 코인 ' + E82.featherCoins[T.indexOf(nx)] : ' · 이번 주 완료');
+    row.innerHTML = '<img src="' + V82.featherEvent + '" alt="" width="28" height="28"><div class="v8-chestinfo"><b class="sr-only">' + full + '</b><div class="v8-star-bar" aria-hidden="true"><i style="width:' + (75 * Math.min(1, have / need)).toFixed(1) + '%"></i></div><small>' + have + '/' + need + '</small></div>'
+      + '<button class="btn v8-bag v82-chal' + (chal82 ? ' on' : '') + '" id="v82chal" aria-pressed="' + chal82 + '" aria-label="도전 모드 ' + (chal82 ? '켜짐' : '꺼짐') + '">도전<i>' + (chal82 ? 'ON' : 'OFF') + '</i></button>';
+    row.setAttribute('aria-label', '깃털 이벤트 ' + e.n + '개'); pillTip(row, full + ' · 일요일 23:59까지 · 클리어당 깃털 1(★3은 2)');
     $('v82chal').onclick = function () { chal82 = !chal82; menu82(co); toast(chal82 ? '도전 모드: 클리어한 판을 최소 수 × 1.3 안에 깨면 왕관' : '도전 모드를 껐어요'); }; }
   function set82() { if ($('v82guideSet')) return; var c = $('closeSet'); if (!c) return; var b = document.createElement('button'); b.className = 'btn wide'; b.id = 'v82guideSet'; b.textContent = '기믹 안내'; c.parentNode.insertBefore(b, c);
     b.onclick = function () { $('setov').classList.remove('show'); guideOpen(true); }; }
@@ -706,12 +720,15 @@ SP.platform.whenReady(function () { var QA_ = {}; // L5: runs once the platform 
     var al = M81.albumSync(save, debuts(), E81, EC); if (al.got.length) h += ' · 도감 카드 +' + al.got.length; if (al.coins) { coins += al.coins; h += ' · 도감 보상 +' + al.coins; }
     var ch = M81.chestAccrue(save, E81); if (ch) h += ' · 별 상자 +' + ch + ' (지도에서 열어요)';
     flameHud(); QA_.meta = { clean: clean, streak: n, album: al, chests: ch, coins: coins }; return { coins: coins, html: h }; }
+  // 2026-11-18: star box + feather event share one row (#v8events) of two half pills; a lone pill fills the row. Tap a pill = its full text.
+  function evRow(co) { var r = $('v8events'); if (!r) { r = document.createElement('div'); r.id = 'v8events'; r.className = 'v8-events'; co.insertAdjacentElement('afterend', r); } return r; }
+  function pillTip(row, t) { row.title = t; row.onclick = function (e) { if (!e.target.closest('button')) toast(t); }; }
   function metaMenu() { var co = $('coins'); co.insertAdjacentHTML('beforeend', ' <button class="btn v8-bag" id="v8albumBtn">도감</button>'); $('v8albumBtn').onclick = albumOpen;
     if (save.m81sheet && !QAP) { var u = save.m81sheet; delete save.m81sheet; persist(); upgradeSheet(u); QA_.upgradeShown = (QA_.upgradeShown || 0) + 1; }
     var got = []; if (!QAP) { M81.albumSync(save, debuts(), E81, EC); M81.chestAccrue(save, E81); got = M81.chestOpen(save, E81, EC); persist(); } // v8.1.1: QA practice opens / grants nothing
-    var pr = M81.chestProgress(save, E81), row = $('v8chestrow'); if (!row) { row = document.createElement('div'); row.id = 'v8chestrow'; row.className = 'v8-chestrow'; co.insertAdjacentElement('afterend', row); }
-    row.innerHTML = '<img src="' + V81.chestClosed + '" alt="" width="36" height="36"><div class="v8-chestinfo"><b>별 상자까지 ' + pr.left + '개</b><div class="v8-star-bar" aria-hidden="true"><i style="width:' + (75 * pr.have / pr.need).toFixed(1) + '%"></i></div><small>' + pr.have + ' / ' + pr.need + '</small></div>';
-    row.setAttribute('aria-label', '별 상자까지 별 ' + pr.left + '개 남음');
+    var pr = M81.chestProgress(save, E81), row = $('v8chestrow'); if (!row) { row = document.createElement('div'); row.id = 'v8chestrow'; row.className = 'v8-chestrow'; evRow(co).appendChild(row); }
+    row.innerHTML = '<img src="' + V81.chestClosed + '" alt="" width="28" height="28"><div class="v8-chestinfo"><b class="sr-only">별 상자까지 ' + pr.left + '개</b><div class="v8-star-bar" aria-hidden="true"><i style="width:' + (75 * pr.have / pr.need).toFixed(1) + '%"></i></div><small>' + pr.have + '/' + pr.need + '</small></div>';
+    row.setAttribute('aria-label', '별 상자까지 별 ' + pr.left + '개 남음'); pillTip(row, '별 상자까지 별 ' + pr.left + '개 · 별 ' + pr.need + '개마다 상자가 열려요');
     if (got.length) { sfx.play('chest-open'); var t = { coins: 0, hint: 0, token: 0 }; got.forEach(function (r) { for (var x in r) t[x] += r[x]; });
       var parts = []; if (t.coins) parts.push('코인 +' + t.coins); if (t.hint) parts.push('힌트 +' + t.hint); if (t.token) parts.push('횃대 토큰 +' + t.token);
       $('coins').firstChild && (co.innerHTML = co.innerHTML.replace(/^[\s\S]*?(?= <button)/, IC('coin') + ' ' + Math.min(save.coins, EC.coinMax).toLocaleString('ko-KR'))); $('v8bag').onclick = bagSheet; $('v8albumBtn').onclick = albumOpen;
@@ -930,7 +947,7 @@ SP.platform.whenReady(function () { var QA_ = {}; // L5: runs once the platform 
     clearTimeout(perfectJump._h); perfectJump._h = setTimeout(function () { var x = mapLive['n' + n]; if (x) x.classList.remove('map-node--target'); if (mapTarget === n) mapTarget = 0; }, 3000); }
   if ($('mapperfect')) $('mapperfect').onclick = perfectJump;
   function isPerfect(n) { var b = save.best && +save.best[n], m = SP.STAGES[n] && SP.STAGES[n].min; return !!(b && m > 0 && b <= m); } // 2026-11-01: map ring for stages whose best equals the minimum
-  function reveal(st) { confetti(); sfx.play('clear'); for (var k = 0; k < st; k++) setTimeout(sfx.play.bind(sfx, 'star', k), 1000 + k * 150); QA_.clearShownAt = performance.now(); $('overlay').classList.add('show'); } // DESIGN §7: fanfare, then a ding per star
+  function reveal(st) { confetti(); sfx.play('clear'); for (var k = 0; k < st; k++) setTimeout(sfx.play.bind(sfx, 'star', k), 1000 + k * 150); QA_.clearShownAt = performance.now(); $('overlay').classList.add('show'); ($('next').style.display === 'none' ? $('again') : $('next')).focus({ preventScroll: true, focusVisible: false }); } // DESIGN §7: fanfare, then a ding per star
   function winDaily(st, defer) { // first clear of the day pays the 7-day track reward (coins only); replays only keep the best stars
     var r = DD.complete(save.daily, S.daily, st, S.moves, S.g.min); save.coins += r.reward; // 2026-11-16: + today's best record (moves)
     save.attempt.daily = { key: S.daily, undoLeft: C.freeUndos, addedTube: false }; persist(); render();
@@ -1009,9 +1026,13 @@ SP.platform.whenReady(function () { var QA_ = {}; // L5: runs once the platform 
     var el = $('dailycard'); if (!el) return; if (!DD) { el.style.display = 'none'; return; } QA_.dailyRec = null; QA_.dailyWeek = null;
     var k = today(), d = save.daily, done = DD.doneToday(d, k), cur = DD.streakNow(d, k), at = done ? (cur - 1) % 7 : cur % 7, h = '';
     DD.REWARDS.forEach(function (c, i) { h += '<div class="dday' + (i < at || (done && i === at) ? ' got' : '') + (i === at ? ' today' : '') + '"><b>' + (i + 1) + '일</b><span>' + (i < at || (done && i === at) ? '✓' : (i === 6 ? IC('gift') : IC('coin')) + c) + '</span></div>'; });
-    el.innerHTML = '<div class="drow"><div class="dtitle">' + CAL(k) + ' 오늘의 도전 <small>' + dailyLabel(k) + (F82 && DD.theme && DD.theme(k, THO()) ? ' · <span class="dtheme">' + DD.theme(k, THO()).label + '</span>' : '') + (F82 && SP.DAILY_THEMES ? ' <button class="dweek" id="dailyWeek" aria-label="요일별 도전 테마 보기">요일 테마 ›</button>' : '') + '</small></div><div class="dstreak" title="최고 ' + (d.best || 0) + '일">' + IC('fire') + ' ' + cur + '일 연속</div></div>'
-      + '<div class="dtrack">' + h + '</div>' + dailyWeekHtml(k) + (done ? dailyRecHtml(k) : '') + '<button class="btn ' + (done ? '' : 'primary ') + 'wide" id="dailyBtn">' + (done ? '다시 하기 (보상 없음) · <span id="dailyCd"></span> 후 새 도전' : '도전하기 ▶') + '</button>';
+    // 2026-11-18 (닭부장님): one collapsed row [달력 오늘의 도전 · N일 연속 · 도전하기 ▶]; date/theme, 7-day track, recent week and today's record open on tap
+    el.className = ''; el.innerHTML = '<div class="drow dhead"><button type="button" class="dtoggle" id="dailyToggle" aria-expanded="false" aria-controls="dailyMore">' + CAL(k) + '<span class="dname dtitle">오늘의 도전<span class="sr-only"> ' + dailyLabel(k) + '</span></span><span class="dstreak" title="최고 ' + (d.best || 0) + '일">' + IC('fire') + ' ' + cur + '일 연속</span><i class="dchev" aria-hidden="true"></i></button>'
+      + '<button class="btn ' + (done ? '' : 'primary ') + 'dgo" id="dailyBtn"' + (done ? ' aria-label="다시 하기, 보상 없음"><b>다시 하기 ▶</b><small><span id="dailyCd"></span> 후 새 도전</small>' : '>도전하기 ▶') + '</button></div>'
+      + '<div class="dmore" id="dailyMore"><div class="drow"><div class="dsub">' + dailyLabel(k) + (F82 && DD.theme && DD.theme(k, THO()) ? ' · <span class="dtheme">' + DD.theme(k, THO()).label + '</span>' : '') + (done ? ' · 다시 하기는 보상 없음' : '') + '</div>' + (F82 && SP.DAILY_THEMES ? '<button class="dweek" id="dailyWeek" aria-label="요일별 도전 테마 보기">요일 테마 ›</button>' : '') + '</div>'
+      + '<div class="dtrack">' + h + '</div>' + dailyWeekHtml(k) + (done ? dailyRecHtml(k) : '') + '</div>';
     $('dailyBtn').onclick = function () { $('menu').classList.remove('show'); clearInterval(cdT); load(DAILY); }; bindDailyWeek();
+    $('dailyToggle').onclick = function () { var o = el.classList.toggle('open'); this.setAttribute('aria-expanded', o); mapFocus($('sagamap')); mapRender(); }; // map height changed -> current node back in view
     if ($('dailyWeek')) $('dailyWeek').onclick = function (e) { e.stopPropagation(); weekSheet(k); };
     clearInterval(cdT); if (done) { var tick = function () { var s = Math.ceil(DD.msToMidnight() / 1000), c = $('dailyCd'); if (!c || !$('menu').classList.contains('show')) return clearInterval(cdT); if (today() !== k) return dailyCard();
       c.textContent = Math.floor(s / 3600) + ':' + ('0' + Math.floor(s / 60) % 60).slice(-2) + ':' + ('0' + s % 60).slice(-2); }; tick(); cdT = setInterval(tick, 1000); }
@@ -1102,20 +1123,25 @@ SP.platform.whenReady(function () { var QA_ = {}; // L5: runs once the platform 
     try { $('coins').innerHTML = IC('coin') + ' ' + (F80 ? Math.min(save.coins, EC.coinMax).toLocaleString('ko-KR') : save.coins) + (F80 ? ' <button class="btn v8-bag v8-bag-ico" id="v8bag" aria-label="가방" title="가방"><span class="v8-bag-svg" aria-hidden="true"></span></button>' : ''); if (F80) $('v8bag').onclick = bagSheet; if (F81) metaMenu(); dailyCard(); } catch (e) { console.error('menu: daily card', e); }
     try { mapOpen(); } catch (e) { console.error('menu: saga map', e); }
   }
+  function mapFocus(m) { var focus = Math.min(Math.max(1, save.unlocked), LAST); m.scrollTop = mapPos(focus).y * mapK + Math.min(120 * mapK, Math.max(0, m.clientHeight / 2 - 40)) - m.clientHeight / 2; // current node a bit above centre (shows the path ahead); 11/05: offset capped so the node stays fully inside short maps (360x560 map is ~126px)
+  }
   function mapOpen() {
     var m = $('sagamap'), tr = $('sagatrack'); if (!m || !tr) return;
     for (var key in mapLive) mapLive[key].remove(); mapLive = {}; if (mapIO) mapIO.disconnect();
     mapIO = window.IntersectionObserver ? new IntersectionObserver(function (es) { es.forEach(function (x) { if (x.isIntersecting) { segBg(x.target); mapIO.unobserve(x.target); } }); }, { root: m, rootMargin: '100% 0px' }) : null;
     mapTotal = Math.ceil(MAPN() / 100) * BLK; mapK = Math.min(1, (m.clientWidth || M.w) / M.w);
     tr.style.height = mapTotal + 'px'; tr.style.transform = 'scale(' + mapK + ')'; $('sagasize').style.height = mapTotal * mapK + 'px';
-    var focus = Math.min(Math.max(1, save.unlocked), LAST); m.scrollTop = mapPos(focus).y * mapK + Math.min(120 * mapK, Math.max(0, m.clientHeight / 2 - 40)) - m.clientHeight / 2; // current node a bit above centre (shows the path ahead); 11/05: offset capped so the node stays fully inside short maps (360x560 map is ~126px)
+    mapFocus(m);
     if (!m._bound) { m._bound = true; m.addEventListener('scroll', function () { if (!mapRaf) mapRaf = requestAnimationFrame(function () { mapRaf = 0; mapRender(); }); }, { passive: true }); }
     mapTarget = 0; mapJumpLast = 0; var pm = $('mapperfectmsg'); if (pm) pm.hidden = true;
     mapRender(); perfectHud();
   }
   $('undo').onclick = undo; function doRestart() { if (F81 && !S.daily && !S.won) M81.streakReset(save); $('restartov').classList.remove('show'); var st = $('v8stuck'); if (st) st.classList.remove('show'); if (S.a.addedTube || S.a.perches) { S.a.addedTube = false; S.a.perches = 0; } S.moves = 0; if (save.mid && save.mid.k === midKey()) delete save.mid; persist(); load(S.n); } // restart drops the saved board
   $('board').addEventListener('pointerdown', hideToast, true); // v7.2 PM-1: tapping the board closes the toast (the tap itself still reaches the bird)
-  if (window.MutationObserver) { var tOb = new MutationObserver(function () { if (document.querySelector('.ov.show')) hideToast(); }); [].forEach.call(document.querySelectorAll('.ov'), function (o) { tOb.observe(o, { attributes: true, attributeFilter: ['class'] }); }); } // any modal/sheet -> toast closes at once
+  if (window.MutationObserver) { var tOb = new MutationObserver(function (ms) { if (document.querySelector('.ov.show')) hideToast(); ms.forEach(function (m) { ovFocus(m.target); }); }); [].forEach.call(document.querySelectorAll('.ov'), function (o) { tOb.observe(o, { attributes: true, attributeFilter: ['class'] }); }); } // any modal/sheet -> toast closes at once
+  function ovFocus(o) { var a = document.activeElement, on = o.classList.contains('show'); if (on === !!o._ret) return;
+    if (on) { o._ret = a && !o.contains(a) ? a : document.body; if (o.contains(a)) return; var fs = [].filter.call(o.querySelectorAll('button, input, [tabindex]:not([tabindex="-1"])'), function (el) { return !el.disabled && el.getClientRects().length; }), f = o.querySelector('.btn.primary:not([disabled])'); f = f && f.getClientRects().length ? f : fs[0]; if (f) f.focus({ preventScroll: true, focusVisible: false }); return; }
+    var r = o._ret; o._ret = null; if ((!a || a === document.body || o.contains(a)) && r && r !== document.body && r.isConnected) r.focus({ preventScroll: true, focusVisible: false }); }
   $('restart').onclick = function () { if (S.locked || SP.ads.isBusy()) return; if (dirty()) { $('restartMsg').textContent = (S.moves > 0 || (S.hist && S.hist.length)) ? '지금까지의 이동이 사라져요.' : (S.a.addedTube ? '추가한 횃대도 사라져요.' : '지금까지의 이동이 사라져요.'); $('restartov').classList.add('show'); } else doRestart(); }; // v7 A4 + v7.1 PM-6: confirm whenever the board differs from the stage start (moves, added perch, ...)
   function dirty() { if (S.moves > 0 || S.hist.length || S.a.addedTube) return true; var lk = S.lock.filter(Boolean).length, hd = 0; S.mask.forEach(function (m) { m.forEach(function (x) { if (x) hd++; }); });
     return JSON.stringify([S.tubes, S.g.caps ? S.caps : null, lk, hd]) !== S.init0; }
