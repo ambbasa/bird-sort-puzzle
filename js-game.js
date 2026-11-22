@@ -43,6 +43,9 @@ SP.platform.whenReady(function () {
   var q = function (id) { return document.getElementById(id); };
   ['undo', 'hint'].forEach(function (id, k) { var b = q(id); if (b) { b.setAttribute('aria-keyshortcuts', k ? 'H' : 'Z Backspace'); b.title = (k ? '힌트 (H)' : '되돌리기 (Z)'); } });
   window.addEventListener('keydown', function (e) {
+    if (e.key === 'Tab' && !e.ctrlKey && !e.metaKey && !e.altKey) { var a = document.activeElement, os = document.querySelectorAll('.ov.show'), o = a && a.closest('.ov.show') || os[os.length - 1]; if (!o) return;
+      var fs = [].filter.call(o.querySelectorAll('button, input, select, a[href], [tabindex]:not([tabindex="-1"])'), function (el) { return !el.disabled && el.getClientRects().length; }), i = fs.indexOf(a);
+      if (fs.length && (i < 0 || i === (e.shiftKey ? 0 : fs.length - 1))) { e.preventDefault(); fs[e.shiftKey ? fs.length - 1 : 0].focus(); } return; }
     if (e.ctrlKey || e.metaKey || e.altKey || e.repeat || e.isComposing && !/^(Digit|Numpad|Key)/.test(e.code)) return;
     var t = e.target, tag = t && t.tagName; if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return;
     if (document.querySelector('.ov.show')) return; // menu, settings, clear card, sheets: shortcuts off
