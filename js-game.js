@@ -950,7 +950,7 @@ SP.platform.whenReady(function () {
     clearTimeout(perfectJump._h); perfectJump._h = setTimeout(function () { var x = mapLive['n' + n]; if (x) x.classList.remove('map-node--target'); if (mapTarget === n) mapTarget = 0; }, 3000); }
   if ($('mapperfect')) $('mapperfect').onclick = perfectJump;
   function isPerfect(n) { var b = save.best && +save.best[n], m = SP.STAGES[n] && SP.STAGES[n].min; return !!(b && m > 0 && b <= m); } // 2026-11-01: map ring for stages whose best equals the minimum
-  function reveal(st) { confetti(); sfx.play('clear'); for (var k = 0; k < st; k++) setTimeout(sfx.play.bind(sfx, 'star', k), 1000 + k * 150); QA_.clearShownAt = performance.now(); $('overlay').classList.add('show'); ($('next').style.display === 'none' ? $('again') : $('next')).focus({ preventScroll: true, focusVisible: false }); } // DESIGN §7: fanfare, then a ding per star
+  function reveal(st) { confetti(); sfx.play('clear'); for (var k = 0; k < st; k++) setTimeout(sfx.play.bind(sfx, 'star', k), 1000 + k * 150); QA_.clearShownAt = performance.now(); $('overlay').classList.add('show'); ($('next').style.display === 'none' ? $('again') : $('next')).focus({ preventScroll: true, focusVisible: document.activeElement.matches(':focus-visible') }); } // DESIGN §7: fanfare, then a ding per star
   function winDaily(st, defer) { // first clear of the day pays the 7-day track reward (coins only); replays only keep the best stars
     var r = DD.complete(save.daily, S.daily, st, S.moves, S.g.min); save.coins += r.reward; // 2026-11-16: + today's best record (moves)
     save.attempt.daily = { key: S.daily, undoLeft: C.freeUndos, addedTube: false }; persist(); render();
