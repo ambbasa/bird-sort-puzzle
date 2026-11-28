@@ -52,7 +52,7 @@ SP.platform.whenReady(function () {
     var m = /^(?:Digit|Numpad)(\d)$/.exec(e.code || ''), btn = null;
     if (m) { var n = m[1] === '0' ? 9 : +m[1] - 1, ts = document.querySelectorAll('#board .tube'); if (!ts[n]) return; e.preventDefault(); ts[n].focus({ preventScroll: true, focusVisible: true }); ts[n].dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true })); QA_.lastKey = 'perch' + (n + 1); return; }
     if (e.code === 'KeyZ' || e.key === 'Backspace') btn = q('undo'); else if (e.code === 'KeyH') btn = q('hint');
-    if (!btn || btn.disabled || btn.offsetParent === null) return; e.preventDefault(); btn.click(); QA_.lastKey = btn.id;
+    if (!btn || btn.disabled || btn.offsetParent === null) return; e.preventDefault(); btn.focus({ preventScroll: true, focusVisible: true }); btn.click(); QA_.lastKey = btn.id;
   });
 });
   var A11Y_KEY = 'a11y.symbolsLarge'; // DESIGN.md §8: default off
